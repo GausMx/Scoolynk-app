@@ -5,7 +5,7 @@ import axios from 'axios';
 // Create a new Axios instance with a base URL
 const API = axios.create({
   baseURL:
-    process.env.REACT_APP_API_BASE_URL ||  process.env.REACT_APP_API_URL || 'https://scoolynk-backend.onrender.com'});
+    process.env.REACT_APP_API_URL || 'https://scoolynk-backend.onrender.com'});
 
 // Use an interceptor to attach the JWT token to every request
 API.interceptors.request.use(
