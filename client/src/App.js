@@ -1,25 +1,74 @@
-import logo from './logo.svg';
-import './App.css';
+// src/App.js
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
-function App() {
+// pages & auth
+import AdminDashboard from './components/pages/AdminDashboard';
+import TeacherDashboard from './components/pages/TeacherDashboard';
+import ParentDashboard from './components/pages/ParentDashboard';
+import LoginForm from './components/Auth/LoginForm';
+import RegisterForm from './components/Auth/RegisterForm';
+import { getUser, getToken } from './components/utils/auth';
+
+// ProtectedRoute wrapper
+const ProtectedRoute = ({ children, roles }) => {
+  const user = getUser();
+  const token = getToken();
+
+  if (!user || !token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (roles && !roles.includes(user.role)) {
+    return <Navigate to={`/${user.role}`} replace />;
+  }
+
+  return children;
+};
+
+// Temporary placeholders
+const LandingPagePlaceholder = () => (
+  <div className="container mt-5 text-center">
+    <h1>Welcome to Scoolynk!</h1>
+    <p>Please log in or register to continue.</p>
+  </div>
+);
+
+const App = () => {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<LandingPagePlaceholder />} />
+        <Route path="/login" element={<LoginForm />} />
+        <Route path="/register" element={<RegisterForm />} />
+
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute roles={['admin']}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher"
+          element={
+            <ProtectedRoute roles={['teacher']}>
+              <TeacherDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/parent"
+          element={
+            <ProtectedRoute roles={['parent']}>
+              <ParentDashboard />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </Router>
   );
-}
+};
 
 export default App;
