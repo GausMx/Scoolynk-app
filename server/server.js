@@ -9,7 +9,7 @@ import protect from './middleware/authMiddleware.js';
 import subscriptionGuard from './middleware/subscriptionMiddleware.js';
 import requireRole from './middleware/roleMiddleware.js';
 import { getAdminDashboard } from './controllers/adminController.js';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import User from './models/User.js';
 // Load environment variables
 dotenv.config();
