@@ -22,12 +22,20 @@ const app = express();
 app.use(express.json()); // Body parser
 app.use(express.urlencoded({ extended: false }));
 
-// CORS setup for localhost:3000
+// CORS setup
+const allowedOrigins = process.env.CORS_ORIGIN.split(',');
+
 const corsOptions = {
-  // The CORS origin is from your environment variables.
-  // This allows frontend apps at the specified URL to communicate with your backend.
-  origin: process.env.CORS_ORIGIN,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
 };
+
 app.use(cors(corsOptions));
 
 // Define routes
@@ -41,8 +49,7 @@ app.use('/api/auth', authRoutes);
 // Example of protected routes using a combination of middleware
 app.get('/api/admin', protect, subscriptionGuard, requireRole('admin'), getAdminDashboard);
 
-// The PORT is from your environment variables.
-// This allows you to configure the port without changing the code.
+// Test route
 app.post('/test', (req, res) => {
   res.json({ message: 'Test route working!' });
 });
