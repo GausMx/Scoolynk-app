@@ -26,7 +26,7 @@ const LoginForm = () => {
   const onSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await api.post('/auth/login', { email, password });
+  const res = await api.post('/api/auth/login', { email, password });
 
       // backend should return token + user details
       const { token, role, name, _id, schoolId } = res.data;
