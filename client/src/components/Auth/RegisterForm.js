@@ -11,7 +11,8 @@ const RegisterForm = () => {
     email: '',
     phone: '',
     password: '',
-    role: 'parent',
+    schoolName: '',
+    role: 'admin',
   });
   const [message, setMessage] = useState('');
 
@@ -24,7 +25,7 @@ const RegisterForm = () => {
     setMessage('');
     try {
       // The API instance automatically attaches the base URL
-      await API.post('/auth/register', formData);
+  await API.post('/auth/register', formData);
       setMessage('Registration successful!');
       // Reset the form after successful registration
       setFormData({
@@ -32,7 +33,8 @@ const RegisterForm = () => {
         email: '',
         phone: '',
         password: '',
-        role: 'parent',
+        schoolName: '',
+        role: 'admin',
       });
     } catch (error) {
       // Display the error message from the backend
@@ -93,6 +95,17 @@ const RegisterForm = () => {
                     className="form-control rounded-3"
                     name="password"
                     value={formData.password}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">School Name</label>
+                  <input
+                    type="text"
+                    className="form-control rounded-3"
+                    name="schoolName"
+                    value={formData.schoolName}
                     onChange={handleChange}
                     required
                   />
