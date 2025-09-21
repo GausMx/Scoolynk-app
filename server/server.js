@@ -28,15 +28,15 @@ const allowedOrigins = process.env.CORS_ORIGIN.split(',').map(o => o.trim().repl
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Log the origin for debugging
     console.log('[CORS] Request origin:', origin);
-    if (!origin) {
-      // Allow server-to-server or curl requests
-      return callback(null, true);
-    }
-    // Remove trailing slash from origin for comparison
+    if (!origin) return callback(null, true);
     const cleanOrigin = origin.replace(/\/$/, '');
-    if (allowedOrigins.includes(cleanOrigin)) {
+    // Allow *.netlify.app and Netlify preview URLs
+    if (
+      allowedOrigins.includes(cleanOrigin) ||
+      /^https:\/\/[a-z0-9-]+--scoolynk-app\.netlify\.app$/.test(cleanOrigin) ||
+      /^https:\/\/[a-z0-9-]+\.netlify\.app$/.test(cleanOrigin)
+    ) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS: ' + origin));
