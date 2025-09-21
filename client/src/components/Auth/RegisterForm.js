@@ -24,8 +24,8 @@ const RegisterForm = () => {
     e.preventDefault();
     setMessage('');
     try {
-      // The API instance automatically attaches the base URL
-  await API.post('/auth/register', formData);
+    // The API instance automatically attaches the base URL
+    await API.post('/api/auth/register', formData);
       setMessage('Registration successful!');
       // Reset the form after successful registration
       setFormData({
