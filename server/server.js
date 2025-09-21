@@ -24,14 +24,22 @@ app.use(express.json()); // Body parser
 app.use(express.urlencoded({ extended: false }));
 
 // CORS setup
-const allowedOrigins = process.env.CORS_ORIGIN.split(',');
+const allowedOrigins = process.env.CORS_ORIGIN.split(',').map(o => o.trim().replace(/\/$/, ''));
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Log the origin for debugging
+    console.log('[CORS] Request origin:', origin);
+    if (!origin) {
+      // Allow server-to-server or curl requests
+      return callback(null, true);
+    }
+    // Remove trailing slash from origin for comparison
+    const cleanOrigin = origin.replace(/\/$/, '');
+    if (allowedOrigins.includes(cleanOrigin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error('Not allowed by CORS: ' + origin));
     }
   },
   credentials: true,
