@@ -7,15 +7,13 @@ import { setToken, setUser} from '../utils/auth';
 import { redirectByRole } from '../utils/auth';
 
 const LoginForm = () => {
-  const navigate = useNavigate();
 
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
-
   const [error, setError] = useState('');
-
   const { email, password } = formData;
 
   // handle input change
@@ -26,19 +24,21 @@ const LoginForm = () => {
   const onSubmit = async (e) => {
     e.preventDefault();
     try {
-  const res = await api.post('/api/auth/login', { email, password });
-
+      const res = await api.post('/api/auth/login', { email, password });
       // backend should return token + user details
-      const { token, role, name, _id, schoolId } = res.data;
-
-      // store token and user info in localStorage
+      const { token, role, name, _id, schoolId, mustChangePassword } = res.data;
+      // store token and user info in localStorage, include mustChangePassword
       setToken(token);
-      setUser({ id: _id, name, email, role, schoolId });
-
-      // redirect by role
-      navigate(redirectByRole(role));
+      setUser({ id: _id, name, email, role, schoolId, mustChangePassword });
+      // If mustChangePassword, redirect to password reset page
+      if (mustChangePassword) {
+        navigate('/reset-password');
+      } else {
+        // redirect by role
+        navigate(redirectByRole(role));
+      }
     } catch (err) {
-      setError(err.response?.data?.msg || 'Login failed. Try again.');
+      setError(err.response?.data?.msg || err.response?.data?.message || 'Login failed. Try again.');
     }
   };
 

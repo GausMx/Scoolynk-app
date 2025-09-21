@@ -97,19 +97,8 @@ const RegisterForm = () => {
                     required
                   />
                 </div>
-                <div className="mb-4">
-                  <label className="form-label">Role</label>
-                  <select
-                    className="form-select rounded-3"
-                    name="role"
-                    value={formData.role}
-                    onChange={handleChange}
-                  >
-                    <option value="parent">Parent</option>
-                    <option value="teacher">Teacher</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
+                {/* Only admin registration allowed */}
+                <input type="hidden" name="role" value="admin" />
                 <div className="d-grid gap-2">
                   <button type="submit" className="btn btn-primary rounded-3 shadow-sm">
                     Register

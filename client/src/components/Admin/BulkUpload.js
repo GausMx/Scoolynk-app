@@ -28,9 +28,14 @@ const BulkUpload = () => {
           const headers = json[0];
           const rows = json.slice(1);
 
-          // ✅ Required headers check
-          const requiredHeaders = ['name', 'email', 'phone', 'childrenNames'];
-          const missing = requiredHeaders.filter(h => !headers.includes(h));
+
+          // Support both parent and teacher uploads
+          const isTeacherUpload = headers.includes('courses') || headers.includes('classes');
+          const requiredParentHeaders = ['name', 'email', 'phone', 'childrenNames'];
+          const requiredTeacherHeaders = ['name', 'email', 'phone', 'courses', 'classes'];
+          const missing = isTeacherUpload
+            ? requiredTeacherHeaders.filter(h => !headers.includes(h))
+            : requiredParentHeaders.filter(h => !headers.includes(h));
           if (missing.length > 0) {
             setMessage({
               text: `Missing required columns: ${missing.join(', ')}`,
@@ -42,8 +47,17 @@ const BulkUpload = () => {
           const extractedData = rows.map(row => {
             const rowData = {};
             headers.forEach((header, index) => {
-              rowData[header] = row[index];
+              if (header === 'childrenNames') {
+                rowData.children = (row[index] || '').split(',').map(c => c.trim()).filter(Boolean);
+              } else if (header === 'courses') {
+                rowData.courses = (row[index] || '').split(',').map(c => c.trim()).filter(Boolean);
+              } else if (header === 'classes') {
+                rowData.classes = (row[index] || '').split(',').map(c => c.trim()).filter(Boolean);
+              } else {
+                rowData[header] = row[index];
+              }
             });
+            rowData.role = isTeacherUpload ? 'teacher' : 'parent';
             return rowData;
           });
 
@@ -71,7 +85,17 @@ const BulkUpload = () => {
 
     setLoading(true);
     try {
-      await API.post('/admin/bulk-register', { users: parsedData });
+      // Remove childrenNames/courses/classes from payload, use arrays
+      const uploadData = parsedData.map(row => {
+        const { childrenNames, courses, classes, ...rest } = row;
+        return {
+          ...rest,
+          ...(row.children ? { children: row.children } : {}),
+          ...(row.courses ? { courses: row.courses } : {}),
+          ...(row.classes ? { classes: row.classes } : {}),
+        };
+      });
+      await API.post('/admin/bulk-register', { users: uploadData });
       setMessage({
         text: 'Parents registered successfully!',
         type: 'alert-success',
@@ -125,16 +149,22 @@ const BulkUpload = () => {
               <thead>
                 <tr>
                   {Object.keys(parsedData[0]).map((key) => (
-                    <th key={key}>{key}</th>
+                    key !== 'children' ? <th key={key}>{key}</th> : null
                   ))}
+                  <th>Children</th>
                 </tr>
               </thead>
               <tbody>
                 {parsedData.map((row, index) => (
                   <tr key={index}>
-                    {Object.values(row).map((value, i) => (
-                      <td key={i}>{String(value || '')}</td>
+                    {Object.entries(row).map(([key, value], i) => (
+                      key !== 'children' ? <td key={i}>{String(value || '')}</td> : null
                     ))}
+                    <td>
+                      {Array.isArray(row.children)
+                        ? row.children.map((child, idx) => <span key={idx} className="badge bg-secondary me-1">{child}</span>)
+                        : ''}
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import BulkUpload from './BulkUpload';
+import ReviewResults from './ReviewResults';
+import Broadcast from './Broadcast';
 const Dashboard = () => {
   const [user, setUser] = useState(null);
 
@@ -27,10 +29,12 @@ const Dashboard = () => {
               Welcome, <span className="text-primary">{user?.name || 'Admin'}</span>!
             </h1>
             <p className="lead">
-              This is your administrator dashboard. Manage users and schools here.
+              This is your administrator dashboard. Manage users, classes, results, and notifications here.
             </p>
             <hr className="my-4" />
             <BulkUpload />
+            <ReviewResults />
+            <Broadcast />
           </div>
         </div>
       </div>

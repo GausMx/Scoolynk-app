@@ -8,6 +8,7 @@ import TeacherDashboard from './components/pages/TeacherDashboard';
 import ParentDashboard from './components/pages/ParentDashboard';
 import LoginForm from './components/Auth/LoginForm';
 import RegisterForm from './components/Auth/RegisterForm';
+import PasswordResetForm from './components/Auth/PasswordResetForm';
 import { getUser, getToken } from './components/utils/auth';
 
 // ProtectedRoute wrapper
@@ -17,6 +18,11 @@ const ProtectedRoute = ({ children, roles }) => {
 
   if (!user || !token) {
     return <Navigate to="/login" replace />;
+  }
+
+  // If user must change password, force redirect to reset-password
+  if (user.mustChangePassword) {
+    return <Navigate to="/reset-password" replace />;
   }
 
   if (roles && !roles.includes(user.role)) {
@@ -42,6 +48,7 @@ const App = () => {
         <Route path="/login" element={<LoginForm />} />
         <Route path="/register" element={<RegisterForm />} />
 
+        <Route path="/reset-password" element={<PasswordResetForm />} />
         <Route
           path="/admin"
           element={
