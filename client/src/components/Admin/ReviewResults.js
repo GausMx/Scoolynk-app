@@ -12,7 +12,7 @@ const ReviewResults = () => {
 			setLoading(true);
 			setError('');
 			try {
-				const res = await API.get('/admin/results');
+				const res = await API.get('/api/admin/results');
 				setResults(res.data.results || []);
 			} catch (err) {
 				setError('Failed to load results.');
@@ -25,7 +25,7 @@ const ReviewResults = () => {
 	const handleReview = async (resultId, action) => {
 		setMessage('');
 		try {
-			await API.post('/admin/results/review', { resultId, action });
+				await API.post('/api/admin/results/review', { resultId, action });
 			setMessage(`Result ${action}ed.`);
 			setResults(results => results.filter(r => r._id !== resultId));
 		} catch (err) {
