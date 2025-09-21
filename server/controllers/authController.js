@@ -66,10 +66,11 @@ const register = async (req, res) => {
   }
 
   const { name, email, phone, password, role, schoolName } = req.body;
+  const normalizedEmail = email.toLowerCase();
 
   try {
     // Check for duplicate email or phone
-    const userExists = await User.findOne({ $or: [{ email }, { phone }] });
+  const userExists = await User.findOne({ $or: [{ email: normalizedEmail }, { phone }] });
     if (userExists) {
       return res.status(400).json({ message: 'Email or phone number already registered.' });
     }
@@ -87,7 +88,7 @@ const register = async (req, res) => {
       
       const tempUser = await User.create({
         name,
-        email,
+        email: normalizedEmail,
         phone,
         passwordHash,
         role,
@@ -117,7 +118,7 @@ const register = async (req, res) => {
     }
 
     // After creation, find the user to return
-    const user = await User.findOne({ email }).select('-passwordHash');
+  const user = await User.findOne({ email: normalizedEmail }).select('-passwordHash');
 
     res.status(201).json({
       _id: user._id,
@@ -140,9 +141,10 @@ const register = async (req, res) => {
 // @access  Public
 const login = async (req, res) => {
   const { email, password } = req.body;
+  const normalizedEmail = email.toLowerCase();
 
   try {
-    const user = await User.findOne({ email });
+  const user = await User.findOne({ email: normalizedEmail });
 
     // Verify user and password
     if (user && (await user.matchPassword(password))) {
