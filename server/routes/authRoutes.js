@@ -1,14 +1,14 @@
 // server/routes/authRoutes.js
 
+
 import express from 'express';
 import { check } from 'express-validator';
 import { register, login, getMe, resetPassword } from '../controllers/authController.js';
-// Password reset for users with mustChangePassword
-router.post('/reset-password', resetPassword);
 import protect from '../middleware/authMiddleware.js';
 import requireRole from '../middleware/roleMiddleware.js';
 
 const router = express.Router();
+
 
 router.post(
   '/register',
@@ -23,7 +23,12 @@ router.post(
   register
 );
 
+
 router.post('/login', login);
+
+// Password reset for users with mustChangePassword
+router.post('/reset-password', resetPassword);
+
 
 // This route is protected by both authentication and subscription middleware
 router.get('/me', protect, getMe);
