@@ -44,10 +44,9 @@ const App = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<LandingPagePlaceholder />} />
+        <Route path="/" element={<LoginForm />} />
         <Route path="/login" element={<LoginForm />} />
         <Route path="/register" element={<RegisterForm />} />
-
         <Route path="/reset-password" element={<PasswordResetForm />} />
         <Route
           path="/admin"

@@ -13,7 +13,10 @@ const BulkUpload = () => {
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     setFile(selectedFile);
-    setMessage({ text: '', type: '' });
+    // Only clear message if it was from a previous upload, not on every file change
+    if (message.type === 'alert-success' || message.type === 'alert-danger') {
+      setMessage({ text: '', type: '' });
+    }
 
     if (selectedFile) {
       const reader = new FileReader();
@@ -97,7 +100,7 @@ const BulkUpload = () => {
       });
       await API.post('/admin/bulk-register', { users: uploadData });
       setMessage({
-        text: 'Parents registered successfully!',
+        text: 'Parents and teachers registered successfully!',
         type: 'alert-success',
       });
 
@@ -108,8 +111,14 @@ const BulkUpload = () => {
         fileInputRef.current.value = '';
       }
     } catch (error) {
+      let backendMsg = error.response?.data?.message;
+      let details = error.response?.data?.errors;
+      let text = backendMsg || 'Upload failed. Please try again.';
+      if (details && Array.isArray(details)) {
+        text += ' Details: ' + details.map(e => e.msg || e.message).join('; ');
+      }
       setMessage({
-        text: error.response?.data?.message || 'Upload failed. Please try again.',
+        text,
         type: 'alert-danger',
       });
       console.error(error);

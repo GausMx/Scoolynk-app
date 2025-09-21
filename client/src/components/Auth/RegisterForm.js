@@ -1,9 +1,10 @@
 // src/components/Auth/RegisterForm.js
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../utils/api';
 import { setToken } from '../utils/auth';
+import { Link } from 'react-router-dom';
 
 
 const RegisterForm = () => {
@@ -17,6 +18,26 @@ const RegisterForm = () => {
     role: 'admin',
   });
   const [message, setMessage] = useState('');
+  const [adminExists, setAdminExists] = useState(false);
+
+  // Check if an admin already exists for the entered school name
+  useEffect(() => {
+    if (!formData.schoolName) {
+      setAdminExists(false);
+      return;
+    }
+    const checkAdmin = setTimeout(() => {
+      fetch(
+        process.env.REACT_APP_API_URL + '/api/auth/admin-exists?schoolName=' + encodeURIComponent(formData.schoolName)
+      )
+        .then(res => res.json())
+        .then(data => {
+          setAdminExists(!!data.exists);
+        })
+        .catch(() => setAdminExists(false));
+    }, 500);
+    return () => clearTimeout(checkAdmin);
+  }, [formData.schoolName]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -47,6 +68,25 @@ const RegisterForm = () => {
     }
   };
 
+  // If admin exists for this school, block registration and show message
+  if (adminExists) {
+    return (
+      <div className="container mt-5">
+        <div className="row justify-content-center">
+          <div className="col-md-6">
+            <div className="card shadow-sm rounded-3">
+              <div className="card-body p-4 text-center">
+                <h2 className="mb-4">Registration Blocked</h2>
+                <div className="alert alert-danger rounded-3" role="alert">
+                  An admin already exists for this school. Please <Link to="/login">login</Link> or contact your school admin.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="container mt-5">
       <div className="row justify-content-center">
@@ -123,6 +163,10 @@ const RegisterForm = () => {
                   </button>
                 </div>
               </form>
+              <div className="text-center mt-3">
+                <span>Already have an account? </span>
+                <Link to="/login">Login</Link>
+              </div>
             </div>
           </div>
         </div>

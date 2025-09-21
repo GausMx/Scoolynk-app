@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { setToken, setUser} from '../utils/auth';
 import { redirectByRole } from '../utils/auth';
+import { Link } from 'react-router-dom';
 
 const LoginForm = () => {
 
@@ -73,6 +74,11 @@ const LoginForm = () => {
           Login
         </button>
       </form>
+      <div className="text-center mt-3">
+        <small className="text-muted">
+          Only admins can register. Parents and teachers should contact the school admin for access.
+        </small>
+      </div>
     </div>
   );
 };
