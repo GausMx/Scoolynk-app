@@ -3,7 +3,9 @@
 
 import express from 'express';
 import { check } from 'express-validator';
-import { register, login, getMe, resetPassword } from '../controllers/authController.js';
+import { register, login, getMe, resetPassword, adminExists } from '../controllers/authController.js';
+// Check if admin exists (for frontend to secure register page)
+router.get('/admin-exists', adminExists);
 import protect from '../middleware/authMiddleware.js';
 import requireRole from '../middleware/roleMiddleware.js';
 

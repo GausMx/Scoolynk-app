@@ -1,3 +1,20 @@
+// @desc    Check if an admin user already exists for a school
+// @route   GET /api/auth/admin-exists?schoolName=...
+// @access  Public
+const adminExists = async (req, res) => {
+  try {
+    const { schoolName } = req.query;
+    if (!schoolName) return res.status(400).json({ exists: false, error: 'Missing schoolName' });
+    // Find school by name
+    const school = await School.findOne({ name: schoolName });
+    if (!school) return res.json({ exists: false });
+    // Check if an admin exists for this school
+    const admin = await User.findOne({ role: 'admin', schoolId: school._id });
+    res.json({ exists: !!admin });
+  } catch (err) {
+    res.status(500).json({ exists: false });
+  }
+};
 // @desc    Reset password for users with mustChangePassword
 // @route   POST /api/auth/reset-password
 // @access  Public (user must provide userId and new password)
@@ -155,4 +172,4 @@ const getMe = (req, res) => {
   res.json({ user: req.user });
 };
 
-export { register, login, getMe, resetPassword };
+export { register, login, getMe, resetPassword, adminExists };
