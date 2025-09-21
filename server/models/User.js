@@ -10,6 +10,12 @@ const userSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true },
   role: { type: String, enum: ['admin', 'teacher', 'parent'], required: true },
   schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
+  // For parents: array of children (students)
+  children: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Student' }],
+  // For teachers: array of classes and courses
+  classes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Class' }],
+  courses: [{ type: String }],
+  mustChangePassword: { type: Boolean, default: false },
   subscriptionStatus: { type: String, enum: ['trial', 'active', 'inactive'], default: 'trial' },
   trialStartDate: { type: Date, default: Date.now },
   trialEndDate: { type: Date },

@@ -1,3 +1,26 @@
+// @desc    Reset password for users with mustChangePassword
+// @route   POST /api/auth/reset-password
+// @access  Public (user must provide userId and new password)
+const resetPassword = async (req, res) => {
+  const { userId, password } = req.body;
+  if (!userId || !password || password.length < 6) {
+    return res.status(400).json({ message: 'Invalid request.' });
+  }
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found.' });
+    user.passwordHash = await User.hashPassword(password);
+    user.mustChangePassword = false;
+    await user.save();
+    // Return new token
+    res.json({
+      token: generateToken(user._id, user.schoolId, user.role),
+      message: 'Password updated.'
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to reset password.' });
+  }
+};
 // server/controllers/authController.js
 
 import jwt from 'jsonwebtoken';
@@ -112,6 +135,7 @@ const login = async (req, res) => {
         email: user.email,
         role: user.role,
         schoolId: user.schoolId,
+        mustChangePassword: user.mustChangePassword,
         token: generateToken(user._id, user.schoolId, user.role),
       });
     } else {
@@ -131,4 +155,4 @@ const getMe = (req, res) => {
   res.json({ user: req.user });
 };
 
-export { register, login, getMe };
+export { register, login, getMe, resetPassword };

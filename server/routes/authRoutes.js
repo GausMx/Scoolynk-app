@@ -2,7 +2,9 @@
 
 import express from 'express';
 import { check } from 'express-validator';
-import { register, login, getMe } from '../controllers/authController.js';
+import { register, login, getMe, resetPassword } from '../controllers/authController.js';
+// Password reset for users with mustChangePassword
+router.post('/reset-password', resetPassword);
 import protect from '../middleware/authMiddleware.js';
 import requireRole from '../middleware/roleMiddleware.js';
 
