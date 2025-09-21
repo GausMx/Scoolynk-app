@@ -1,11 +1,13 @@
 // src/components/Auth/RegisterForm.js
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import API from '../utils/api';
 import { setToken } from '../utils/auth';
 
 
 const RegisterForm = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -26,7 +28,10 @@ const RegisterForm = () => {
     try {
     // The API instance automatically attaches the base URL
     await API.post('/api/auth/register', formData);
-      setMessage('Registration successful!');
+      setMessage('Registration successful! Redirecting to login...');
+      setTimeout(() => {
+        navigate('/login');
+      }, 1500);
       // Reset the form after successful registration
       setFormData({
         name: '',
