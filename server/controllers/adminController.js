@@ -6,7 +6,28 @@ export const bulkRegisterParents = async (req, res) => {
     const { users } = req.body; // [{ name, email, phone, role, ... }]
     const schoolId = req.user.schoolId;
     const createdUsers = [];
-    for (const user of users) {
+    const errors = [];
+    if (!Array.isArray(users) || users.length === 0) {
+      return res.status(400).json({ message: 'No users provided for bulk registration.' });
+    }
+    for (let i = 0; i < users.length; i++) {
+      const user = users[i];
+      // Validate required fields
+      const missing = [];
+      if (!user.name) missing.push('name');
+      if (!user.email) missing.push('email');
+      if (!user.phone) missing.push('phone');
+      if (!user.role) missing.push('role');
+      if (user.role === 'parent' && (!user.children || !Array.isArray(user.children) || user.children.length === 0)) {
+        missing.push('children');
+      }
+      if (user.role === 'teacher' && (!user.classes || !Array.isArray(user.classes) || user.classes.length === 0)) {
+        missing.push('classes');
+      }
+      if (missing.length > 0) {
+        errors.push({ row: i + 2, msg: `Missing required fields: ${missing.join(', ')}` });
+        continue;
+      }
       // Check for duplicate
       let dbUser = await User.findOne({ email: user.email, schoolId });
       if (!dbUser) {
@@ -28,6 +49,7 @@ export const bulkRegisterParents = async (req, res) => {
       // Parent: create children
       if (user.role === 'parent' && Array.isArray(user.children)) {
         for (const childName of user.children) {
+          if (!childName) continue;
           let child = await (await import('../models/Student.js')).default.findOne({ name: childName, parents: dbUser._id, schoolId });
           if (!child) {
             child = await (await import('../models/Student.js')).default.create({
@@ -45,6 +67,7 @@ export const bulkRegisterParents = async (req, res) => {
         if (Array.isArray(user.classes)) {
           dbUser.classes = [];
           for (const className of user.classes) {
+            if (!className) continue;
             // Find or create class for this school
             let dbClass = await (await import('../models/Class.js')).default.findOne({ name: className, schoolId });
             if (!dbClass) {
@@ -65,10 +88,13 @@ export const bulkRegisterParents = async (req, res) => {
       }
       createdUsers.push(dbUser.email);
     }
+    if (errors.length > 0) {
+      return res.status(400).json({ message: 'Some users could not be registered.', errors });
+    }
     res.json({ message: `Bulk registration complete. Users created: ${createdUsers.length}` });
   } catch (err) {
     console.error('[BulkRegisterUsers]', err);
-    res.status(500).json({ message: 'Bulk registration failed.' });
+    res.status(500).json({ message: 'Bulk registration failed.', error: err.message });
   }
 };
 import Result from '../models/Result.js';
