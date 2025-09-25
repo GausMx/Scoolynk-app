@@ -11,7 +11,7 @@ export const getTeacherClasses = async (req, res) => {
       return res.status(404).json({ message: 'Teacher not found.' });
     }
     res.json({ classes: teacher.classes || [] });
-  } catch (err) {
+  } catch (err) { 
     console.error('[TeacherClasses]', err);
     res.status(500).json({ message: 'Failed to load classes.' });
   }
