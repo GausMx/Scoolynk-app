@@ -98,7 +98,7 @@ const BulkUpload = () => {
           ...(row.classes ? { classes: row.classes } : {}),
         };
       });
-      await API.post('/admin/bulk-register', { users: uploadData });
+      await API.post('/api/admin/bulk-register', { users: uploadData });
       setMessage({
         text: 'Parents and teachers registered successfully!',
         type: 'alert-success',

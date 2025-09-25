@@ -40,7 +40,7 @@ const LoginForm = () => {
       }
     } catch (err) {
       setError(err.response?.data?.msg || err.response?.data?.message || 'Login failed. Try again.');
-    }
+    } 
   };
 
   return (
