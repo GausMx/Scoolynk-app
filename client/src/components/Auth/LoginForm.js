@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../utils/api';
+import API from '../utils/api';
 import { setToken, setUser} from '../utils/auth';
 import { redirectByRole } from '../utils/auth';
 import { Link } from 'react-router-dom';
@@ -25,7 +25,7 @@ const LoginForm = () => {
   const onSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await api.post('/api/auth/login', { email, password });
+      const res = await API.post('/api/auth/login', { email, password });
       // backend should return token + user details
       const { token, role, name, _id, schoolId, mustChangePassword } = res.data;
       // store token and user info in localStorage, include mustChangePassword

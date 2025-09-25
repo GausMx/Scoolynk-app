@@ -1,7 +1,7 @@
 // src/components/Auth/PasswordResetForm.js
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../utils/api';
+import API from '../utils/api';
 import { setToken, setUser, getUser } from '../utils/auth';
 
 const PasswordResetForm = () => {
@@ -32,7 +32,7 @@ const PasswordResetForm = () => {
     }
     try {
       // Call backend to update password
-      const res = await api.post('/api/auth/reset-password', {
+      const res = await API.post('/api/auth/reset-password', {
         userId: user.id,
         password,
       });

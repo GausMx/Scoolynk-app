@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+
+import React, { useEffect, useState, useCallback } from 'react';
 import API from '../utils/api';
 
 const ReviewResults = () => {
@@ -7,25 +8,27 @@ const ReviewResults = () => {
 	const [error, setError] = useState('');
 	const [message, setMessage] = useState('');
 
-	useEffect(() => {
-		const fetchResults = async () => {
-			setLoading(true);
-			setError('');
-			try {
-				const res = await API.get('/api/admin/results');
-				setResults(res.data.results || []);
-			} catch (err) {
-				setError('Failed to load results.');
-			}
-			setLoading(false);
-		};
-		fetchResults();
+	const fetchResults = useCallback(async () => {
+		setLoading(true);
+		setError('');
+		try {
+			const res = await API.get('/api/admin/results');
+			setResults(res.data.results || []);
+		} catch (err) {
+			let backendMsg = err.response?.data?.message;
+			setError(backendMsg || 'Failed to load results.');
+		}
+		setLoading(false);
 	}, []);
+
+	useEffect(() => {
+		fetchResults();
+	}, [fetchResults]);
 
 	const handleReview = async (resultId, action) => {
 		setMessage('');
 		try {
-				await API.post('/api/admin/results/review', { resultId, action });
+			await API.post('/api/admin/results/review', { resultId, action });
 			setMessage(`Result ${action}ed.`);
 			setResults(results => results.filter(r => r._id !== resultId));
 		} catch (err) {
@@ -34,13 +37,17 @@ const ReviewResults = () => {
 	};
 
 	if (loading) return <div>Loading...</div>;
-	if (error) return <div className="alert alert-danger">{error}</div>;
 
 	return (
 		<div className="card p-3 mb-4">
 			<h5>Review Teacher-Submitted Results</h5>
 			{message && <div className="alert alert-info">{message}</div>}
-			{results.length === 0 ? (
+			{error ? (
+				<div className="alert alert-danger">
+					{error}
+					<button className="btn btn-link btn-sm ms-2" onClick={fetchResults}>Retry</button>
+				</div>
+			) : results.length === 0 ? (
 				<div className="alert alert-success">No pending results.</div>
 			) : (
 				<table className="table table-bordered">
