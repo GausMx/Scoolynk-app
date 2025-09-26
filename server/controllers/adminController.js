@@ -18,8 +18,11 @@ export const bulkRegisterParents = async (req, res) => {
       if (!user.email) missing.push('email');
       if (!user.phone) missing.push('phone');
       if (!user.role) missing.push('role');
-      if (user.role === 'parent' && (!user.children || !Array.isArray(user.children) || user.children.length === 0)) {
-        missing.push('children');
+      // Accept childrenNamesAndClasses as the required field for parents
+      if (user.role === 'parent') {
+        if (!user.children || !Array.isArray(user.children) || user.children.length === 0) {
+          missing.push('childrenNamesAndClasses');
+        }
       }
       if (user.role === 'teacher' && (!user.classes || !Array.isArray(user.classes) || user.classes.length === 0)) {
         missing.push('classes');
