@@ -34,7 +34,7 @@ const BulkUpload = () => {
 
           // Support both parent and teacher uploads
           const isTeacherUpload = headers.includes('courses') || headers.includes('classes');
-          const requiredParentHeaders = ['name', 'email', 'phone', 'childrenNames'];
+          const requiredParentHeaders = ['name', 'email', 'phone', 'childrenNamesAndClasses'];
           const requiredTeacherHeaders = ['name', 'email', 'phone', 'courses', 'classes'];
           const missing = isTeacherUpload
             ? requiredTeacherHeaders.filter(h => !headers.includes(h))
@@ -50,8 +50,13 @@ const BulkUpload = () => {
           const extractedData = rows.map(row => {
             const rowData = {};
             headers.forEach((header, index) => {
-              if (header === 'childrenNames') {
-                rowData.children = (row[index] || '').split(',').map(c => c.trim()).filter(Boolean);
+              if (header === 'childrenNamesAndClasses') {
+                // Parse format: "Child Name - Class Name, Child2 Name - Class2 Name"
+                rowData.children = (row[index] || '').split(',').map(c => {
+                  const [name, className] = c.split('-').map(s => s.trim());
+                  if (name && className) return { name, className };
+                  return null;
+                }).filter(Boolean);
               } else if (header === 'courses') {
                 rowData.courses = (row[index] || '').split(',').map(c => c.trim()).filter(Boolean);
               } else if (header === 'classes') {
@@ -90,7 +95,7 @@ const BulkUpload = () => {
     try {
       // Remove childrenNames/courses/classes from payload, use arrays
       const uploadData = parsedData.map(row => {
-        const { childrenNames, courses, classes, ...rest } = row;
+        const { childrenNamesAndClasses, courses, classes, ...rest } = row;
         return {
           ...rest,
           ...(row.children ? { children: row.children } : {}),
