@@ -52,11 +52,16 @@ const BulkUpload = () => {
             headers.forEach((header, index) => {
               if (header === 'childrenNamesAndClasses') {
                 // Parse format: "Child Name - Class Name, Child2 Name - Class2 Name"
-                rowData.children = (row[index] || '').split(',').map(c => {
+                const childrenArr = (row[index] || '').split(',').map(c => {
                   const [name, className] = c.split('-').map(s => s.trim());
-                  if (name && className) return { name, className };
-                  return null;
+                  if (!name || !className) return null;
+                  return { name, className };
                 }).filter(Boolean);
+                // If any child is null, show error and skip this row
+                if ((row[index] || '').trim() && childrenArr.length !== (row[index] || '').split(',').filter(Boolean).length) {
+                  throw new Error('Invalid format in childrenNamesAndClasses. Use "Child Name - Class Name" for each child, separated by commas.');
+                }
+                rowData.children = childrenArr;
               } else if (header === 'courses') {
                 rowData.courses = (row[index] || '').split(',').map(c => c.trim()).filter(Boolean);
               } else if (header === 'classes') {
@@ -73,9 +78,10 @@ const BulkUpload = () => {
 
         } catch (error) {
           setMessage({
-            text: 'Error parsing file. Please ensure it is a valid Excel/CSV.',
+            text: error.message || 'Error parsing file. Please ensure it is a valid Excel/CSV.',
             type: 'alert-danger',
           });
+          setParsedData([]);
           console.error(error);
         }
       };
