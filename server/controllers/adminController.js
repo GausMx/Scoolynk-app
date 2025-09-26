@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
+import { sendTempPasswordEmail } from '../utils/email.js';
 // Bulk register parents and children from Excel/CSV upload
 export const bulkRegisterParents = async (req, res) => {
   try {
@@ -46,8 +47,12 @@ export const bulkRegisterParents = async (req, res) => {
           schoolId,
           mustChangePassword: true,
         });
-        // Log SMS/WhatsApp notification placeholder
-        console.log(`[BulkRegister] Send to ${user.phone}: Your account has been created. Email: ${user.email}, Temp Password: ${tempPassword}`);
+        // Send temp password to user's email
+        try {
+          await sendTempPasswordEmail(user.email, tempPassword);
+        } catch (emailErr) {
+          console.error(`Failed to send temp password email to ${user.email}:`, emailErr);
+        }
       }
       // Parent: create children (now requires className for each child)
       if (user.role === 'parent' && Array.isArray(user.children)) {
