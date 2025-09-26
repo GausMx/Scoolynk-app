@@ -182,7 +182,11 @@ const BulkUpload = () => {
                     ))}
                     <td>
                       {Array.isArray(row.children)
-                        ? row.children.map((child, idx) => <span key={idx} className="badge bg-secondary me-1">{child}</span>)
+                        ? row.children.map((child, idx) =>
+                            child && typeof child === 'object'
+                              ? <span key={idx} className="badge bg-secondary me-1">{child.name} ({child.className})</span>
+                              : <span key={idx} className="badge bg-secondary me-1">{String(child)}</span>
+                          )
                         : ''}
                     </td>
                   </tr>
