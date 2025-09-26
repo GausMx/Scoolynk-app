@@ -46,14 +46,29 @@ export const bulkRegisterParents = async (req, res) => {
         // Log SMS/WhatsApp notification placeholder
         console.log(`[BulkRegister] Send to ${user.phone}: Your account has been created. Email: ${user.email}, Temp Password: ${tempPassword}`);
       }
-      // Parent: create children
+      // Parent: create children (now requires className for each child)
       if (user.role === 'parent' && Array.isArray(user.children)) {
-        for (const childName of user.children) {
-          if (!childName) continue;
+        for (const childObj of user.children) {
+          // Support both ["childName"] and [{ name, className }]
+          let childName, className;
+          if (typeof childObj === 'string') {
+            childName = childObj;
+            className = user.className || null; // fallback to parent's className if provided
+          } else if (typeof childObj === 'object') {
+            childName = childObj.name;
+            className = childObj.className;
+          }
+          if (!childName || !className) continue; // skip if missing
+          // Find or create class for this school
+          let dbClass = await (await import('../models/Class.js')).default.findOne({ name: className, schoolId });
+          if (!dbClass) {
+            dbClass = await (await import('../models/Class.js')).default.create({ name: className, schoolId, fee: 0 });
+          }
           let child = await (await import('../models/Student.js')).default.findOne({ name: childName, parents: dbUser._id, schoolId });
           if (!child) {
             child = await (await import('../models/Student.js')).default.create({
               name: childName,
+              classId: dbClass._id,
               schoolId,
               parents: [dbUser._id],
             });
