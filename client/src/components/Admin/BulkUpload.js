@@ -51,15 +51,19 @@ const BulkUpload = () => {
             const rowData = {};
             headers.forEach((header, index) => {
               if (header === 'childrenNamesAndClasses') {
-                // Parse format: "Child Name - Class Name, Child2 Name - Class2 Name"
+                // Parse format: "Child Name - Class Name - RegNo, Child2 Name - Class2 Name - RegNo2"
                 const childrenArr = (row[index] || '').split(',').map(c => {
-                  const [name, className] = c.split('-').map(s => s.trim());
+                  const parts = c.split('-').map(s => s.trim());
+                  if (parts.length < 2) return null;
+                  const [name, className, regNo] = parts;
                   if (!name || !className) return null;
-                  return { name, className };
+                  const childObj = { name, className };
+                  if (regNo) childObj.regNo = regNo;
+                  return childObj;
                 }).filter(Boolean);
                 // If any child is null, show error and skip this row
                 if ((row[index] || '').trim() && childrenArr.length !== (row[index] || '').split(',').filter(Boolean).length) {
-                  throw new Error('Invalid format in childrenNamesAndClasses. Use "Child Name - Class Name" for each child, separated by commas.');
+                  throw new Error('Invalid format in childrenNamesAndClasses. Use "Child Name - Class Name - RegNo" for each child, separated by commas. RegNo is optional.');
                 }
                 rowData.children = childrenArr;
               } else if (header === 'courses') {
@@ -184,7 +188,7 @@ const BulkUpload = () => {
                       {Array.isArray(row.children)
                         ? row.children.map((child, idx) =>
                             child && typeof child === 'object'
-                              ? <span key={idx} className="badge bg-secondary me-1">{child.name} ({child.className})</span>
+                              ? <span key={idx} className="badge bg-secondary me-1">{child.name} ({child.className}{child.regNo ? ` - ${child.regNo}` : ''})</span>
                               : <span key={idx} className="badge bg-secondary me-1">{String(child)}</span>
                           )
                         : ''}
