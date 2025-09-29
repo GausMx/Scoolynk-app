@@ -7,7 +7,7 @@ const studentSchema = new mongoose.Schema({
   classId: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
   schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
   parents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  regNo: { type: String, unique: true },
+  regNo: { type: String, unique: true, required: true },
 });
 
 const Student = mongoose.model('Student', studentSchema);

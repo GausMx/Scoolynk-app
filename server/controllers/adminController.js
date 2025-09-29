@@ -57,14 +57,15 @@ export const bulkRegisterParents = async (req, res) => {
       // Parent: create children (now requires className for each child)
       if (user.role === 'parent' && Array.isArray(user.children)) {
         for (const childObj of user.children) {
-          // Support both ["childName"] and [{ name, className }]
-          let childName, className;
+          // Support both ["childName"] and [{ name, className, regNo }]
+          let childName, className, regNo;
           if (typeof childObj === 'string') {
             childName = childObj;
             className = user.className || null; // fallback to parent's className if provided
           } else if (typeof childObj === 'object') {
             childName = childObj.name;
             className = childObj.className;
+            regNo = childObj.regNo;
           }
           if (!childName || !className) continue; // skip if missing
           // Find or create class for this school
@@ -74,12 +75,14 @@ export const bulkRegisterParents = async (req, res) => {
           }
           let child = await (await import('../models/Student.js')).default.findOne({ name: childName, parents: dbUser._id, schoolId });
           if (!child) {
-            child = await (await import('../models/Student.js')).default.create({
+            const studentData = {
               name: childName,
               classId: dbClass._id,
               schoolId,
               parents: [dbUser._id],
-            });
+            };
+            if (regNo) studentData.regNo = regNo;
+            child = await (await import('../models/Student.js')).default.create(studentData);
             dbUser.children.push(child._id);
           }
         }
