@@ -1,3 +1,4 @@
+import User from '../models/User.js';
 // Get parent dashboard: children, results, fees, notifications
 export const getParentDashboard = async (req, res) => {
   try {
