@@ -1,6 +1,4 @@
-import { getParentDashboard } from '../controllers/parentController.js';
 
-// Dashboard route: GET /parent/children
 import express from 'express';
 import protect from '../middleware/authMiddleware.js';
 import requireRole from '../middleware/roleMiddleware.js';
