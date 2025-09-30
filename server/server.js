@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import parentRoutes from './routes/parentRoutes.js';
+import teacherRoutes from './routes/teacherRoutes.js';
 import connectDB from './config/db.js';
 import protect from './middleware/authMiddleware.js';
 import subscriptionGuard from './middleware/subscriptionMiddleware.js';
@@ -54,9 +56,11 @@ app.get('/', (req, res) => {
 });
 
 // Mount authentication routes
-app.use('/api/auth', authRoutes);
 
+app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/parent', parentRoutes);
+app.use('/api/teacher', teacherRoutes);
 
 // Example of protected routes using a combination of middleware
 app.get('/api/admin', protect, subscriptionGuard, requireRole('admin'), getAdminDashboard);
