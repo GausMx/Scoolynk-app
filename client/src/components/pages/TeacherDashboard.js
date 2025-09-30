@@ -12,7 +12,7 @@ const TeacherDashboard = () => {
 	useEffect(() => {
 		const fetchClasses = async () => {
 			try {
-				const res = await API.get('/teacher/classes');
+				const res = await API.get('/api/teacher/classes');
 				setClasses(res.data.classes || []);
 			} catch (err) {
 				setError('Failed to load classes.');
@@ -27,7 +27,7 @@ const TeacherDashboard = () => {
 			setLoading(true);
 			setError('');
 			try {
-				const res = await API.get(`/teacher/students?classId=${classId}`);
+				const res = await API.get(`/api/teacher/students?classId=${classId}`);
 				setStudents(res.data.students || []);
 			} catch (err) {
 				setError(err.response?.data?.message || 'Failed to load students.');

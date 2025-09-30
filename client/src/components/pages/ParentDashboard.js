@@ -11,7 +11,7 @@ const ParentDashboard = () => {
 		const fetchData = async () => {
 			try {
 				// Fetch all children for the logged-in parent
-				const res = await API.get('/parent/children');
+				const res = await API.get('/api/parent/children');
 				setChildren(res.data.children || []);
 				setNotifications(res.data.notifications || []);
 			} catch (err) {
