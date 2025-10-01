@@ -69,24 +69,6 @@ app.get('/api/admin', protect, subscriptionGuard, requireRole('admin'), getAdmin
 app.post('/test', (req, res) => {
   res.json({ message: 'Test route working!' });
 });
-app.post('/api/create-deployed-user', async (req, res) => {
-  try {
-    const { name, email, password, role, schoolId } = req.body;
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return res.status(400).json({ message: 'User already exists' });
-
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    const user = new User({ name, email, passwordHash, role, schoolId });
-    await user.save();
-
-    res.json({ message: 'Deployed user created', user: { email, role } });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
