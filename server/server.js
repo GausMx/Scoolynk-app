@@ -14,6 +14,10 @@ import requireRole from './middleware/roleMiddleware.js';
 import { getAdminDashboard } from './controllers/adminController.js';
 import bcrypt from 'bcrypt';
 import User from './models/User.js';
+import testEmailRoutes from "./routes/testEmail.js";
+
+
+
 // Load environment variables
 dotenv.config();
 
@@ -61,7 +65,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/parent', parentRoutes);
 app.use('/api/teacher', teacherRoutes);
-
+app.use("/api/test", testEmailRoutes);
 // Example of protected routes using a combination of middleware
 app.get('/api/admin', protect, subscriptionGuard, requireRole('admin'), getAdminDashboard);
 
