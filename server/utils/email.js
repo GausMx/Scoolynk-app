@@ -1,48 +1,38 @@
-import nodemailer from 'nodemailer';
+import SibApiV3Sdk from 'sib-api-v3-sdk';
 import dotenv from 'dotenv';
-// Ensure dotenv runs immediately to load variables
-dotenv.config(); 
+dotenv.config();
 
-// Check if credentials exist before creating the transporter
-if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
-    console.error("!!! FATAL: GMAIL_USER or GMAIL_PASS is missing in environment variables. Email will not be sent. !!!");
-    // Create a dummy object to prevent app crash if credentials are missing
-    var transporter = {
-      sendMail: async (mailOptions) => {
-        console.log(`[DUMMY EMAIL] Skipping sending email to ${mailOptions.to}. Credentials missing.`);
-        return { response: '250 OK (DUMMY)' };
-      }
-    };
-} else {
-    // Create a reusable transporter using Gmail SMTP
-    var transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.GMAIL_USER, // Your Gmail address
-        pass: process.env.GMAIL_PASS, // App password
-      },
-    });
-}
+const defaultClient = SibApiV3Sdk.ApiClient.instance;
 
+// Configure API key
+const apiKey = defaultClient.authentications['api-key'];
+apiKey.apiKey = process.env.BREVO_API_KEY;
+
+const tranEmailApi = new SibApiV3Sdk.TransactionalEmailsApi();
 
 /**
- * Send a temporary password email to a user
+ * Send a temporary password email to a user using Brevo API
  * @param {string} to - Recipient's email address
  * @param {string} tempPassword - The temporary password to send
  */
 export async function sendTempPasswordEmail(to, tempPassword) {
-  const mailOptions = {
-    from: process.env.GMAIL_USER,
-    to,
-    subject: 'Your Temporary Password for Scoolynk',
-    text: `Welcome to Scoolynk!\n\nYour account has been created.\n\nTemporary Password: ${tempPassword}\n\nPlease log in and change your password immediately.`,
-  };
-
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`Email sent successfully to: ${to}`);
-  } catch (error) {
-    // This is the critical log. Check your console for this specific message!
-    console.error(`Error sending email to ${to}:`, error.message);
+    const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail({
+      to: [{ email: to }],
+      sender: { email: 'lawalgaus7@gmail.com', name: 'Scoolynk' },
+      subject: 'Your Temporary Password for Scoolynk',
+      htmlContent: `
+        <h3>Welcome to Scoolynk!</h3>
+        <p>Your account has been created.</p>
+        <p><strong>Temporary Password:</strong> ${tempPassword}</p>
+        <p>Please log in and change your password immediately.</p>
+      `
+    });
+
+    await tranEmailApi.sendTransacEmail(sendSmtpEmail);
+    console.log(`Temporary password email sent to ${to}`);
+  } catch (err) {
+    console.error(`Failed to send temp password email to ${to}:`, err);
+    throw err;
   }
 }
