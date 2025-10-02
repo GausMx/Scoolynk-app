@@ -65,7 +65,7 @@ const register = async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { name, email, phone, password, role, schoolName } = req.body;
+  const { name, email, phone, password, role, schoolName, schoolCode, children, classes, courses } = req.body;
   const normalizedEmail = email.toLowerCase();
 
   try {
@@ -75,46 +75,63 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'Email or phone number already registered.' });
     }
 
+
     let school;
     let schoolId;
 
-    // Logic for multi-tenancy: admin registration creates a new school
     if (role === 'admin') {
       if (!schoolName) {
         return res.status(400).json({ message: 'Admin registration requires a school name.' });
       }
-      // Password is hashed with a salt of 10 for strong security.
       const passwordHash = await User.hashPassword(password);
-      
       const tempUser = await User.create({
         name,
         email: normalizedEmail,
         phone,
         passwordHash,
         role,
-        // The schoolId will be set after the school is created
-        schoolId: new mongoose.Types.ObjectId(), 
+        schoolId: new mongoose.Types.ObjectId(),
         trialStartDate: new Date(),
       });
-
-      // Create a new school document linked to the new admin user
       school = await School.create({
         name: schoolName,
         adminUserId: tempUser._id,
       });
-
-      // Update the user with the new schoolId
       tempUser.schoolId = school._id;
       await tempUser.save();
-      
       schoolId = school._id;
-
+    } else if (role === 'teacher' || role === 'parent') {
+      if (!schoolCode || schoolCode.length !== 16) {
+        return res.status(400).json({ message: 'A valid 16-digit school code is required.' });
+      }
+      school = await School.findOne({ schoolCode });
+      if (!school) {
+        return res.status(400).json({ message: 'Invalid school code.' });
+      }
+      schoolId = school._id;
+      // Validate required fields for teacher/parent
+      if (!name || !email || !phone || !password) {
+        return res.status(400).json({ message: 'All fields are required.' });
+      }
+      if (role === 'teacher') {
+        // Optionally require classes/courses
+      }
+      if (role === 'parent') {
+        // Optionally require children
+      }
+      const passwordHash = await User.hashPassword(password);
+      await User.create({
+        name,
+        email: normalizedEmail,
+        phone,
+        passwordHash,
+        role,
+        schoolId,
+        ...(role === 'teacher' ? { classes, courses } : {}),
+        ...(role === 'parent' ? { children } : {}),
+      });
     } else {
-      // Future-proofing: For other roles (teacher, parent),
-      // their registration would likely be managed by an admin,
-      // and they would be passed a schoolId or similar.
-      // For now, we will require schoolId in the request body.
-      return res.status(400).json({ message: 'Only admin can self-register at this time. Future registration for other roles will be via admin invitation.' });
+      return res.status(400).json({ message: 'Invalid role.' });
     }
 
     // After creation, find the user to return
