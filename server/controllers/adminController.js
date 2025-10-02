@@ -1,11 +1,12 @@
-// server/controllers/adminController.js
-
 import bcrypt from 'bcrypt';
 import User from '../models/User.js';
 import Student from '../models/Student.js';
 import Class from '../models/Class.js';
+import Result from '../models/Result.js';
 
+// -------------------------
 // Bulk register users
+// -------------------------
 export const bulkRegisterUsers = async (req, res) => {
   try {
     const { users, schoolId } = req.body;
@@ -36,7 +37,9 @@ export const bulkRegisterUsers = async (req, res) => {
           });
         }
 
+        // -------------------------
         // Parent logic: handle children
+        // -------------------------
         if (user.role === 'parent' && Array.isArray(user.children)) {
           for (const childObj of user.children) {
             let childName, className, regNo;
@@ -67,7 +70,9 @@ export const bulkRegisterUsers = async (req, res) => {
           }
         }
 
+        // -------------------------
         // Teacher logic: handle classes and courses
+        // -------------------------
         if (user.role === 'teacher') {
           if (Array.isArray(user.classes)) {
             dbUser.classes = [];
@@ -108,26 +113,83 @@ export const bulkRegisterUsers = async (req, res) => {
   }
 };
 
-// Simple placeholder implementations for other admin functions
+// -------------------------
+// Get all submitted results for admin's school
+// -------------------------
 export const getSubmittedResults = async (req, res) => {
-  res.json({ message: 'getSubmittedResults placeholder' });
+  try {
+    const schoolId = req.user.schoolId;
+    const results = await Result.find({ status: 'submitted' })
+      .populate({
+        path: 'student',
+        match: { schoolId },
+        populate: { path: 'classId', select: 'name' }
+      })
+      .populate('teacher', 'name');
+
+    res.json({ results: results.filter(r => r.student) });
+  } catch (err) {
+    console.error('[AdminGetResults]', err);
+    res.status(500).json({ message: 'Failed to fetch results.' });
+  }
 };
 
+// -------------------------
+// Verify or reject a result
+// -------------------------
 export const reviewResult = async (req, res) => {
-  res.json({ message: 'reviewResult placeholder' });
+  try {
+    const { resultId, action } = req.body; // action: 'verify' or 'reject'
+    const result = await Result.findById(resultId).populate('student');
+    if (!result) return res.status(404).json({ message: 'Result not found.' });
+    if (String(result.student.schoolId) !== String(req.user.schoolId)) {
+      return res.status(403).json({ message: 'Not authorized for this school.' });
+    }
+    result.status = action === 'verify' ? 'verified' : 'rejected';
+    await result.save();
+    res.json({ message: `Result ${action}ed.` });
+  } catch (err) {
+    console.error('[AdminReviewResult]', err);
+    res.status(500).json({ message: 'Failed to review result.' });
+  }
 };
 
-// Properly export broadcastNotification to fix the deploy error
+// -------------------------
+// Broadcast notification to all users in school
+// -------------------------
 export const broadcastNotification = async (req, res) => {
   try {
     const { message } = req.body;
-    const users = await User.find({ schoolId: req.user.schoolId });
+    const schoolId = req.user.schoolId;
+    const users = await User.find({ schoolId });
+
     users.forEach(u => {
       console.log(`[Broadcast] To: ${u.email} | Message: ${message}`);
     });
+
     res.json({ message: 'Notification broadcasted.' });
   } catch (err) {
-    console.error('[BroadcastNotification]', err);
+    console.error('[AdminBroadcast]', err);
     res.status(500).json({ message: 'Failed to broadcast notification.' });
   }
+};
+
+// -------------------------
+// Admin dashboard
+// -------------------------
+export const getAdminDashboard = (req, res) => {
+  res.json({
+    message: `Welcome to the Admin Dashboard, ${req.user.name}. Your school ID is ${req.user.schoolId}.`
+  });
+};
+
+// -------------------------
+// Export all functions
+// -------------------------
+export {
+  bulkRegisterUsers,
+  getSubmittedResults,
+  reviewResult,
+  broadcastNotification,
+  getAdminDashboard
 };
