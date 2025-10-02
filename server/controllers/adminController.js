@@ -107,3 +107,27 @@ export const bulkRegisterUsers = async (req, res) => {
     res.status(500).json({ message: 'Bulk registration failed.', error: err.message });
   }
 };
+
+// Simple placeholder implementations for other admin functions
+export const getSubmittedResults = async (req, res) => {
+  res.json({ message: 'getSubmittedResults placeholder' });
+};
+
+export const reviewResult = async (req, res) => {
+  res.json({ message: 'reviewResult placeholder' });
+};
+
+// Properly export broadcastNotification to fix the deploy error
+export const broadcastNotification = async (req, res) => {
+  try {
+    const { message } = req.body;
+    const users = await User.find({ schoolId: req.user.schoolId });
+    users.forEach(u => {
+      console.log(`[Broadcast] To: ${u.email} | Message: ${message}`);
+    });
+    res.json({ message: 'Notification broadcasted.' });
+  } catch (err) {
+    console.error('[BroadcastNotification]', err);
+    res.status(500).json({ message: 'Failed to broadcast notification.' });
+  }
+};

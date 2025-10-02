@@ -1,12 +1,12 @@
 import express from 'express';
 import protect from '../middleware/authMiddleware.js';
 import requireRole from '../middleware/roleMiddleware.js';
-import { getSubmittedResults, reviewResult, broadcastNotification, bulkRegisterParents } from '../controllers/adminController.js';
+import { bulkRegisterUsers, getSubmittedResults, reviewResult, broadcastNotification } from '../controllers/adminController.js';
 
 const router = express.Router();
 
-// Bulk register parents
-router.post('/bulk-register', protect, requireRole('admin'), bulkRegisterParents);
+// Bulk register users
+router.post('/bulk-register', protect, requireRole('admin'), bulkRegisterUsers);
 
 // Review submitted results
 router.get('/results', protect, requireRole('admin'), getSubmittedResults);
