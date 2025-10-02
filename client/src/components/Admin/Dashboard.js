@@ -1,7 +1,6 @@
 // src/components/Admin/Dashboard.js
 
 import React, { useState, useEffect } from 'react';
-import BulkUpload from './BulkUpload';
 import ReviewResults from './ReviewResults';
 import Broadcast from './Broadcast';
 const Dashboard = () => {
@@ -32,7 +31,6 @@ const Dashboard = () => {
               This is your administrator dashboard. Manage users, classes, results, and notifications here.
             </p>
             <hr className="my-4" />
-            <BulkUpload />
             <ReviewResults />
             <Broadcast />
           </div>

@@ -14,15 +14,19 @@ const RegisterForm = () => {
     email: '',
     phone: '',
     password: '',
-    schoolName: '',
-    role: 'admin',
+    schoolName: '', // Only for admin
+    schoolCode: '', // Only for teacher/parent
+    role: '',
+    children: '', // For parent (optional, comma-separated)
+    classes: '', // For teacher (optional, comma-separated)
+    courses: '', // For teacher (optional, comma-separated)
   });
   const [message, setMessage] = useState('');
   const [adminExists, setAdminExists] = useState(false);
 
-  // Check if an admin already exists for the entered school name
+  // Check if an admin already exists for the entered school name (only for admin role)
   useEffect(() => {
-    if (!formData.schoolName) {
+    if (formData.role !== 'admin' || !formData.schoolName) {
       setAdminExists(false);
       return;
     }
@@ -37,7 +41,7 @@ const RegisterForm = () => {
         .catch(() => setAdminExists(false));
     }, 500);
     return () => clearTimeout(checkAdmin);
-  }, [formData.schoolName]);
+  }, [formData.schoolName, formData.role]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -47,29 +51,39 @@ const RegisterForm = () => {
     e.preventDefault();
     setMessage('');
     try {
-    // The API instance automatically attaches the base URL
-    await API.post('/api/auth/register', formData);
+      // Prepare payload
+      const payload = { ...formData };
+      if (formData.role === 'teacher') {
+        payload.classes = formData.classes ? formData.classes.split(',').map(s => s.trim()) : [];
+        payload.courses = formData.courses ? formData.courses.split(',').map(s => s.trim()) : [];
+      }
+      if (formData.role === 'parent') {
+        payload.children = formData.children ? formData.children.split(',').map(s => s.trim()) : [];
+      }
+      await API.post('/api/auth/register', payload);
       setMessage('Registration successful! Redirecting to login...');
       setTimeout(() => {
         navigate('/login');
       }, 1500);
-      // Reset the form after successful registration
       setFormData({
         name: '',
         email: '',
         phone: '',
         password: '',
         schoolName: '',
-        role: 'admin',
+        schoolCode: '',
+        role: '',
+        children: '',
+        classes: '',
+        courses: '',
       });
     } catch (error) {
-      // Display the error message from the backend
       setMessage(error.response?.data?.message || 'Something went wrong.');
     }
   };
 
   // If admin exists for this school, block registration and show message
-  if (adminExists) {
+  if (formData.role === 'admin' && adminExists) {
     return (
       <div className="container mt-5">
         <div className="row justify-content-center">
@@ -100,6 +114,21 @@ const RegisterForm = () => {
                 </div>
               )}
               <form onSubmit={handleSubmit}>
+                <div className="mb-3">
+                  <label className="form-label">Role</label>
+                  <select
+                    className="form-select rounded-3"
+                    name="role"
+                    value={formData.role}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="">Select role</option>
+                    <option value="admin">Admin</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="parent">Parent</option>
+                  </select>
+                </div>
                 <div className="mb-3">
                   <label className="form-label">Name</label>
                   <input
@@ -144,19 +173,74 @@ const RegisterForm = () => {
                     required
                   />
                 </div>
-                <div className="mb-3">
-                  <label className="form-label">School Name</label>
-                  <input
-                    type="text"
-                    className="form-control rounded-3"
-                    name="schoolName"
-                    value={formData.schoolName}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                {/* Only admin registration allowed */}
-                <input type="hidden" name="role" value="admin" />
+                {formData.role === 'admin' && (
+                  <div className="mb-3">
+                    <label className="form-label">School Name</label>
+                    <input
+                      type="text"
+                      className="form-control rounded-3"
+                      name="schoolName"
+                      value={formData.schoolName}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                )}
+                {(formData.role === 'teacher' || formData.role === 'parent') && (
+                  <div className="mb-3">
+                    <label className="form-label">School Code</label>
+                    <input
+                      type="text"
+                      className="form-control rounded-3"
+                      name="schoolCode"
+                      value={formData.schoolCode}
+                      onChange={handleChange}
+                      required
+                      minLength={16}
+                      maxLength={16}
+                      placeholder="Enter 16-digit school code"
+                    />
+                  </div>
+                )}
+                {formData.role === 'teacher' && (
+                  <>
+                    <div className="mb-3">
+                      <label className="form-label">Classes (comma separated)</label>
+                      <input
+                        type="text"
+                        className="form-control rounded-3"
+                        name="classes"
+                        value={formData.classes}
+                        onChange={handleChange}
+                        placeholder="e.g. JSS1A, JSS2B"
+                      />
+                    </div>
+                    <div className="mb-3">
+                      <label className="form-label">Courses (comma separated)</label>
+                      <input
+                        type="text"
+                        className="form-control rounded-3"
+                        name="courses"
+                        value={formData.courses}
+                        onChange={handleChange}
+                        placeholder="e.g. Math, English"
+                      />
+                    </div>
+                  </>
+                )}
+                {formData.role === 'parent' && (
+                  <div className="mb-3">
+                    <label className="form-label">Children (comma separated names)</label>
+                    <input
+                      type="text"
+                      className="form-control rounded-3"
+                      name="children"
+                      value={formData.children}
+                      onChange={handleChange}
+                      placeholder="e.g. John Doe, Jane Doe"
+                    />
+                  </div>
+                )}
                 <div className="d-grid gap-2">
                   <button type="submit" className="btn btn-primary rounded-3 shadow-sm">
                     Register
