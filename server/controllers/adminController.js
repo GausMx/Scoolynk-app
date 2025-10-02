@@ -186,10 +186,3 @@ export const getAdminDashboard = (req, res) => {
 // -------------------------
 // Export all functions
 // -------------------------
-export {
-  bulkRegisterUsers,
-  getSubmittedResults,
-  reviewResult,
-  broadcastNotification,
-  getAdminDashboard
-};
