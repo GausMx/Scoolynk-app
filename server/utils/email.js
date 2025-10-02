@@ -19,7 +19,7 @@ export async function sendTempPasswordEmail(to, tempPassword) {
   try {
     const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail({
       to: [{ email: to }],
-      sender: { email: 'lawalgaus7@gmail.com', name: 'Scoolynk' },
+      sender: { email: 'scoolynkapp@gmail.com', name: 'Scoolynk' },
       subject: 'Your Temporary Password for Scoolynk',
       htmlContent: `
         <h3>Welcome to Scoolynk!</h3>

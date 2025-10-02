@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.get('/send-test-email', async (req, res) => {
   try {
-    await sendTempPasswordEmail('scoolynk@gmail.com', 'Temp1234');
+    await sendTempPasswordEmail('lawalgaus7@gmail.com', 'Temp1234');
     res.send('Test email sent');
   } catch (err) {
     res.status(500).send('Failed to send test email');
