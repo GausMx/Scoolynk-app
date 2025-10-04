@@ -20,7 +20,6 @@ const ProtectedRoute = ({ children, roles }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // If user must change password, force redirect to reset-password
   if (user.mustChangePassword) {
     return <Navigate to="/reset-password" replace />;
   }
@@ -32,40 +31,39 @@ const ProtectedRoute = ({ children, roles }) => {
   return children;
 };
 
-// Temporary placeholders
-const LandingPagePlaceholder = () => (
-  <div className="container mt-5 text-center">
-    <h1>Welcome to Scoolynk!</h1>
-    <p>Please log in or register to continue.</p>
-  </div>
-);
-
 const App = () => {
   return (
     <Router>
       <Routes>
+        {/* Auth routes */}
         <Route path="/" element={<LoginForm />} />
         <Route path="/login" element={<LoginForm />} />
         <Route path="/register" element={<RegisterForm />} />
         <Route path="/reset-password" element={<PasswordResetForm />} />
+
+        {/* Admin routes with nested pages */}
         <Route
-          path="/admin"
+          path="/admin/*"
           element={
             <ProtectedRoute roles={['admin']}>
               <AdminDashboard />
             </ProtectedRoute>
           }
         />
+
+        {/* Teacher routes */}
         <Route
-          path="/teacher"
+          path="/teacher/*"
           element={
             <ProtectedRoute roles={['teacher']}>
               <TeacherDashboard />
             </ProtectedRoute>
           }
         />
+
+        {/* Parent routes */}
         <Route
-          path="/parent"
+          path="/parent/*"
           element={
             <ProtectedRoute roles={['parent']}>
               <ParentDashboard />
