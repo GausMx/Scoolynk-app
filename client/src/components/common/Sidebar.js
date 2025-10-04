@@ -1,15 +1,12 @@
-import React, { useState } from 'react';
+// src/components/common/Sidebar.js
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import './Sidebar.css';
 
 const Sidebar = ({ user, role }) => {
-  const [isOpen, setIsOpen] = useState(true);
   const location = useLocation();
 
-  const toggleSidebar = () => setIsOpen(!isOpen);
-
   const adminLinks = [
-    { path: '/', label: 'Home' },
+    { path: '/admin', label: 'Home' },
     { path: '/admin/review-results', label: 'Review Results' },
     { path: '/admin/broadcast', label: 'Broadcast Notification' },
     { path: '/admin/settings', label: 'Settings' },
@@ -30,26 +27,48 @@ const Sidebar = ({ user, role }) => {
   const links = role === 'admin' ? adminLinks : role === 'teacher' ? teacherLinks : parentLinks;
 
   return (
-    <nav className={`sidebar ${isOpen ? 'open' : 'collapsed'}`}>
-      <button className="btn btn-sm btn-outline-primary d-md-none" onClick={toggleSidebar}>
+    <>
+      {/* Toggle button visible only on mobile */}
+      <button
+        className="btn btn-dark d-md-none mb-3"
+        type="button"
+        data-bs-toggle="offcanvas"
+        data-bs-target="#sidebarOffcanvas"
+        aria-controls="sidebarOffcanvas"
+      >
         ☰
       </button>
-      <ul className="nav flex-column">
-        {links.map(link => (
-          <li key={link.path} className="nav-item">
-            <Link
-              className={`nav-link ${location.pathname === link.path ? 'active' : ''}`}
-              to={link.path}
-            >
-              {link.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-      <div className="sidebar-footer mt-auto p-3">
-        {role === 'admin' ? <small>{user?.schoolName}</small> : <small>{user?.name}</small>}
+
+      {/* Sidebar Offcanvas */}
+      <div
+        className="offcanvas offcanvas-start bg-dark text-white d-md-flex flex-column flex-shrink-0 p-3"
+        tabIndex="-1"
+        id="sidebarOffcanvas"
+        aria-labelledby="sidebarLabel"
+        style={{ width: '250px' }}
+      >
+        <h5 className="offcanvas-title mb-3" id="sidebarLabel">
+          {role === 'admin' ? user?.schoolName : user?.name}
+        </h5>
+        <hr />
+        <ul className="nav nav-pills flex-column mb-auto">
+          {links.map((link) => (
+            <li className="nav-item" key={link.path}>
+              <Link
+                to={link.path}
+                className={`nav-link ${location.pathname === link.path ? 'active text-white' : 'text-white'}`}
+                data-bs-dismiss="offcanvas" // closes sidebar on mobile after click
+              >
+                {link.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-auto">
+          <small>{role === 'admin' ? user?.schoolName : user?.name}</small>
+        </div>
       </div>
-    </nav>
+    </>
   );
 };
 
