@@ -1,117 +1,7 @@
 import bcrypt from 'bcrypt';
 import User from '../models/User.js';
-import Student from '../models/Student.js';
-import Class from '../models/Class.js';
+import School from '../models/School.js'; // assuming you have a School model
 import Result from '../models/Result.js';
-
-// -------------------------
-// Bulk register users
-// -------------------------
-export const bulkRegisterUsers = async (req, res) => {
-  try {
-    const { users, schoolId } = req.body;
-    if (!Array.isArray(users) || users.length === 0) {
-      return res.status(400).json({ message: 'No users provided.' });
-    }
-
-    const createdUsers = [];
-    const errors = [];
-
-    for (const user of users) {
-      try {
-        if (!user.email || !user.role || !user.password) {
-          errors.push({ user, message: 'Missing email, role, or password.' });
-          continue;
-        }
-
-        const hashedPassword = await bcrypt.hash(user.password, 10);
-
-        let dbUser = await User.findOne({ email: user.email });
-        if (!dbUser) {
-          dbUser = await User.create({
-            name: user.name || user.email.split('@')[0],
-            email: user.email,
-            password: hashedPassword,
-            role: user.role,
-            schoolId,
-          });
-        }
-
-        // -------------------------
-        // Parent logic: handle children
-        // -------------------------
-        if (user.role === 'parent' && Array.isArray(user.children)) {
-          for (const childObj of user.children) {
-            let childName, className, regNo;
-
-            if (typeof childObj === 'string') {
-              childName = childObj;
-              className = user.className || null;
-            } else if (typeof childObj === 'object') {
-              childName = childObj.name;
-              className = childObj.className;
-              regNo = childObj.regNo;
-            }
-
-            if (!childName || !className) continue;
-
-            let dbClass = await Class.findOne({ name: className, schoolId });
-            if (!dbClass) {
-              dbClass = await Class.create({ name: className, schoolId, fee: 0 });
-            }
-
-            let child = await Student.findOne({ name: childName, parents: dbUser._id, schoolId });
-            if (!child) {
-              const studentData = { name: childName, classId: dbClass._id, schoolId, parents: [dbUser._id] };
-              if (regNo) studentData.regNo = regNo;
-              child = await Student.create(studentData);
-              dbUser.children.push(child._id);
-            }
-          }
-        }
-
-        // -------------------------
-        // Teacher logic: handle classes and courses
-        // -------------------------
-        if (user.role === 'teacher') {
-          if (Array.isArray(user.classes)) {
-            dbUser.classes = [];
-            for (const className of user.classes) {
-              if (!className) continue;
-              let dbClass = await Class.findOne({ name: className, schoolId });
-              if (!dbClass) dbClass = await Class.create({ name: className, schoolId, fee: 0 });
-
-              if (!dbClass.teachers.includes(dbUser._id)) {
-                dbClass.teachers.push(dbUser._id);
-                await dbClass.save();
-              }
-
-              dbUser.classes.push(dbClass._id);
-            }
-          }
-
-          if (Array.isArray(user.courses)) {
-            dbUser.courses = user.courses;
-          }
-        }
-
-        await dbUser.save();
-        createdUsers.push(dbUser.email);
-      } catch (userErr) {
-        errors.push({ user, message: userErr.message });
-      }
-    }
-
-    if (errors.length > 0) {
-      return res.status(400).json({ message: 'Some users could not be registered.', errors });
-    }
-
-    res.json({ message: `Bulk registration complete. Users created: ${createdUsers.length}`, createdUsers });
-  } catch (err) {
-    console.error('[BulkRegisterUsers]', err);
-    res.status(500).json({ message: 'Bulk registration failed.', error: err.message });
-  }
-};
 
 // -------------------------
 // Get all submitted results for admin's school
@@ -139,7 +29,7 @@ export const getSubmittedResults = async (req, res) => {
 // -------------------------
 export const reviewResult = async (req, res) => {
   try {
-    const { resultId, action } = req.body; // action: 'verify' or 'reject'
+    const { resultId, action } = req.body;
     const result = await Result.findById(resultId).populate('student');
     if (!result) return res.status(404).json({ message: 'Result not found.' });
     if (String(result.student.schoolId) !== String(req.user.schoolId)) {
@@ -184,5 +74,35 @@ export const getAdminDashboard = (req, res) => {
 };
 
 // -------------------------
+// Update admin settings (password & school info)
+// -------------------------
+export const updateAdminSettings = async (req, res) => {
+  try {
+    const { newPassword, schoolName, schoolAddress } = req.body;
+    const adminId = req.user._id;
+
+    // Update admin password
+    if (newPassword) {
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await User.findByIdAndUpdate(adminId, { password: hashedPassword });
+    }
+
+    // Update school info
+    if (schoolName || schoolAddress) {
+      await School.findByIdAndUpdate(req.user.schoolId, {
+        ...(schoolName && { name: schoolName }),
+        ...(schoolAddress && { address: schoolAddress }),
+      });
+    }
+
+    res.json({ message: 'Settings updated successfully.' });
+  } catch (err) {
+    console.error('[UpdateAdminSettings]', err);
+    res.status(500).json({ message: 'Failed to update settings.' });
+  }
+};
+
+// -------------------------
 // Export all functions
 // -------------------------
+
