@@ -1,0 +1,11 @@
+/* src/components/common/Layout.css */
+.main-content {
+  margin-left: 250px;
+  padding: 1rem;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+  }
+}
