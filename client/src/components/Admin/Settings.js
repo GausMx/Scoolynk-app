@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { getToken } from '../utils/auth';
 import api from '../utils/api';
+import '../layout.css';
 
 const Settings = () => {
   const [password, setPassword] = useState('');
