@@ -1,7 +1,6 @@
 // src/components/Admin/ReviewResults.js
 import React, { useEffect, useState, useCallback } from 'react';
 import API from '../utils/api';
-import '../common/Layout.css';
 
 const ReviewResults = () => {
   const [results, setResults] = useState([]);
@@ -46,6 +45,7 @@ const ReviewResults = () => {
   if (loading) return <div>Loading...</div>;
 
   return (
+  <main className="container mt-5" role="main">
     <div className="card p-3 mb-4">
       <h5>Review Teacher-Submitted Results</h5>
 
@@ -108,6 +108,7 @@ const ReviewResults = () => {
         </table>
       )}
     </div>
+  </main>
   );
 };
 

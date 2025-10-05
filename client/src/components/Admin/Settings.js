@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { getToken } from '../utils/auth';
 import api from '../utils/api';
-import '../common/Layout.css';
 
 const Settings = () => {
   const [password, setPassword] = useState('');
@@ -31,6 +30,7 @@ const Settings = () => {
   };
 
   return (
+  <main className="container mt-5" role="main">
     <div className="container">
       <h2>Settings</h2>
       {message && <div className="alert alert-info">{message}</div>}
@@ -45,6 +45,7 @@ const Settings = () => {
         <button type="submit" className="btn btn-secondary">Update School</button>
       </form>
     </div>
+  </main>
   );
 };
 

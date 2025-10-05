@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import API from '../utils/api';
-import '../common/Layout.css';
 
 const Broadcast = () => {
 	const [message, setMessage] = useState('');
@@ -22,6 +21,7 @@ const Broadcast = () => {
 	};
 
 	return (
+    <main className="container mt-5" role="main">
 		<div className="card p-3 mb-4">
 			<h5>Broadcast Notification</h5>
 			{status && <div className="alert alert-info">{status}</div>}
@@ -41,6 +41,7 @@ const Broadcast = () => {
 				</button>
 			</form>
 		</div>
+	</main>
 	);
 };
 
