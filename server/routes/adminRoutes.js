@@ -4,7 +4,7 @@ import requireRole from '../middleware/roleMiddleware.js';
 import {
   getSubmittedResults,
   reviewResult,
-  //include broadCastNotification here later
+  broadcastNotification,
   getAdminSettings,
   updateAdminSettings
 } from '../controllers/adminController.js';

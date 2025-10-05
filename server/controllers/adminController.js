@@ -4,105 +4,126 @@ import School from '../models/School.js';
 import Result from '../models/Result.js';
 
 // -------------------------
-// Get admin settings (Profile, Fees, Academic, etc.)
+// Get all submitted results for admin's school
 // -------------------------
-export const getAdminSettings = async (req, res) => {
+export const getSubmittedResults = async (req, res) => {
   try {
-    const school = await School.findById(req.user.schoolId).lean();
-    const user = await User.findById(req.user._id).lean();
+    const schoolId = req.user.schoolId;
+    const results = await Result.find({ status: 'submitted' })
+      .populate({
+        path: 'student',
+        match: { schoolId },
+        populate: { path: 'classId', select: 'name' }
+      })
+      .populate('teacher', 'name');
 
-    if (!school || !user) {
-      return res.status(404).json({ message: 'School or user not found.' });
-    }
-
-    res.json({
-      schoolName: school.name,
-      schoolEmail: user.email,
-      phone: school.phone || '',
-      address: school.address || '',
-      motto: school.motto || '',
-      defaultFee: school.defaultFee || '',
-      lateFee: school.lateFee || '',
-      classes: school.classes || [],
-      subjects: school.subjects || [],
-      gradingSystem: school.gradingSystem || '',
-      termStart: school.termStart || '',
-      termEnd: school.termEnd || '',
-    });
+    res.json({ results: results.filter(r => r.student) });
   } catch (err) {
-    console.error('[GetAdminSettings]', err);
-    res.status(500).json({ message: 'Failed to fetch settings.' });
+    console.error('[AdminGetResults]', err);
+    res.status(500).json({ message: 'Failed to fetch results.' });
   }
 };
 
 // -------------------------
-// Update admin settings based on section
+// Verify or reject a result
+// -------------------------
+export const reviewResult = async (req, res) => {
+  try {
+    const { resultId, action } = req.body;
+    const result = await Result.findById(resultId).populate('student');
+    if (!result) return res.status(404).json({ message: 'Result not found.' });
+    if (String(result.student.schoolId) !== String(req.user.schoolId)) {
+      return res.status(403).json({ message: 'Not authorized for this school.' });
+    }
+    result.status = action === 'verify' ? 'verified' : 'rejected';
+    await result.save();
+    res.json({ message: `Result ${action}ed.` });
+  } catch (err) {
+    console.error('[AdminReviewResult]', err);
+    res.status(500).json({ message: 'Failed to review result.' });
+  }
+};
+
+// -------------------------
+// Broadcast notification to all users in school
+// -------------------------
+export const broadcastNotification = async (req, res) => {
+  try {
+    const { message } = req.body;
+    const schoolId = req.user.schoolId;
+    const users = await User.find({ schoolId });
+
+    users.forEach(u => {
+      console.log(`[Broadcast] To: ${u.email} | Message: ${message}`);
+    });
+
+    res.json({ message: 'Notification broadcasted.' });
+  } catch (err) {
+    console.error('[AdminBroadcast]', err);
+    res.status(500).json({ message: 'Failed to broadcast notification.' });
+  }
+};
+
+// -------------------------
+// Admin dashboard
+// -------------------------
+export const getAdminDashboard = (req, res) => {
+  res.json({
+    message: `Welcome to the Admin Dashboard, ${req.user.name}. Your school ID is ${req.user.schoolId}.`
+  });
+};
+
+// -------------------------
+// Get Admin Settings (for Settings.js page)
+// -------------------------
+export const getAdminSettings = async (req, res) => {
+  try {
+    const adminId = req.user._id;
+    const admin = await User.findById(adminId).select('-password');
+    const school = await School.findById(req.user.schoolId);
+
+    if (!admin || !school) return res.status(404).json({ message: 'Settings not found.' });
+
+    res.json({
+      admin: {
+        name: admin.name,
+        email: admin.email,
+      },
+      school: {
+        name: school.name,
+        address: school.address,
+        schoolCode: school.schoolCode,
+      },
+    });
+  } catch (err) {
+    console.error('[GetAdminSettings]', err);
+    res.status(500).json({ message: 'Failed to load settings.' });
+  }
+};
+
+// -------------------------
+// Update Admin Settings (password & school info)
 // -------------------------
 export const updateAdminSettings = async (req, res) => {
   try {
-    const { section, data } = req.body;
+    const { newPassword, schoolName, schoolAddress } = req.body;
     const adminId = req.user._id;
-    const schoolId = req.user.schoolId;
 
-    if (!section || !data) {
-      return res.status(400).json({ message: 'Invalid request payload.' });
+    // Update admin password
+    if (newPassword) {
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await User.findByIdAndUpdate(adminId, { password: hashedPassword });
     }
 
-    if (section === 'profile') {
-      const { schoolName, schoolEmail, phone, address, motto } = data;
-
-      await School.findByIdAndUpdate(schoolId, {
+    // Update school info
+    if (schoolName || schoolAddress) {
+      await School.findByIdAndUpdate(req.user.schoolId, {
         ...(schoolName && { name: schoolName }),
-        ...(phone && { phone }),
-        ...(address && { address }),
-        ...(motto && { motto }),
+        ...(schoolAddress && { address: schoolAddress }),
       });
-
-      if (schoolEmail) {
-        await User.findByIdAndUpdate(adminId, { email: schoolEmail });
-      }
-
-      return res.json({ message: 'Profile updated successfully.' });
     }
 
-    if (section === 'security') {
-      const { currentPassword, newPassword, confirmPassword } = data;
-      const user = await User.findById(adminId);
-
-      if (!user) return res.status(404).json({ message: 'User not found.' });
-      const isMatch = await bcrypt.compare(currentPassword, user.password);
-      if (!isMatch) return res.status(400).json({ message: 'Incorrect current password.' });
-      if (newPassword !== confirmPassword)
-        return res.status(400).json({ message: 'Passwords do not match.' });
-
-      const hashed = await bcrypt.hash(newPassword, 10);
-      user.password = hashed;
-      await user.save();
-      return res.json({ message: 'Password changed successfully.' });
-    }
-
-    if (section === 'fees') {
-      const { defaultFee, lateFee } = data;
-      await School.findByIdAndUpdate(schoolId, {
-        ...(defaultFee && { defaultFee }),
-        ...(lateFee && { lateFee }),
-      });
-      return res.json({ message: 'Fees updated successfully.' });
-    }
-
-    if (section === 'academic') {
-      const { classes, subjects, gradingSystem, termStart, termEnd } = data;
-      await School.findByIdAndUpdate(schoolId, {
-        ...(classes && { classes }),
-        ...(subjects && { subjects }),
-        ...(gradingSystem && { gradingSystem }),
-        ...(termStart && { termStart }),
-        ...(termEnd && { termEnd }),
-      });
-      return res.json({ message: 'Academic settings updated successfully.' });
-    }
-
-    res.status(400).json({ message: 'Invalid section provided.' });
+    res.json({ message: 'Settings updated successfully.' });
   } catch (err) {
     console.error('[UpdateAdminSettings]', err);
     res.status(500).json({ message: 'Failed to update settings.' });
