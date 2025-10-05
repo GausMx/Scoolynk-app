@@ -1,36 +1,68 @@
-// src/components/Admin/Settings.js
-
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Card, Spinner, Button, Form } from 'react-bootstrap';
 
 const Settings = () => {
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('profile');
   const [editMode, setEditMode] = useState(false);
-  const [data, setData] = useState({
-    admin: { name: '', email: '' },
-    school: { name: '', address: '', schoolCode: '' },
-  });
-  const [form, setForm] = useState({
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  // ----- Form states -----
+  const [profile, setProfile] = useState({
     schoolName: '',
-    schoolAddress: '',
-    newPassword: '',
+    schoolEmail: '',
+    phone: '',
+    address: '',
+    motto: '',
   });
 
-  // Fetch current settings
+  const [security, setSecurity] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+
+  const [fees, setFees] = useState({
+    defaultFee: '',
+    lateFee: '',
+  });
+
+  const [academic, setAcademic] = useState({
+    classes: [],
+    subjects: [],
+    gradingSystem: '',
+    termStart: '',
+    termEnd: '',
+  });
+
+  // ----- Fetch existing settings -----
   useEffect(() => {
     const fetchSettings = async () => {
       try {
+        setLoading(true);
         const token = localStorage.getItem('token');
         const res = await axios.get('/api/admin/settings', {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setData(res.data);
-        setForm({
-          schoolName: res.data.school.name || '',
-          schoolAddress: res.data.school.address || '',
-          newPassword: '',
+
+        const data = res.data;
+        setProfile({
+          schoolName: data.school?.name || '',
+          schoolEmail: data.admin?.email || '',
+          phone: data.school?.phone || '',
+          address: data.school?.address || '',
+          motto: data.school?.motto || '',
+        });
+        setFees({
+          defaultFee: data.school?.defaultFee || '',
+          lateFee: data.school?.lateFee || '',
+        });
+        setAcademic({
+          classes: data.school?.classes || [],
+          subjects: data.school?.subjects || [],
+          gradingSystem: data.school?.gradingSystem || '',
+          termStart: data.school?.termStart || '',
+          termEnd: data.school?.termEnd || '',
         });
       } catch (err) {
         console.error('Failed to fetch settings:', err);
@@ -41,130 +73,210 @@ const Settings = () => {
     fetchSettings();
   }, []);
 
-  // Handle input change
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  // ----- Handle input changes -----
+  const handleChange = (e, stateSetter) => {
+    const { name, value } = e.target;
+    stateSetter((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Submit updates
-  const handleSave = async () => {
+  // ----- Save updates -----
+  const handleSave = async (section) => {
     try {
-      setSaving(true);
+      setLoading(true);
+      setMessage('');
       const token = localStorage.getItem('token');
-      await axios.put(
+
+      let payload = {};
+      if (section === 'profile') payload = profile;
+      if (section === 'security') payload = security;
+      if (section === 'fees') payload = fees;
+      if (section === 'academic') payload = academic;
+
+      const res = await axios.put(
         '/api/admin/settings',
-        {
-          schoolName: form.schoolName,
-          schoolAddress: form.schoolAddress,
-          newPassword: form.newPassword || undefined,
-        },
+        { section, data: payload },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert('Settings updated successfully!');
+
+      setMessage(res.data.message || 'Settings updated successfully!');
       setEditMode(false);
-      // Re-fetch latest data
-      const refreshed = await axios.get('/api/admin/settings', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setData(refreshed.data);
     } catch (err) {
-      console.error(err);
-      alert('Failed to update settings.');
+      console.error('Error updating settings:', err);
+      setMessage(err.response?.data?.message || 'Failed to update settings.');
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="text-center mt-5">
-        <Spinner animation="border" />
-        <p>Loading settings...</p>
-      </div>
-    );
-  }
-
   return (
-    <main className="container mt-5 mb-5">
-      <Card className="shadow-sm p-4 rounded-3">
-        <h2 className="mb-4 text-center text-primary">School Settings</h2>
+    <div className="container mt-5">
+      <h2 className="mb-4">School Settings</h2>
+      {message && <div className="alert alert-info">{message}</div>}
 
-        {/* Admin Info */}
-        <section className="mb-4">
-          <h5 className="text-secondary mb-3">Admin Information</h5>
-          <p><strong>Name:</strong> {data.admin.name}</p>
-          <p><strong>Email:</strong> {data.admin.email}</p>
-        </section>
+      {/* Tabs */}
+      <ul className="nav nav-tabs mb-3">
+        {['profile', 'security', 'fees', 'academic'].map((tab) => (
+          <li className="nav-item" key={tab}>
+            <button
+              className={`nav-link ${activeTab === tab ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab(tab);
+                setEditMode(false);
+              }}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          </li>
+        ))}
+      </ul>
 
-        {/* School Info */}
-        <section className="mb-4">
-          <h5 className="text-secondary mb-3">School Information</h5>
-          {!editMode ? (
-            <>
-              <p><strong>School Name:</strong> {data.school.name}</p>
-              <p><strong>Address:</strong> {data.school.address || 'Not set'}</p>
-              <p><strong>School Code:</strong> {data.school.schoolCode}</p>
-            </>
-          ) : (
-            <Form>
-              <Form.Group className="mb-3">
-                <Form.Label>School Name</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="schoolName"
-                  value={form.schoolName}
-                  onChange={handleChange}
+      {/* Tab Content */}
+      <div>
+        {/* ---------- Profile ---------- */}
+        {activeTab === 'profile' && (
+          <div>
+            {['schoolName', 'schoolEmail', 'phone', 'address', 'motto'].map((field) => (
+              <div className="mb-3" key={field}>
+                <label className="form-label">
+                  {field.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
+                </label>
+                <input
+                  type={field === 'schoolEmail' ? 'email' : 'text'}
+                  className="form-control"
+                  name={field}
+                  value={profile[field]}
+                  onChange={(e) => handleChange(e, setProfile)}
+                  readOnly={!editMode}
                 />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>School Address</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="schoolAddress"
-                  value={form.schoolAddress}
-                  onChange={handleChange}
-                />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>Change Password (optional)</Form.Label>
-                <Form.Control
+              </div>
+            ))}
+            {!editMode ? (
+              <button className="btn btn-outline-primary" onClick={() => setEditMode(true)}>
+                Edit
+              </button>
+            ) : (
+              <>
+                <button
+                  className="btn btn-primary me-2"
+                  onClick={() => handleSave('profile')}
+                  disabled={loading}
+                >
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button className="btn btn-secondary" onClick={() => setEditMode(false)}>
+                  Cancel
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ---------- Security ---------- */}
+        {activeTab === 'security' && (
+          <div>
+            {['currentPassword', 'newPassword', 'confirmPassword'].map((field) => (
+              <div className="mb-3" key={field}>
+                <label className="form-label">
+                  {field.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
+                </label>
+                <input
                   type="password"
-                  name="newPassword"
-                  value={form.newPassword}
-                  onChange={handleChange}
-                  placeholder="Enter new password"
+                  className="form-control"
+                  name={field}
+                  value={security[field]}
+                  onChange={(e) => handleChange(e, setSecurity)}
                 />
-              </Form.Group>
-            </Form>
-          )}
-        </section>
+              </div>
+            ))}
+            <button
+              className="btn btn-primary"
+              onClick={() => handleSave('security')}
+              disabled={loading}
+            >
+              {loading ? 'Saving...' : 'Change Password'}
+            </button>
+          </div>
+        )}
 
-        {/* Buttons */}
-        <div className="d-flex justify-content-end gap-2">
-          {!editMode ? (
-            <Button variant="primary" onClick={() => setEditMode(true)}>
-              Edit Settings
-            </Button>
-          ) : (
-            <>
-              <Button
-                variant="success"
-                disabled={saving}
-                onClick={handleSave}
-              >
-                {saving ? 'Saving...' : 'Save Changes'}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => setEditMode(false)}
-              >
-                Cancel
-              </Button>
-            </>
-          )}
-        </div>
-      </Card>
-    </main>
+        {/* ---------- Fees ---------- */}
+        {activeTab === 'fees' && (
+          <div>
+            {['defaultFee', 'lateFee'].map((field) => (
+              <div className="mb-3" key={field}>
+                <label className="form-label">
+                  {field.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
+                </label>
+                <input
+                  type="number"
+                  className="form-control"
+                  name={field}
+                  value={fees[field]}
+                  onChange={(e) => handleChange(e, setFees)}
+                  readOnly={!editMode}
+                />
+              </div>
+            ))}
+            {!editMode ? (
+              <button className="btn btn-outline-primary" onClick={() => setEditMode(true)}>
+                Edit
+              </button>
+            ) : (
+              <>
+                <button
+                  className="btn btn-primary me-2"
+                  onClick={() => handleSave('fees')}
+                  disabled={loading}
+                >
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button className="btn btn-secondary" onClick={() => setEditMode(false)}>
+                  Cancel
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ---------- Academic ---------- */}
+        {activeTab === 'academic' && (
+          <div>
+            {['gradingSystem', 'termStart', 'termEnd'].map((field) => (
+              <div className="mb-3" key={field}>
+                <label className="form-label">
+                  {field.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
+                </label>
+                <input
+                  type={field.includes('term') ? 'date' : 'text'}
+                  className="form-control"
+                  name={field}
+                  value={academic[field]}
+                  onChange={(e) => handleChange(e, setAcademic)}
+                  readOnly={!editMode}
+                />
+              </div>
+            ))}
+            {!editMode ? (
+              <button className="btn btn-outline-primary" onClick={() => setEditMode(true)}>
+                Edit
+              </button>
+            ) : (
+              <>
+                <button
+                  className="btn btn-primary me-2"
+                  onClick={() => handleSave('academic')}
+                  disabled={loading}
+                >
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button className="btn btn-secondary" onClick={() => setEditMode(false)}>
+                  Cancel
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
