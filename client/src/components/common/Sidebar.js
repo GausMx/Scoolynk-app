@@ -25,9 +25,11 @@ const Sidebar = ({ user, role }) => {
 
   const links = role === 'admin' ? adminLinks : role === 'teacher' ? teacherLinks : parentLinks;
 
+  const displayName = user ? (role === 'admin' ? user.schoolName : user.name) : '';
+
   return (
     <>
-      {/* Mobile toggle */}
+      {/* Mobile toggle button */}
       <button
         className="btn btn-dark d-md-none mb-3"
         type="button"
@@ -39,8 +41,11 @@ const Sidebar = ({ user, role }) => {
       </button>
 
       {/* Desktop sidebar */}
-      <div className="d-none d-md-flex flex-column flex-shrink-0 p-3 bg-dark text-white" style={{ width: '250px', height: '100vh', position: 'sticky', top: 0 }}>
-        <h5 className="mb-3">{role === 'admin' ? user?.schoolName : user?.name}</h5>
+      <div
+        className="d-none d-md-flex flex-column flex-shrink-0 p-3 bg-dark text-white"
+        style={{ width: '250px', height: '100vh', position: 'sticky', top: 0 }}
+      >
+        <h5 className="mb-3">{displayName || 'Loading...'}</h5>
         <hr />
         <ul className="nav nav-pills flex-column mb-auto">
           {links.map((link) => (
@@ -55,7 +60,7 @@ const Sidebar = ({ user, role }) => {
           ))}
         </ul>
         <div className="mt-auto">
-          <small>{role === 'admin' ? user?.schoolName : user?.name}</small>
+          <small>{displayName || ''}</small>
         </div>
       </div>
 
@@ -68,9 +73,14 @@ const Sidebar = ({ user, role }) => {
       >
         <div className="offcanvas-header">
           <h5 className="offcanvas-title" id="mobileSidebarLabel">
-            {role === 'admin' ? user?.schoolName : user?.name}
+            {displayName || 'Loading...'}
           </h5>
-          <button type="button" className="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+          <button
+            type="button"
+            className="btn-close btn-close-white"
+            data-bs-dismiss="offcanvas"
+            aria-label="Close"
+          ></button>
         </div>
         <div className="offcanvas-body">
           <ul className="nav nav-pills flex-column">
@@ -87,7 +97,7 @@ const Sidebar = ({ user, role }) => {
             ))}
           </ul>
           <div className="mt-auto">
-            <small>{role === 'admin' ? user?.schoolName : user?.name}</small>
+            <small>{displayName || ''}</small>
           </div>
         </div>
       </div>
