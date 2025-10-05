@@ -30,15 +30,22 @@ const Sidebar = ({ user, role }) => {
   return (
     <>
       {/* Mobile toggle button */}
-      <button
-        className="btn btn-dark d-md-none mb-3"
-        type="button"
-        data-bs-toggle="offcanvas"
-        data-bs-target="#mobileSidebar"
-        aria-controls="mobileSidebar"
-      >
-        ☰
-      </button>
+<button
+  className="btn btn-dark d-md-none"
+  type="button"
+  data-bs-toggle="offcanvas"
+  data-bs-target="#mobileSidebar"
+  aria-controls="mobileSidebar"
+  style={{
+    position: 'fixed',
+    top: '10px',
+    left: '10px',
+    zIndex: 1050, // ensures it stays above other elements
+  }}
+>
+  ☰
+</button>
+
 
       {/* Desktop sidebar */}
       <div
