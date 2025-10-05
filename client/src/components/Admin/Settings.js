@@ -1,327 +1,170 @@
 // src/components/Admin/Settings.js
-import React, { useState, useEffect } from 'react';
+
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { Card, Spinner, Button, Form } from 'react-bootstrap';
 
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState('profile');
-
-  // ----- Form states -----
-  const [profile, setProfile] = useState({
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [data, setData] = useState({
+    admin: { name: '', email: '' },
+    school: { name: '', address: '', schoolCode: '' },
+  });
+  const [form, setForm] = useState({
     schoolName: '',
-    schoolEmail: '',
-    phone: '',
-    address: '',
-    motto: '',
-  });
-
-  const [security, setSecurity] = useState({
-    currentPassword: '',
+    schoolAddress: '',
     newPassword: '',
-    confirmPassword: '',
   });
 
-  const [fees, setFees] = useState({
-    defaultFee: '',
-    lateFee: '',
-  });
-
-  const [academic, setAcademic] = useState({
-    classes: [],
-    subjects: [],
-    gradingSystem: '',
-    termStart: '',
-    termEnd: '',
-  });
-
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-
-  // ----- Fetch existing settings from backend -----
+  // Fetch current settings
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await axios.get('/api/admin/settings'); // replace with your API endpoint
-        const data = res.data;
-        setProfile({
-          schoolName: data.schoolName || '',
-          schoolEmail: data.schoolEmail || '',
-          phone: data.phone || '',
-          address: data.address || '',
-          motto: data.motto || '',
+        const token = localStorage.getItem('token');
+        const res = await axios.get('/api/admin/settings', {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        setFees({
-          defaultFee: data.defaultFee || '',
-          lateFee: data.lateFee || '',
-        });
-        setAcademic({
-          classes: data.classes || [],
-          subjects: data.subjects || [],
-          gradingSystem: data.gradingSystem || '',
-          termStart: data.termStart || '',
-          termEnd: data.termEnd || '',
+        setData(res.data);
+        setForm({
+          schoolName: res.data.school.name || '',
+          schoolAddress: res.data.school.address || '',
+          newPassword: '',
         });
       } catch (err) {
         console.error('Failed to fetch settings:', err);
+      } finally {
+        setLoading(false);
       }
     };
-
     fetchSettings();
   }, []);
 
-  // ----- Handle input changes -----
-  const handleChange = (e, stateSetter) => {
-    const { name, value } = e.target;
-    stateSetter(prev => ({ ...prev, [name]: value }));
+  // Handle input change
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // ----- Handle form submission -----
-  const handleSubmit = async (section) => {
-    setLoading(true);
-    setMessage('');
+  // Submit updates
+  const handleSave = async () => {
     try {
-      let payload;
-      let endpoint = '/api/admin/settings';
-
-      if (section === 'profile') payload = profile;
-      else if (section === 'security') payload = security;
-      else if (section === 'fees') payload = fees;
-      else if (section === 'academic') payload = academic;
-
-      const res = await axios.post(endpoint, { section, data: payload });
-      setMessage(res.data.message || 'Settings updated successfully!');
+      setSaving(true);
+      const token = localStorage.getItem('token');
+      await axios.put(
+        '/api/admin/settings',
+        {
+          schoolName: form.schoolName,
+          schoolAddress: form.schoolAddress,
+          newPassword: form.newPassword || undefined,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert('Settings updated successfully!');
+      setEditMode(false);
+      // Re-fetch latest data
+      const refreshed = await axios.get('/api/admin/settings', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setData(refreshed.data);
     } catch (err) {
-      console.error('Error updating settings:', err);
-      setMessage(err.response?.data?.message || 'Failed to update settings.');
+      console.error(err);
+      alert('Failed to update settings.');
+    } finally {
+      setSaving(false);
     }
-    setLoading(false);
   };
+
+  if (loading) {
+    return (
+      <div className="text-center mt-5">
+        <Spinner animation="border" />
+        <p>Loading settings...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mt-5">
-      <h2 className="mb-4">School Settings</h2>
-      {message && <div className="alert alert-info">{message}</div>}
+    <main className="container mt-5 mb-5">
+      <Card className="shadow-sm p-4 rounded-3">
+        <h2 className="mb-4 text-center text-primary">School Settings</h2>
 
-      {/* Tabs */}
-      <ul className="nav nav-tabs mb-3">
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === 'profile' ? 'active' : ''}`}
-            onClick={() => setActiveTab('profile')}
-          >
-            Profile
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === 'security' ? 'active' : ''}`}
-            onClick={() => setActiveTab('security')}
-          >
-            Security
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === 'fees' ? 'active' : ''}`}
-            onClick={() => setActiveTab('fees')}
-          >
-            Fees
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === 'academic' ? 'active' : ''}`}
-            onClick={() => setActiveTab('academic')}
-          >
-            Academic
-          </button>
-        </li>
-      </ul>
+        {/* Admin Info */}
+        <section className="mb-4">
+          <h5 className="text-secondary mb-3">Admin Information</h5>
+          <p><strong>Name:</strong> {data.admin.name}</p>
+          <p><strong>Email:</strong> {data.admin.email}</p>
+        </section>
 
-      {/* Tab Content */}
-      <div>
-        {/* ---------- Profile ---------- */}
-        {activeTab === 'profile' && (
-          <div>
-            <div className="mb-3">
-              <label className="form-label">School Name</label>
-              <input
-                type="text"
-                className="form-control"
-                name="schoolName"
-                value={profile.schoolName}
-                onChange={(e) => handleChange(e, setProfile)}
-              />
-            </div>
-            <div className="mb-3">
-              <label className="form-label">Email</label>
-              <input
-                type="email"
-                className="form-control"
-                name="schoolEmail"
-                value={profile.schoolEmail}
-                onChange={(e) => handleChange(e, setProfile)}
-              />
-            </div>
-            <div className="mb-3">
-              <label className="form-label">Phone</label>
-              <input
-                type="text"
-                className="form-control"
-                name="phone"
-                value={profile.phone}
-                onChange={(e) => handleChange(e, setProfile)}
-              />
-            </div>
-            <div className="mb-3">
-              <label className="form-label">Address</label>
-              <input
-                type="text"
-                className="form-control"
-                name="address"
-                value={profile.address}
-                onChange={(e) => handleChange(e, setProfile)}
-              />
-            </div>
-            <div className="mb-3">
-              <label className="form-label">Motto / Tagline</label>
-              <input
-                type="text"
-                className="form-control"
-                name="motto"
-                value={profile.motto}
-                onChange={(e) => handleChange(e, setProfile)}
-              />
-            </div>
-            <button
-              className="btn btn-primary"
-              onClick={() => handleSubmit('profile')}
-              disabled={loading}
-            >
-              {loading ? 'Saving...' : 'Save Profile'}
-            </button>
-          </div>
-        )}
+        {/* School Info */}
+        <section className="mb-4">
+          <h5 className="text-secondary mb-3">School Information</h5>
+          {!editMode ? (
+            <>
+              <p><strong>School Name:</strong> {data.school.name}</p>
+              <p><strong>Address:</strong> {data.school.address || 'Not set'}</p>
+              <p><strong>School Code:</strong> {data.school.schoolCode}</p>
+            </>
+          ) : (
+            <Form>
+              <Form.Group className="mb-3">
+                <Form.Label>School Name</Form.Label>
+                <Form.Control
+                  type="text"
+                  name="schoolName"
+                  value={form.schoolName}
+                  onChange={handleChange}
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>School Address</Form.Label>
+                <Form.Control
+                  type="text"
+                  name="schoolAddress"
+                  value={form.schoolAddress}
+                  onChange={handleChange}
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Change Password (optional)</Form.Label>
+                <Form.Control
+                  type="password"
+                  name="newPassword"
+                  value={form.newPassword}
+                  onChange={handleChange}
+                  placeholder="Enter new password"
+                />
+              </Form.Group>
+            </Form>
+          )}
+        </section>
 
-        {/* ---------- Security ---------- */}
-        {activeTab === 'security' && (
-          <div>
-            <div className="mb-3">
-              <label className="form-label">Current Password</label>
-              <input
-                type="password"
-                className="form-control"
-                name="currentPassword"
-                value={security.currentPassword}
-                onChange={(e) => handleChange(e, setSecurity)}
-              />
-            </div>
-            <div className="mb-3">
-              <label className="form-label">New Password</label>
-              <input
-                type="password"
-                className="form-control"
-                name="newPassword"
-                value={security.newPassword}
-                onChange={(e) => handleChange(e, setSecurity)}
-              />
-            </div>
-            <div className="mb-3">
-              <label className="form-label">Confirm Password</label>
-              <input
-                type="password"
-                className="form-control"
-                name="confirmPassword"
-                value={security.confirmPassword}
-                onChange={(e) => handleChange(e, setSecurity)}
-              />
-            </div>
-            <button
-              className="btn btn-primary"
-              onClick={() => handleSubmit('security')}
-              disabled={loading}
-            >
-              {loading ? 'Saving...' : 'Change Password'}
-            </button>
-          </div>
-        )}
-
-        {/* ---------- Fees ---------- */}
-        {activeTab === 'fees' && (
-          <div>
-            <div className="mb-3">
-              <label className="form-label">Default Fee</label>
-              <input
-                type="number"
-                className="form-control"
-                name="defaultFee"
-                value={fees.defaultFee}
-                onChange={(e) => handleChange(e, setFees)}
-              />
-            </div>
-            <div className="mb-3">
-              <label className="form-label">Late Fee</label>
-              <input
-                type="number"
-                className="form-control"
-                name="lateFee"
-                value={fees.lateFee}
-                onChange={(e) => handleChange(e, setFees)}
-              />
-            </div>
-            <button
-              className="btn btn-primary"
-              onClick={() => handleSubmit('fees')}
-              disabled={loading}
-            >
-              {loading ? 'Saving...' : 'Save Fees'}
-            </button>
-          </div>
-        )}
-
-        {/* ---------- Academic ---------- */}
-        {activeTab === 'academic' && (
-          <div>
-            <div className="mb-3">
-              <label className="form-label">Grading System</label>
-              <input
-                type="text"
-                className="form-control"
-                name="gradingSystem"
-                value={academic.gradingSystem}
-                onChange={(e) => handleChange(e, setAcademic)}
-              />
-            </div>
-            <div className="mb-3">
-              <label className="form-label">Term Start</label>
-              <input
-                type="date"
-                className="form-control"
-                name="termStart"
-                value={academic.termStart}
-                onChange={(e) => handleChange(e, setAcademic)}
-              />
-            </div>
-            <div className="mb-3">
-              <label className="form-label">Term End</label>
-              <input
-                type="date"
-                className="form-control"
-                name="termEnd"
-                value={academic.termEnd}
-                onChange={(e) => handleChange(e, setAcademic)}
-              />
-            </div>
-            <button
-              className="btn btn-primary"
-              onClick={() => handleSubmit('academic')}
-              disabled={loading}
-            >
-              {loading ? 'Saving...' : 'Save Academic Settings'}
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
+        {/* Buttons */}
+        <div className="d-flex justify-content-end gap-2">
+          {!editMode ? (
+            <Button variant="primary" onClick={() => setEditMode(true)}>
+              Edit Settings
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="success"
+                disabled={saving}
+                onClick={handleSave}
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setEditMode(false)}
+              >
+                Cancel
+              </Button>
+            </>
+          )}
+        </div>
+      </Card>
+    </main>
   );
 };
 
