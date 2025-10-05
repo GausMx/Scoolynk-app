@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 const Sidebar = ({ user, role }) => {
   const location = useLocation();
+  const [isNavOpen, setIsNavOpen] = useState(false);
 
   const adminLinks = [
     { path: "/admin", label: "Home" },
@@ -28,6 +29,10 @@ const Sidebar = ({ user, role }) => {
 
   const displayName =
     user && (role === "admin" ? user.schoolName : user.name);
+
+  // Toggle collapse manually
+  const toggleNav = () => setIsNavOpen(!isNavOpen);
+  const closeNav = () => setIsNavOpen(false);
 
   return (
     <>
@@ -62,20 +67,22 @@ const Sidebar = ({ user, role }) => {
       {/* ================= Mobile Navbar ================= */}
       <nav className="navbar navbar-expand-sm bg-dark navbar-dark d-md-none fixed-top">
         <div className="container-fluid">
-          <span className="navbar-brand">{displayName || "App"}</span>
+          <span className="navbar-brand">{displayName || "Scoolynk"}</span>
           <button
             className="navbar-toggler"
             type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#mobileNav"
+            onClick={toggleNav}
             aria-controls="mobileNav"
-            aria-expanded="false"
+            aria-expanded={isNavOpen}
             aria-label="Toggle navigation"
           >
             <span className="navbar-toggler-icon"></span>
           </button>
 
-          <div className="collapse navbar-collapse" id="mobileNav">
+          <div
+            className={`collapse navbar-collapse ${isNavOpen ? "show" : ""}`}
+            id="mobileNav"
+          >
             <ul className="navbar-nav me-auto mb-2 mb-lg-0">
               {links.map((link) => (
                 <li className="nav-item" key={link.path}>
@@ -84,8 +91,7 @@ const Sidebar = ({ user, role }) => {
                     className={`nav-link ${
                       location.pathname === link.path ? "active" : ""
                     }`}
-                    data-bs-toggle="collapse"
-                    data-bs-target="#mobileNav"
+                    onClick={closeNav} // closes navbar after navigation
                   >
                     {link.label}
                   </Link>
@@ -96,7 +102,7 @@ const Sidebar = ({ user, role }) => {
         </div>
       </nav>
 
-      {/* Optional: add top margin to page content on mobile so navbar doesn’t overlap */}
+      {/* Add margin so page content doesn’t hide under navbar */}
       <div className="d-md-none" style={{ marginTop: "70px" }}></div>
     </>
   );
