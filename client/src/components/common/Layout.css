@@ -1,1 +1,6 @@
+@media (max-width: 768px) {
+  main {
+    padding-top: 80px !important; /* matches navbar height */
+  }
+}
 
