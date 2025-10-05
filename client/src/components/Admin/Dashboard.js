@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import ReviewResults from './ReviewResults';
 import Broadcast from './Broadcast';
-import '../Layout.css';
+import '../common/Layout.css';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import API from '../utils/api';
-import '../Layout.css';
+import '../common/Layout.css';
 
 const Broadcast = () => {
 	const [message, setMessage] = useState('');

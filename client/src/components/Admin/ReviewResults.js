@@ -1,7 +1,7 @@
 // src/components/Admin/ReviewResults.js
 import React, { useEffect, useState, useCallback } from 'react';
 import API from '../utils/api';
-import '../Layout.css';
+import '../common/Layout.css';
 
 const ReviewResults = () => {
   const [results, setResults] = useState([]);
