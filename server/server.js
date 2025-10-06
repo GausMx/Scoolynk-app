@@ -12,7 +12,8 @@ import connectDB from './config/db.js';
 import protect from './middleware/authMiddleware.js';
 import subscriptionGuard from './middleware/subscriptionMiddleware.js';
 import requireRole from './middleware/roleMiddleware.js';
-import { getAdminDashboard } from './controllers/adminController.js';
+// Note: getAdminDashboard moved to adminRoutes for cleaner structure
+// import { getAdminDashboard } from './controllers/adminController.js'; 
 import bcrypt from 'bcrypt';
 import User from './models/User.js';
 import testEmailRoutes from "./routes/test.js";
@@ -76,24 +77,25 @@ app.post('/test', (req, res) => {
 
 
 // -----------------------------------------------------
-// STATIC FILE SERVING / CATCH-ALL ROUTE (ULTIMATE FIX)
+// STATIC FILE SERVING / CATCH-ALL ROUTE (FINAL FIX)
 // -----------------------------------------------------
 
-// Helper for __dirname in ES Modules (needed for path resolution)
+// Helper for __dirname in ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 if (process.env.NODE_ENV === 'production') {
-  // Assume the client build files are located in a 'client/build' directory relative to the server folder
+  // Assume the client build files are located in a 'client/build' directory
   const buildPath = path.join(__dirname, '..', 'client', 'build');
 
-  // Serve static assets (JS, CSS, images). Must be before catch-all.
+  // 1. Serve static assets (JS, CSS, images). Must be before the catch-all.
   console.log(`[Prod Config] Serving static files from: ${buildPath}`);
   app.use(express.static(buildPath));
 
-  // This final app.get('*') should work, as it's the standard. If this fails, 
-  // there is a very deep environmental issue with path-to-regexp on your Render container.
-  app.get('*', (req, res) => {
+  // 2. FINAL FIX: Use app.use() without a path. This acts as terminal middleware
+   // for all requests not handled by previous API routes or static files.
+   // It completely bypasses the buggy path-to-regexp parser.
+  app.use((req, res) => {
     res.sendFile(path.resolve(buildPath, 'index.html'));
   });
 }
