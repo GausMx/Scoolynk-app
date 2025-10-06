@@ -93,9 +93,8 @@ if (process.env.NODE_ENV === 'production') {
   console.log(`[Prod Config] Serving static files from: ${buildPath}`);
   app.use(express.static(buildPath));
 
-  // Catch-all route: For any GET request that hasn't been handled by the API, 
-  // send back the main index.html file for client-side routing.
-  app.get('*', (req, res) => {
+  // FIX: Changed '*' to '/*' to resolve the PathError on Render/Express
+  app.get('/*', (req, res) => {
     res.sendFile(path.resolve(buildPath, 'index.html'));
   });
 }
