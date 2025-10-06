@@ -46,6 +46,13 @@ const Settings = () => {
         });
 
         const data = res.data;
+        
+        // --- DIAGNOSTIC LOGGING ---
+        // CHECK YOUR BROWSER CONSOLE for this log. It will show you exactly 
+        // what data the frontend received from the backend API.
+        console.log('Frontend received settings data:', data);
+        // --------------------------
+
         setProfile({
           schoolName: data.school?.name || '',
           schoolEmail: data.admin?.email || '',
@@ -67,6 +74,7 @@ const Settings = () => {
         });
       } catch (err) {
         console.error('Failed to fetch settings:', err);
+        setMessage('Failed to load settings. Check network connection.');
       } finally {
         setLoading(false);
       }
@@ -120,6 +128,7 @@ const Settings = () => {
   return (
     <div className="container mt-5">
       <h2 className="mb-4">School Settings</h2>
+      {loading && <div className="text-center text-primary">Loading...</div>}
       {message && <div className="alert alert-info">{message}</div>}
 
       {/* Tabs */}
@@ -156,12 +165,12 @@ const Settings = () => {
                     <input
                       type={field === 'schoolEmail' ? 'email' : 'text'}
                       className="form-control rounded-3"
-                      name={field.replace('school', '').toLowerCase()} // Ensure name matches model if needed, but using state key here for simplicity
+                      name={field} // Name matches state key
                       value={profile[field]}
                       onChange={(e) => handleChange(e, setProfile)}
                     />
                   ) : (
-                    // VIEW MODE: Show Plain Text (or input for schoolEmail)
+                    // VIEW MODE: Show Plain Text
                     <p className="form-control-plaintext fw-bold">
                       {profile[field] || 'N/A'}
                     </p>
@@ -225,19 +234,27 @@ const Settings = () => {
         {/* ---------- Fees ---------- */}
         {activeTab === 'fees' && (
           <div>
+            <h5 className="mb-3">Fee Structure</h5>
             {['defaultFee', 'lateFee'].map((field) => (
-              <div className="mb-3" key={field}>
-                <label className="form-label">
-                  {formatFieldName(field)}
+              <div className="mb-3 row" key={field}>
+                <label className="col-sm-3 col-form-label font-weight-bold text-muted">
+                  {formatFieldName(field)}:
                 </label>
-                <input
-                  type="number"
-                  className="form-control rounded-3"
-                  name={field}
-                  value={fees[field]}
-                  onChange={(e) => handleChange(e, setFees)}
-                  readOnly={!editMode}
-                />
+                <div className="col-sm-9">
+                    {editMode ? (
+                        <input
+                            type="number"
+                            className="form-control rounded-3"
+                            name={field}
+                            value={fees[field]}
+                            onChange={(e) => handleChange(e, setFees)}
+                        />
+                    ) : (
+                        <p className="form-control-plaintext fw-bold">
+                            {fees[field] ? `$${fees[field]}` : 'N/A'}
+                        </p>
+                    )}
+                </div>
               </div>
             ))}
             {!editMode ? (
@@ -264,20 +281,28 @@ const Settings = () => {
         {/* ---------- Academic ---------- */}
         {activeTab === 'academic' && (
           <div>
+            <h5 className="mb-3">Academic Term & Grading</h5>
             {/* Simple fields */}
             {['gradingSystem', 'termStart', 'termEnd'].map((field) => (
-              <div className="mb-3" key={field}>
-                <label className="form-label">
-                  {formatFieldName(field)}
+              <div className="mb-3 row" key={field}>
+                <label className="col-sm-3 col-form-label font-weight-bold text-muted">
+                    {formatFieldName(field)}:
                 </label>
-                <input
-                  type={field.includes('term') ? 'date' : 'text'}
-                  className="form-control rounded-3"
-                  name={field}
-                  value={academic[field]}
-                  onChange={(e) => handleChange(e, setAcademic)}
-                  readOnly={!editMode}
-                />
+                <div className="col-sm-9">
+                    {editMode ? (
+                        <input
+                            type={field.includes('term') ? 'date' : 'text'}
+                            className="form-control rounded-3"
+                            name={field}
+                            value={academic[field]}
+                            onChange={(e) => handleChange(e, setAcademic)}
+                        />
+                    ) : (
+                        <p className="form-control-plaintext fw-bold">
+                            {academic[field] || 'N/A'}
+                        </p>
+                    )}
+                </div>
               </div>
             ))}
             {/* TODO: Add complex fields like classes/subjects editor here */}
