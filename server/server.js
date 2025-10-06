@@ -31,19 +31,22 @@ const app = express();
 app.use(express.json()); // Body parser
 app.use(express.urlencoded({ extended: false }));
 
-// CORS setup (Unchanged, looks good)
+// CORS setup 
 const allowedOrigins = process.env.CORS_ORIGIN.split(',').map(o => o.trim().replace(/\/$/, ''));
 
 const corsOptions = {
   origin: (origin, callback) => {
     console.log('[CORS] Request origin:', origin);
     if (!origin) return callback(null, true);
+    
+    // Regex to match scoolynk-app.netlify.app and any subdomain/branch deploy.
+    const netlifyRegex = /^https:\/\/(?:[a-z0-9-]+\.)?scoolynk-app\.netlify\.app$/;
+
     const cleanOrigin = origin.replace(/\/$/, '');
-    // Allow *.netlify.app and Netlify preview URLs
+
     if (
-      allowedOrigins.includes(cleanOrigin) ||
-      /^https:\/\/[a-z0-9-]+--scoolynk-app\.netlify\.app$/.test(cleanOrigin) ||
-      /^https:\/\/[a-z0-9-]+\.netlify\.app$/.test(cleanOrigin)
+      allowedOrigins.includes(cleanOrigin) || // Check explicit origins from env
+      netlifyRegex.test(cleanOrigin) // Check Netlify deployment URLs
     ) {
       callback(null, true);
     } else {
@@ -74,7 +77,7 @@ app.post('/test', (req, res) => {
 
 
 // -----------------------------------------------------
-// STATIC FILE SERVING / CATCH-ALL ROUTE (Deployment Fix)
+// STATIC FILE SERVING / CATCH-ALL ROUTE (Most Reliable Fix)
 // -----------------------------------------------------
 
 // Helper for __dirname in ES Modules (needed for path resolution)
@@ -89,10 +92,9 @@ if (process.env.NODE_ENV === 'production') {
   console.log(`[Prod Config] Serving static files from: ${buildPath}`);
   app.use(express.static(buildPath));
 
-  // FIX: Using a Regular Expression (/.*/) for the catch-all route.
-  // This bypasses the strict string parsing of the '*' or '/*' character 
-  // that is causing the PathError in your deployment environment.
-  app.get(/.*/, (req, res) => {
+  // FIX: Use a named parameter with a wide regex. This is the most reliable 
+  // cross-version way to define a catch-all route without throwing PathErrors.
+  app.get('/:path([\\s\\S]*)', (req, res) => {
     res.sendFile(path.resolve(buildPath, 'index.html'));
   });
 }
