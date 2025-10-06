@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+// Assuming API is correctly configured elsewhere if using fetch
+// For this single file, we keep using axios as specified
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -7,6 +9,7 @@ const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
+  // ----- Form states -----
   const [profile, setProfile] = useState({
     schoolName: '',
     schoolEmail: '',
@@ -36,6 +39,8 @@ const Settings = () => {
 
   // ----- Fetch existing settings -----
   useEffect(() => {
+    // NOTE: This uses localStorage, which is generally discouraged for authentication in production.
+    // It's recommended to use secure, HttpOnly cookies for tokens.
     const fetchSettings = async () => {
       try {
         setLoading(true);
@@ -72,11 +77,13 @@ const Settings = () => {
     fetchSettings();
   }, []);
 
-  const handleChange = (e, setter) => {
+  // ----- Handle input changes -----
+  const handleChange = (e, stateSetter) => {
     const { name, value } = e.target;
-    setter((prev) => ({ ...prev, [name]: value }));
+    stateSetter((prev) => ({ ...prev, [name]: value }));
   };
 
+  // ----- Save updates -----
   const handleSave = async (section) => {
     try {
       setLoading(true);
@@ -105,6 +112,11 @@ const Settings = () => {
     }
   };
 
+  // Helper function to format field name for display
+  const formatFieldName = (field) => {
+    return field.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
+  };
+
   return (
     <div className="container mt-5">
       <h2 className="mb-4">School Settings</h2>
@@ -118,54 +130,62 @@ const Settings = () => {
               className={`nav-link ${activeTab === tab ? 'active' : ''}`}
               onClick={() => {
                 setActiveTab(tab);
-                setEditMode(false);
+                setEditMode(false); // Reset edit mode when switching tabs
               }}
             >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {formatFieldName(tab)}
             </button>
           </li>
         ))}
       </ul>
 
       {/* Tab Content */}
-      <div>
+      <div className="card p-4 shadow-sm">
         {/* ---------- Profile ---------- */}
         {activeTab === 'profile' && (
           <div>
-            {Object.entries(profile).map(([key, value]) => (
-              <div className="mb-3" key={key}>
-                <label className="form-label fw-semibold">
-                  {key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
+            {['schoolName', 'schoolEmail', 'phone', 'address', 'motto'].map((field) => (
+              <div className="mb-3 row" key={field}>
+                <label className="col-sm-3 col-form-label font-weight-bold text-muted">
+                  {formatFieldName(field)}:
                 </label>
-
-                {!editMode ? (
-                  <p className="form-control-plaintext border p-2 bg-light">{value || '—'}</p>
-                ) : (
-                  <input
-                    type={key === 'schoolEmail' ? 'email' : 'text'}
-                    className="form-control"
-                    name={key}
-                    value={value}
-                    onChange={(e) => handleChange(e, setProfile)}
-                  />
-                )}
+                <div className="col-sm-9">
+                  {editMode ? (
+                    // EDIT MODE: Show Input Field
+                    <input
+                      type={field === 'schoolEmail' ? 'email' : 'text'}
+                      className="form-control rounded-3"
+                      name={field}
+                      value={profile[field]}
+                      onChange={(e) => handleChange(e, setProfile)}
+                    />
+                  ) : (
+                    // VIEW MODE: Show Plain Text
+                    <p className="form-control-plaintext fw-bold">
+                      {profile[field] || 'N/A'}
+                    </p>
+                  )}
+                </div>
               </div>
             ))}
-
             {!editMode ? (
-              <button className="btn btn-outline-primary" onClick={() => setEditMode(true)}>
+              <button className="btn btn-outline-primary rounded-3" onClick={() => setEditMode(true)}>
                 Edit Profile
               </button>
             ) : (
               <>
                 <button
-                  className="btn btn-primary me-2"
+                  className="btn btn-primary rounded-3 me-2"
                   onClick={() => handleSave('profile')}
                   disabled={loading}
                 >
                   {loading ? 'Saving...' : 'Save Changes'}
                 </button>
-                <button className="btn btn-secondary" onClick={() => setEditMode(false)}>
+                <button 
+                  className="btn btn-secondary rounded-3" 
+                  onClick={() => setEditMode(false)}
+                  disabled={loading}
+                >
                   Cancel
                 </button>
               </>
@@ -176,14 +196,15 @@ const Settings = () => {
         {/* ---------- Security ---------- */}
         {activeTab === 'security' && (
           <div>
+            <h5 className="mb-3">Change Administrator Password</h5>
             {['currentPassword', 'newPassword', 'confirmPassword'].map((field) => (
               <div className="mb-3" key={field}>
                 <label className="form-label">
-                  {field.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
+                  {formatFieldName(field)}
                 </label>
                 <input
                   type="password"
-                  className="form-control"
+                  className="form-control rounded-3"
                   name={field}
                   value={security[field]}
                   onChange={(e) => handleChange(e, setSecurity)}
@@ -191,7 +212,7 @@ const Settings = () => {
               </div>
             ))}
             <button
-              className="btn btn-primary"
+              className="btn btn-primary rounded-3"
               onClick={() => handleSave('security')}
               disabled={loading}
             >
@@ -206,11 +227,11 @@ const Settings = () => {
             {['defaultFee', 'lateFee'].map((field) => (
               <div className="mb-3" key={field}>
                 <label className="form-label">
-                  {field.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
+                  {formatFieldName(field)}
                 </label>
                 <input
                   type="number"
-                  className="form-control"
+                  className="form-control rounded-3"
                   name={field}
                   value={fees[field]}
                   onChange={(e) => handleChange(e, setFees)}
@@ -219,19 +240,19 @@ const Settings = () => {
               </div>
             ))}
             {!editMode ? (
-              <button className="btn btn-outline-primary" onClick={() => setEditMode(true)}>
-                Edit
+              <button className="btn btn-outline-primary rounded-3" onClick={() => setEditMode(true)}>
+                Edit Fees
               </button>
             ) : (
               <>
                 <button
-                  className="btn btn-primary me-2"
+                  className="btn btn-primary rounded-3 me-2"
                   onClick={() => handleSave('fees')}
                   disabled={loading}
                 >
                   {loading ? 'Saving...' : 'Save Changes'}
                 </button>
-                <button className="btn btn-secondary" onClick={() => setEditMode(false)}>
+                <button className="btn btn-secondary rounded-3" onClick={() => setEditMode(false)}>
                   Cancel
                 </button>
               </>
@@ -242,14 +263,15 @@ const Settings = () => {
         {/* ---------- Academic ---------- */}
         {activeTab === 'academic' && (
           <div>
+            {/* Simple fields */}
             {['gradingSystem', 'termStart', 'termEnd'].map((field) => (
               <div className="mb-3" key={field}>
                 <label className="form-label">
-                  {field.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
+                  {formatFieldName(field)}
                 </label>
                 <input
                   type={field.includes('term') ? 'date' : 'text'}
-                  className="form-control"
+                  className="form-control rounded-3"
                   name={field}
                   value={academic[field]}
                   onChange={(e) => handleChange(e, setAcademic)}
@@ -257,20 +279,22 @@ const Settings = () => {
                 />
               </div>
             ))}
+            {/* TODO: Add complex fields like classes/subjects editor here */}
+
             {!editMode ? (
-              <button className="btn btn-outline-primary" onClick={() => setEditMode(true)}>
-                Edit
+              <button className="btn btn-outline-primary rounded-3" onClick={() => setEditMode(true)}>
+                Edit Academic Settings
               </button>
             ) : (
               <>
                 <button
-                  className="btn btn-primary me-2"
+                  className="btn btn-primary rounded-3 me-2"
                   onClick={() => handleSave('academic')}
                   disabled={loading}
                 >
                   {loading ? 'Saving...' : 'Save Changes'}
                 </button>
-                <button className="btn btn-secondary" onClick={() => setEditMode(false)}>
+                <button className="btn btn-secondary rounded-3" onClick={() => setEditMode(false)}>
                   Cancel
                 </button>
               </>
