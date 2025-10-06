@@ -74,13 +74,15 @@ export const getAdminDashboard = (req, res) => {
 };
 
 // -------------------------
-// Get Admin Settings (for Settings.js page)
+// Get Admin Settings (Fetches all pre-registered data + other settings)
 // -------------------------
 export const getAdminSettings = async (req, res) => {
   try {
     const adminId = req.user._id;
+    // Fetch Admin details (for email)
     const admin = await User.findById(adminId).select('-password');
-    // Fetch the School document with all necessary fields for the frontend
+    
+    // Fetch School details (for name, address, phone, motto, etc.)
     const school = await School.findById(req.user.schoolId).select(
       'name address phone motto classes subjects gradingSystem termStart termEnd defaultFee lateFee schoolCode'
     );
@@ -91,13 +93,13 @@ export const getAdminSettings = async (req, res) => {
     res.json({
       admin: {
         name: admin.name,
-        email: admin.email,
+        email: admin.email, // Admin's registered email
       },
       school: {
-        name: school.name,
-        address: school.address,
-        phone: school.phone,
-        motto: school.motto,
+        name: school.name, // Registered school name
+        address: school.address, // Registered school address
+        phone: school.phone, // Registered school phone
+        motto: school.motto, // Motto (may be null/empty initially)
         schoolCode: school.schoolCode,
         defaultFee: school.defaultFee,
         lateFee: school.lateFee,
@@ -116,7 +118,7 @@ export const getAdminSettings = async (req, res) => {
 };
 
 // -------------------------
-// Update Admin Settings (password & school info)
+// Update Admin Settings (handles updates for profile, security, fees, academic)
 // -------------------------
 export const updateAdminSettings = async (req, res) => {
   try {
@@ -176,6 +178,8 @@ export const updateAdminSettings = async (req, res) => {
       }
         
       case 'academic': {
+        // NOTE: This currently only handles simple fields. 
+        // We need to update this logic later to handle the classes/subjects arrays.
         const { gradingSystem, termStart, termEnd } = data;
         await School.findByIdAndUpdate(schoolId, {
           gradingSystem: gradingSystem,
