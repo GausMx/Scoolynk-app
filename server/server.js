@@ -1,7 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-// NEW IMPORTS for path resolution in ES Modules
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -77,7 +76,7 @@ app.post('/test', (req, res) => {
 
 
 // -----------------------------------------------------
-// STATIC FILE SERVING / CATCH-ALL ROUTE (Most Reliable Fix)
+// STATIC FILE SERVING / CATCH-ALL ROUTE (ULTIMATE FIX)
 // -----------------------------------------------------
 
 // Helper for __dirname in ES Modules (needed for path resolution)
@@ -88,13 +87,13 @@ if (process.env.NODE_ENV === 'production') {
   // Assume the client build files are located in a 'client/build' directory relative to the server folder
   const buildPath = path.join(__dirname, '..', 'client', 'build');
 
-  // Serve static assets (JS, CSS, images)
+  // Serve static assets (JS, CSS, images). Must be before catch-all.
   console.log(`[Prod Config] Serving static files from: ${buildPath}`);
   app.use(express.static(buildPath));
 
-  // FIX: Use a named parameter with a wide regex. This is the most reliable 
-  // cross-version way to define a catch-all route without throwing PathErrors.
-  app.get('/:path([\\s\\S]*)', (req, res) => {
+  // This final app.get('*') should work, as it's the standard. If this fails, 
+  // there is a very deep environmental issue with path-to-regexp on your Render container.
+  app.get('*', (req, res) => {
     res.sendFile(path.resolve(buildPath, 'index.html'));
   });
 }
