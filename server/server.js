@@ -62,13 +62,10 @@ app.get('/', (req, res) => {
 
 // Mount all API routes first (This order is crucial!)
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes); // adminRoutes now includes the dashboard route
+app.use('/api/admin', adminRoutes);
 app.use('/api/parent', parentRoutes);
 app.use('/api/teacher', teacherRoutes);
 app.use("/api/test", testEmailRoutes);
-
-// REMOVED: app.get('/api/admin', protect, subscriptionGuard, requireRole('admin'), getAdminDashboard);
-// This route is now inside adminRoutes.js
 
 // Test route
 app.post('/test', (req, res) => {
@@ -92,9 +89,10 @@ if (process.env.NODE_ENV === 'production') {
   console.log(`[Prod Config] Serving static files from: ${buildPath}`);
   app.use(express.static(buildPath));
 
-  // FIX: Using the single standard wildcard '*' which is often more compatible
-  // than '/*' to resolve the PathError.
-  app.get('*', (req, res) => {
+  // FIX: Using a Regular Expression (/.*/) for the catch-all route.
+  // This bypasses the strict string parsing of the '*' or '/*' character 
+  // that is causing the PathError in your deployment environment.
+  app.get(/.*/, (req, res) => {
     res.sendFile(path.resolve(buildPath, 'index.html'));
   });
 }
