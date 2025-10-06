@@ -192,7 +192,7 @@ const Settings = () => {
                   ) : (
                     // VIEW MODE: Show Plain Text (Uses profile[field] which is updated by fetchSettings)
                     <p className="form-control-plaintext fw-bold">
-                      {profile[field] || 'N/A'}
+                      {profile[field]}
                     </p>
                   )}
                 </div>
