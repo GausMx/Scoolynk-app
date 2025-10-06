@@ -62,12 +62,13 @@ app.get('/', (req, res) => {
 
 // Mount all API routes first (This order is crucial!)
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/admin', adminRoutes); // adminRoutes now includes the dashboard route
 app.use('/api/parent', parentRoutes);
 app.use('/api/teacher', teacherRoutes);
 app.use("/api/test", testEmailRoutes);
-// Example of protected routes using a combination of middleware
-app.get('/api/admin', protect, subscriptionGuard, requireRole('admin'), getAdminDashboard);
+
+// REMOVED: app.get('/api/admin', protect, subscriptionGuard, requireRole('admin'), getAdminDashboard);
+// This route is now inside adminRoutes.js
 
 // Test route
 app.post('/test', (req, res) => {
@@ -83,8 +84,6 @@ app.post('/test', (req, res) => {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// This logic ensures that in production, any request that did NOT match
-// an API route above is assumed to be a client-side route and serves index.html.
 if (process.env.NODE_ENV === 'production') {
   // Assume the client build files are located in a 'client/build' directory relative to the server folder
   const buildPath = path.join(__dirname, '..', 'client', 'build');
@@ -93,8 +92,9 @@ if (process.env.NODE_ENV === 'production') {
   console.log(`[Prod Config] Serving static files from: ${buildPath}`);
   app.use(express.static(buildPath));
 
-  // FIX: Changed '*' to '/*' to resolve the PathError on Render/Express
-  app.get('/*', (req, res) => {
+  // FIX: Using the single standard wildcard '*' which is often more compatible
+  // than '/*' to resolve the PathError.
+  app.get('*', (req, res) => {
     res.sendFile(path.resolve(buildPath, 'index.html'));
   });
 }
