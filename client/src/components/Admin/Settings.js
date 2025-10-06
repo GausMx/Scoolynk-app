@@ -7,7 +7,6 @@ const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  // ----- Form states -----
   const [profile, setProfile] = useState({
     schoolName: '',
     schoolEmail: '',
@@ -73,13 +72,11 @@ const Settings = () => {
     fetchSettings();
   }, []);
 
-  // ----- Handle input changes -----
-  const handleChange = (e, stateSetter) => {
+  const handleChange = (e, setter) => {
     const { name, value } = e.target;
-    stateSetter((prev) => ({ ...prev, [name]: value }));
+    setter((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ----- Save updates -----
   const handleSave = async (section) => {
     try {
       setLoading(true);
@@ -135,24 +132,29 @@ const Settings = () => {
         {/* ---------- Profile ---------- */}
         {activeTab === 'profile' && (
           <div>
-            {['schoolName', 'schoolEmail', 'phone', 'address', 'motto'].map((field) => (
-              <div className="mb-3" key={field}>
-                <label className="form-label">
-                  {field.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
+            {Object.entries(profile).map(([key, value]) => (
+              <div className="mb-3" key={key}>
+                <label className="form-label fw-semibold">
+                  {key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
                 </label>
-                <input
-                  type={field === 'schoolEmail' ? 'email' : 'text'}
-                  className="form-control"
-                  name={field}
-                  value={profile[field]}
-                  onChange={(e) => handleChange(e, setProfile)}
-                  readOnly={!editMode}
-                />
+
+                {!editMode ? (
+                  <p className="form-control-plaintext border p-2 bg-light">{value || '—'}</p>
+                ) : (
+                  <input
+                    type={key === 'schoolEmail' ? 'email' : 'text'}
+                    className="form-control"
+                    name={key}
+                    value={value}
+                    onChange={(e) => handleChange(e, setProfile)}
+                  />
+                )}
               </div>
             ))}
+
             {!editMode ? (
               <button className="btn btn-outline-primary" onClick={() => setEditMode(true)}>
-                Edit
+                Edit Profile
               </button>
             ) : (
               <>
