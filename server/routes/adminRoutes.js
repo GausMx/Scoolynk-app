@@ -23,3 +23,4 @@ router.get('/settings', protect, requireRole('admin'), getAdminSettings);
 router.post('/settings', protect, requireRole('admin'), updateAdminSettings);
 
 export default router;
+    
