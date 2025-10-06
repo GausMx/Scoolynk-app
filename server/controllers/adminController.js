@@ -80,10 +80,14 @@ export const getAdminSettings = async (req, res) => {
   try {
     const adminId = req.user._id;
     const admin = await User.findById(adminId).select('-password');
-    const school = await School.findById(req.user.schoolId);
+    // Fetch the School document with all necessary fields for the frontend
+    const school = await School.findById(req.user.schoolId).select(
+      'name address phone motto classes subjects gradingSystem termStart termEnd defaultFee lateFee schoolCode'
+    );
 
     if (!admin || !school) return res.status(404).json({ message: 'Settings not found.' });
 
+    // Respond with combined data structure matching the frontend state setup
     res.json({
       admin: {
         name: admin.name,
@@ -92,7 +96,17 @@ export const getAdminSettings = async (req, res) => {
       school: {
         name: school.name,
         address: school.address,
+        phone: school.phone,
+        motto: school.motto,
         schoolCode: school.schoolCode,
+        defaultFee: school.defaultFee,
+        lateFee: school.lateFee,
+        classes: school.classes,
+        subjects: school.subjects,
+        gradingSystem: school.gradingSystem,
+        // Convert Date objects to YYYY-MM-DD string format for HTML date input
+        termStart: school.termStart ? new Date(school.termStart).toISOString().split('T')[0] : '',
+        termEnd: school.termEnd ? new Date(school.termEnd).toISOString().split('T')[0] : '',
       },
     });
   } catch (err) {
@@ -106,24 +120,76 @@ export const getAdminSettings = async (req, res) => {
 // -------------------------
 export const updateAdminSettings = async (req, res) => {
   try {
-    const { newPassword, schoolName, schoolAddress } = req.body;
+    // Frontend sends { section: 'profile', data: { schoolName: '...', ... } }
+    const { section, data } = req.body;
     const adminId = req.user._id;
+    const schoolId = req.user.schoolId;
 
-    // Update admin password
-    if (newPassword) {
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      await User.findByIdAndUpdate(adminId, { password: hashedPassword });
+    if (!section || !data) {
+        return res.status(400).json({ message: 'Missing section or data in request body.' });
     }
 
-    // Update school info
-    if (schoolName || schoolAddress) {
-      await School.findByIdAndUpdate(req.user.schoolId, {
-        ...(schoolName && { name: schoolName }),
-        ...(schoolAddress && { address: schoolAddress }),
-      });
+    switch (section) {
+      case 'profile': {
+        const { schoolName, phone, address, motto } = data;
+        await School.findByIdAndUpdate(schoolId, {
+          name: schoolName,
+          phone: phone,
+          address: address,
+          motto: motto,
+        }, { new: true });
+        return res.json({ message: 'School profile updated successfully.' });
+      }
+
+      case 'security': {
+        const { currentPassword, newPassword, confirmPassword } = data;
+        if (!currentPassword || !newPassword || !confirmPassword) {
+             return res.status(400).json({ message: 'All password fields are required.' });
+        }
+        if (newPassword !== confirmPassword) {
+          return res.status(400).json({ message: 'New passwords do not match.' });
+        }
+
+        const admin = await User.findById(adminId).select('+password'); // Select password field
+        if (!admin) return res.status(404).json({ message: 'Admin user not found.' });
+
+        // Verify current password
+        const isMatch = await bcrypt.compare(currentPassword, admin.password);
+        if (!isMatch) {
+          return res.status(401).json({ message: 'Current password is incorrect.' });
+        }
+        
+        // Hash and update new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await User.findByIdAndUpdate(adminId, { password: hashedPassword });
+
+        return res.json({ message: 'Password updated successfully.' });
+      }
+
+      case 'fees': {
+        const { defaultFee, lateFee } = data;
+        await School.findByIdAndUpdate(schoolId, {
+          defaultFee: defaultFee,
+          lateFee: lateFee,
+        }, { new: true });
+        return res.json({ message: 'Fee settings updated successfully.' });
+      }
+        
+      case 'academic': {
+        const { gradingSystem, termStart, termEnd } = data;
+        await School.findByIdAndUpdate(schoolId, {
+          gradingSystem: gradingSystem,
+          // Convert string dates back to Date objects
+          termStart: termStart ? new Date(termStart) : null,
+          termEnd: termEnd ? new Date(termEnd) : null,
+        }, { new: true });
+        return res.json({ message: 'Academic settings updated successfully.' });
+      }
+      
+      default:
+        return res.status(400).json({ message: 'Invalid settings section provided.' });
     }
 
-    res.json({ message: 'Settings updated successfully.' });
   } catch (err) {
     console.error('[UpdateAdminSettings]', err);
     res.status(500).json({ message: 'Failed to update settings.' });
