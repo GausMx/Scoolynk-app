@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const Settings = () => {
@@ -15,6 +15,9 @@ const Settings = () => {
     address: '',
     motto: '',
   });
+
+  // NEW: State to hold the original (last saved) profile values for reset on cancel
+  const [originalProfile, setOriginalProfile] = useState({}); 
 
   const [security, setSecurity] = useState({
     currentPassword: '',
@@ -35,52 +38,58 @@ const Settings = () => {
     termEnd: '',
   });
 
-  // ----- Fetch existing settings -----
+  // Function to fetch settings, wrapped in useCallback to be dependency-friendly
+  const fetchSettings = useCallback(async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const res = await axios.get('/api/admin/settings', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = res.data;
+      
+      // --- DIAGNOSTIC LOGGING ---
+      // CHECK YOUR BROWSER CONSOLE for this log. This is the definitive check 
+      // to see if the backend (Render) is sending the school name/address.
+      console.log('Frontend received settings data:', data);
+      // --------------------------
+
+      const fetchedProfile = {
+        schoolName: data.school?.name || '',
+        schoolEmail: data.admin?.email || '',
+        phone: data.school?.phone || '',
+        address: data.school?.address || '',
+        motto: data.school?.motto || '',
+      };
+      
+      // Set both the current and the original state with the fetched data
+      setProfile(fetchedProfile);
+      setOriginalProfile(fetchedProfile); 
+      
+      setFees({
+        defaultFee: data.school?.defaultFee || '',
+        lateFee: data.school?.lateFee || '',
+      });
+      setAcademic({
+        classes: data.school?.classes || [],
+        subjects: data.school?.subjects || [],
+        gradingSystem: data.school?.gradingSystem || '',
+        termStart: data.school?.termStart || '',
+        termEnd: data.school?.termEnd || '',
+      });
+    } catch (err) {
+      console.error('Failed to fetch settings:', err);
+      setMessage('Failed to load settings. Check network connection.');
+    } finally {
+      setLoading(false);
+    }
+  }, []); // Empty dependencies because it doesn't rely on outside state/props
+
+  // ----- Fetch existing settings on mount -----
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem('token');
-        const res = await axios.get('/api/admin/settings', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        const data = res.data;
-        
-        // --- DIAGNOSTIC LOGGING ---
-        // CHECK YOUR BROWSER CONSOLE for this log. It will show you exactly 
-        // what data the frontend received from the backend API.
-        console.log('Frontend received settings data:', data);
-        // --------------------------
-
-        setProfile({
-          schoolName: data.school?.name || '',
-          schoolEmail: data.admin?.email || '',
-          phone: data.school?.phone || '',
-          address: data.school?.address || '',
-          motto: data.school?.motto || '',
-        });
-        setFees({
-          defaultFee: data.school?.defaultFee || '',
-          lateFee: data.school?.lateFee || '',
-        });
-        setAcademic({
-          classes: data.school?.classes || [],
-          subjects: data.school?.subjects || [],
-          gradingSystem: data.school?.gradingSystem || '',
-          // Term dates are now provided by the backend in YYYY-MM-DD format
-          termStart: data.school?.termStart || '',
-          termEnd: data.school?.termEnd || '',
-        });
-      } catch (err) {
-        console.error('Failed to fetch settings:', err);
-        setMessage('Failed to load settings. Check network connection.');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchSettings();
-  }, []);
+  }, [fetchSettings]); // Run once on mount and when fetchSettings changes (though it won't due to useCallback)
 
   // ----- Handle input changes -----
   const handleChange = (e, stateSetter) => {
@@ -110,10 +119,15 @@ const Settings = () => {
       );
 
       setMessage(res.data.message || 'Settings updated successfully!');
+      
+      // If the profile section was saved, refresh the data to update the original state
+      if (section === 'profile' || section === 'fees' || section === 'academic') {
+          await fetchSettings();
+      }
+
       setEditMode(false);
     } catch (err) {
       console.error('Error updating settings:', err);
-      // The backend now provides more specific error messages
       setMessage(err.response?.data?.message || 'Failed to update settings.');
     } finally {
       setLoading(false);
@@ -124,12 +138,18 @@ const Settings = () => {
   const formatFieldName = (field) => {
     return field.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
   };
+  
+  // Logic for resetting profile state on Cancel
+  const handleCancelProfileEdit = () => {
+    setProfile(originalProfile); // Reset profile state to the last saved values
+    setEditMode(false);
+  };
 
   return (
     <div className="container mt-5">
       <h2 className="mb-4">School Settings</h2>
       {loading && <div className="text-center text-primary">Loading...</div>}
-      {message && <div className="alert alert-info">{message}</div>}
+      {message && <div className={`alert ${message.includes('success') ? 'alert-success' : 'alert-info'} rounded-3`}>{message}</div>}
 
       {/* Tabs */}
       <ul className="nav nav-tabs mb-3">
@@ -170,7 +190,7 @@ const Settings = () => {
                       onChange={(e) => handleChange(e, setProfile)}
                     />
                   ) : (
-                    // VIEW MODE: Show Plain Text
+                    // VIEW MODE: Show Plain Text (Uses profile[field] which is updated by fetchSettings)
                     <p className="form-control-plaintext fw-bold">
                       {profile[field] || 'N/A'}
                     </p>
@@ -193,7 +213,7 @@ const Settings = () => {
                 </button>
                 <button 
                   className="btn btn-secondary rounded-3" 
-                  onClick={() => setEditMode(false)}
+                  onClick={handleCancelProfileEdit} // Use the new reset handler
                   disabled={loading}
                 >
                   Cancel
@@ -327,7 +347,7 @@ const Settings = () => {
             )}
           </div>
         )}
-      </div>
+      </div>    
     </div>
   );
 };
