@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-// Assuming API is correctly configured elsewhere if using fetch
-// For this single file, we keep using axios as specified
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -39,8 +37,6 @@ const Settings = () => {
 
   // ----- Fetch existing settings -----
   useEffect(() => {
-    // NOTE: This uses localStorage, which is generally discouraged for authentication in production.
-    // It's recommended to use secure, HttpOnly cookies for tokens.
     const fetchSettings = async () => {
       try {
         setLoading(true);
@@ -65,6 +61,7 @@ const Settings = () => {
           classes: data.school?.classes || [],
           subjects: data.school?.subjects || [],
           gradingSystem: data.school?.gradingSystem || '',
+          // Term dates are now provided by the backend in YYYY-MM-DD format
           termStart: data.school?.termStart || '',
           termEnd: data.school?.termEnd || '',
         });
@@ -91,11 +88,13 @@ const Settings = () => {
       const token = localStorage.getItem('token');
 
       let payload = {};
+      // Determine which state to use for the payload based on the section
       if (section === 'profile') payload = profile;
       if (section === 'security') payload = security;
       if (section === 'fees') payload = fees;
       if (section === 'academic') payload = academic;
 
+      // The frontend sends the section and the corresponding data object
       const res = await axios.put(
         '/api/admin/settings',
         { section, data: payload },
@@ -106,6 +105,7 @@ const Settings = () => {
       setEditMode(false);
     } catch (err) {
       console.error('Error updating settings:', err);
+      // The backend now provides more specific error messages
       setMessage(err.response?.data?.message || 'Failed to update settings.');
     } finally {
       setLoading(false);
@@ -150,17 +150,18 @@ const Settings = () => {
                   {formatFieldName(field)}:
                 </label>
                 <div className="col-sm-9">
-                  {editMode ? (
+                  {/* schoolEmail is always read-only as it's the Admin's email */}
+                  {editMode && field !== 'schoolEmail' ? (
                     // EDIT MODE: Show Input Field
                     <input
                       type={field === 'schoolEmail' ? 'email' : 'text'}
                       className="form-control rounded-3"
-                      name={field}
+                      name={field.replace('school', '').toLowerCase()} // Ensure name matches model if needed, but using state key here for simplicity
                       value={profile[field]}
                       onChange={(e) => handleChange(e, setProfile)}
                     />
                   ) : (
-                    // VIEW MODE: Show Plain Text
+                    // VIEW MODE: Show Plain Text (or input for schoolEmail)
                     <p className="form-control-plaintext fw-bold">
                       {profile[field] || 'N/A'}
                     </p>
