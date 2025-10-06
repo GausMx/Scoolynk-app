@@ -89,14 +89,23 @@ export const getAdminSettings = async (req, res) => {
 
     if (!admin || !school) return res.status(404).json({ message: 'Settings not found.' });
 
+    // --- DIAGNOSTIC LOGGING ---
+    // Check your server console for this output to confirm what data is being retrieved
+    // from the database before being sent to the client.
+    console.log('Sending settings data:', {
+      admin: { name: admin.name, email: admin.email },
+      school: school.toObject() // Use .toObject() to log plain data
+    });
+    // --------------------------
+
     // Respond with combined data structure matching the frontend state setup
     res.json({
       admin: {
         name: admin.name,
-        email: admin.email, // Admin's registered email
+        email: admin.email, // Admin's registered email (for schoolEmail field)
       },
       school: {
-        name: school.name, // Registered school name
+        name: school.name, // Registered school name (for schoolName field)
         address: school.address, // Registered school address
         phone: school.phone, // Registered school phone
         motto: school.motto, // Motto (may be null/empty initially)
