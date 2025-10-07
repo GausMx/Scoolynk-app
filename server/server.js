@@ -78,7 +78,24 @@ app.get('/', (req, res) => {
   res.send('API is running...');
 });
 
-// Mount all API routes first (This order is crucial!)
+// Helper for __dirname in ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// -----------------------------------------------------
+// STATIC FILE SERVING (Production Only)
+// -----------------------------------------------------
+if (process.env.NODE_ENV === 'production') {
+  const buildPath = path.join(__dirname, '..', 'client', 'build');
+  console.log(`[Prod Config] Serving static files from: ${buildPath}`);
+  app.use(express.static(buildPath));
+}
+
+// -----------------------------------------------------
+// API ROUTES (Must come BEFORE catch-all)
+// -----------------------------------------------------
+
+// Mount all API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/parent', parentRoutes);
@@ -91,35 +108,20 @@ app.post('/test', (req, res) => {
 });
 
 // -----------------------------------------------------
-// STATIC FILE SERVING / CATCH-ALL ROUTE
+// CATCH-ALL ROUTE (Must be LAST)
 // -----------------------------------------------------
-
-// Helper for __dirname in ES Modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 if (process.env.NODE_ENV === 'production') {
-  // Assume the client build files are located in a 'client/build' directory
   const buildPath = path.join(__dirname, '..', 'client', 'build');
   
-  // 1. Serve static assets (JS, CSS, images). Must be before the catch-all.
-  console.log(`[Prod Config] Serving static files from: ${buildPath}`);
-  app.use(express.static(buildPath));
-  
-  // 2. Catch-all route for client-side routing
-  // Use middleware function instead of app.get('*') to avoid path-to-regexp issues
-  app.use((req, res, next) => {
-    // Only serve index.html for non-API routes
-    if (!req.path.startsWith('/api')) {
-      res.sendFile(path.resolve(buildPath, 'index.html'), (err) => {
-        if (err) {
-          console.error('[Catch-All Error]', err);
-          res.status(500).send('Error loading page');
-        }
-      });
-    } else {
-      next();
-    }
+  // Catch all remaining requests and serve index.html
+  app.get('*', (req, res) => {
+    console.log(`[Catch-All] Serving index.html for: ${req.path}`);
+    res.sendFile(path.resolve(buildPath, 'index.html'), (err) => {
+      if (err) {
+        console.error('[Catch-All Error]', err);
+        res.status(500).send('Error loading page');
+      }
+    });
   });
 }
 
