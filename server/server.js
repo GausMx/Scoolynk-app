@@ -73,17 +73,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Define API routes
-app.get('/', (req, res) => {
-  res.send('API is running...');
-});
-
 // Helper for __dirname in ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // -----------------------------------------------------
-// STATIC FILE SERVING (Production Only)
+// STATIC FILE SERVING (Production Only - Before Routes)
 // -----------------------------------------------------
 if (process.env.NODE_ENV === 'production') {
   const buildPath = path.join(__dirname, '..', 'client', 'build');
@@ -92,8 +87,13 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // -----------------------------------------------------
-// API ROUTES (Must come BEFORE catch-all)
+// API ROUTES (Must come AFTER static files, BEFORE catch-all)
 // -----------------------------------------------------
+
+// Root route
+app.get('/', (req, res) => {
+  res.send('API is running...');
+});
 
 // Mount all API routes
 app.use('/api/auth', authRoutes);
@@ -108,12 +108,13 @@ app.post('/test', (req, res) => {
 });
 
 // -----------------------------------------------------
-// CATCH-ALL ROUTE (Must be LAST)
+// CATCH-ALL ROUTE FOR CLIENT-SIDE ROUTING (Must be LAST)
 // -----------------------------------------------------
 if (process.env.NODE_ENV === 'production') {
   const buildPath = path.join(__dirname, '..', 'client', 'build');
   
-  // Catch all remaining requests and serve index.html
+  // This MUST be the last route - catches all non-API GET requests
+  // and serves index.html for client-side routing (React Router)
   app.get('*', (req, res) => {
     console.log(`[Catch-All] Serving index.html for: ${req.path}`);
     res.sendFile(path.resolve(buildPath, 'index.html'), (err) => {
