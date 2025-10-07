@@ -12,12 +12,7 @@ import connectDB from './config/db.js';
 import protect from './middleware/authMiddleware.js';
 import subscriptionGuard from './middleware/subscriptionMiddleware.js';
 import requireRole from './middleware/roleMiddleware.js';
-// Note: getAdminDashboard moved to adminRoutes for cleaner structure
-// import { getAdminDashboard } from './controllers/adminController.js'; 
-import bcrypt from 'bcrypt';
-import User from './models/User.js';
 import testEmailRoutes from "./routes/test.js";
-
 
 // Load environment variables
 dotenv.config();
@@ -31,7 +26,7 @@ const app = express();
 app.use(express.json()); // Body parser
 app.use(express.urlencoded({ extended: false }));
 
-// CORS setup 
+// CORS setup
 const allowedOrigins = process.env.CORS_ORIGIN.split(',').map(o => o.trim().replace(/\/$/, ''));
 
 const corsOptions = {
@@ -39,7 +34,9 @@ const corsOptions = {
     console.log('[CORS] Request origin:', origin);
     if (!origin) return callback(null, true);
     
+    // Regex to match scoolynk-app.netlify.app and any subdomain/branch deploy
     const netlifyRegex = /^https:\/\/(?:[a-z0-9-]+\.)?scoolynk-app\.netlify\.app$/;
+    
     const cleanOrigin = origin.replace(/\/$/, '');
     
     if (
@@ -59,11 +56,26 @@ const corsOptions = {
   maxAge: 86400, // Cache preflight for 24 hours
 };
 
+// Apply CORS middleware globally
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+
+// Handle preflight requests using middleware instead of app.options('*')
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    // Set CORS headers for preflight
+    res.header('Access-Control-Allow-Origin', req.headers.origin);
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400');
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // Define API routes
 app.get('/', (req, res) => {
-  res.send('API is running...');
+  res.send('API is running...');
 });
 
 // Mount all API routes first (This order is crucial!)
@@ -75,12 +87,11 @@ app.use("/api/test", testEmailRoutes);
 
 // Test route
 app.post('/test', (req, res) => {
-  res.json({ message: 'Test route working!' });
+  res.json({ message: 'Test route working!' });
 });
 
-
 // -----------------------------------------------------
-// STATIC FILE SERVING / CATCH-ALL ROUTE (FINAL FIX)
+// STATIC FILE SERVING / CATCH-ALL ROUTE
 // -----------------------------------------------------
 
 // Helper for __dirname in ES Modules
@@ -88,26 +99,44 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 if (process.env.NODE_ENV === 'production') {
-  // Assume the client build files are located in a 'client/build' directory
-  const buildPath = path.join(__dirname, '..', 'client', 'build');
-
-  // 1. Serve static assets (JS, CSS, images). Must be before the catch-all.
-  console.log(`[Prod Config] Serving static files from: ${buildPath}`);
-  app.use(express.static(buildPath));
-
-  // 2. FINAL FIX: Use app.use() without a path. This acts as terminal middleware
-   // for all requests not handled by previous API routes or static files.
-   // It completely bypasses the buggy path-to-regexp parser.
-  app.use((req, res) => {
-    res.sendFile(path.resolve(buildPath, 'index.html'));
-  });
+  // Assume the client build files are located in a 'client/build' directory
+  const buildPath = path.join(__dirname, '..', 'client', 'build');
+  
+  // 1. Serve static assets (JS, CSS, images). Must be before the catch-all.
+  console.log(`[Prod Config] Serving static files from: ${buildPath}`);
+  app.use(express.static(buildPath));
+  
+  // 2. Catch-all route for client-side routing
+  // Use middleware function instead of app.get('*') to avoid path-to-regexp issues
+  app.use((req, res, next) => {
+    // Only serve index.html for non-API routes
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(path.resolve(buildPath, 'index.html'), (err) => {
+        if (err) {
+          console.error('[Catch-All Error]', err);
+          res.status(500).send('Error loading page');
+        }
+      });
+    } else {
+      next();
+    }
+  });
 }
 
 // -----------------------------------------------------
-// END STATIC FILE SERVING
+// ERROR HANDLING MIDDLEWARE
 // -----------------------------------------------------
+app.use((err, req, res, next) => {
+  console.error('[Global Error Handler]', err.stack);
+  res.status(err.status || 500).json({
+    message: err.message || 'Internal Server Error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
+});
 
-
+// -----------------------------------------------------
+// START SERVER
+// -----------------------------------------------------
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
