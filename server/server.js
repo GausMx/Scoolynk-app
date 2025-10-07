@@ -113,16 +113,23 @@ app.post('/test', (req, res) => {
 if (process.env.NODE_ENV === 'production') {
   const buildPath = path.join(__dirname, '..', 'client', 'build');
   
-  // This MUST be the last route - catches all non-API GET requests
+  // This MUST be the last middleware - catches all remaining requests
   // and serves index.html for client-side routing (React Router)
-  app.get('*', (req, res) => {
-    console.log(`[Catch-All] Serving index.html for: ${req.path}`);
-    res.sendFile(path.resolve(buildPath, 'index.html'), (err) => {
-      if (err) {
-        console.error('[Catch-All Error]', err);
-        res.status(500).send('Error loading page');
-      }
-    });
+  // Using app.use() with custom logic to avoid path-to-regexp wildcard issues
+  app.use((req, res, next) => {
+    // Only handle GET requests that haven't been handled by API routes
+    if (req.method === 'GET') {
+      console.log(`[Catch-All] Serving index.html for: ${req.path}`);
+      res.sendFile(path.resolve(buildPath, 'index.html'), (err) => {
+        if (err) {
+          console.error('[Catch-All Error]', err);
+          res.status(500).send('Error loading page');
+        }
+      });
+    } else {
+      // For non-GET methods, pass to error handler
+      next();
+    }
   });
 }
 
