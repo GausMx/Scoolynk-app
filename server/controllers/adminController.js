@@ -79,53 +79,64 @@ export const getAdminDashboard = (req, res) => {
 export const getAdminSettings = async (req, res) => {
   try {
     const adminId = req.user._id;
-    // Fetch Admin details (for email)
-    const admin = await User.findById(adminId).select('-password');
+    console.log('[GetAdminSettings] Admin ID:', adminId);
+    console.log('[GetAdminSettings] School ID:', req.user.schoolId);
     
-    // Fetch School details (for name, address, phone, motto, etc.)
+    // Fetch Admin details
+    const admin = await User.findById(adminId).select('-password');
+    console.log('[GetAdminSettings] Admin found:', !!admin);
+    if (admin) {
+      console.log('[GetAdminSettings] Admin data:', { name: admin.name, email: admin.email });
+    }
+    
+    // Fetch School details
     const school = await School.findById(req.user.schoolId).select(
       'name address phone motto classes subjects gradingSystem termStart termEnd defaultFee lateFee schoolCode'
     );
+    console.log('[GetAdminSettings] School found:', !!school);
+    if (school) {
+      console.log('[GetAdminSettings] School data:', {
+        name: school.name,
+        address: school.address,
+        phone: school.phone,
+        motto: school.motto,
+        schoolCode: school.schoolCode
+      });
+    }
 
-    if (!admin || !school) return res.status(404).json({ message: 'Settings not found.' });
+    if (!admin || !school) {
+      console.error('[GetAdminSettings] Missing data - admin:', !!admin, 'school:', !!school);
+      return res.status(404).json({ message: 'Settings not found.' });
+    }
 
-    // --- DIAGNOSTIC LOGGING ---
-    // Check your server console for this output to confirm what data is being retrieved
-    // from the database before being sent to the client.
-    console.log('Sending settings data:', {
-      admin: { name: admin.name, email: admin.email },
-      school: school.toObject() // Use .toObject() to log plain data
-    });
-    // --------------------------
-
-    // Respond with combined data structure matching the frontend state setup
-    res.json({
+    const responseData = {
       admin: {
         name: admin.name,
-        email: admin.email, // Admin's registered email (for schoolEmail field)
+        email: admin.email,
       },
       school: {
-        name: school.name, // Registered school name (for schoolName field)
-        address: school.address, // Registered school address
-        phone: school.phone, // Registered school phone
-        motto: school.motto, // Motto (may be null/empty initially)
+        name: school.name,
+        address: school.address,
+        phone: school.phone,
+        motto: school.motto,
         schoolCode: school.schoolCode,
         defaultFee: school.defaultFee,
         lateFee: school.lateFee,
         classes: school.classes,
         subjects: school.subjects,
         gradingSystem: school.gradingSystem,
-        // Convert Date objects to YYYY-MM-DD string format for HTML date input
         termStart: school.termStart ? new Date(school.termStart).toISOString().split('T')[0] : '',
         termEnd: school.termEnd ? new Date(school.termEnd).toISOString().split('T')[0] : '',
       },
-    });
+    };
+    
+    console.log('[GetAdminSettings] Sending response:', JSON.stringify(responseData, null, 2));
+    res.json(responseData);
   } catch (err) {
-    console.error('[GetAdminSettings]', err);
+    console.error('[GetAdminSettings] Error:', err);
     res.status(500).json({ message: 'Failed to load settings.' });
   }
 };
-
 // -------------------------
 // Update Admin Settings (handles updates for profile, security, fees, academic)
 // -------------------------
