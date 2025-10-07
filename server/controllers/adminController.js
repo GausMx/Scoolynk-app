@@ -136,7 +136,7 @@ export const getAdminSettings = async (req, res) => {
     console.error('[GetAdminSettings] Error:', err);
     res.status(500).json({ message: 'Failed to load settings.' });
   }
-};
+};  
 // -------------------------
 // Update Admin Settings (handles updates for profile, security, fees, academic)
 // -------------------------
