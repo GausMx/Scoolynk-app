@@ -10,7 +10,9 @@ const API = axios.create({
     'Content-Type': 'application/json',
   },
 });
-
+// Temporary debug log
+console.log('API baseURL configured as:', API.defaults.baseURL);
+console.log('Environment variable:', process.env.REACT_APP_API_URL);
 // Use an interceptor to attach the JWT token to every request
 API.interceptors.request.use(
   (config) => {
