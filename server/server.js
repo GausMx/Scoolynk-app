@@ -35,29 +35,32 @@ app.use(express.urlencoded({ extended: false }));
 const allowedOrigins = process.env.CORS_ORIGIN.split(',').map(o => o.trim().replace(/\/$/, ''));
 
 const corsOptions = {
-  origin: (origin, callback) => {
-    console.log('[CORS] Request origin:', origin);
-    if (!origin) return callback(null, true);
-    
-    // Regex to match scoolynk-app.netlify.app and any subdomain/branch deploy.
+  origin: (origin, callback) => {
+    console.log('[CORS] Request origin:', origin);
+    if (!origin) return callback(null, true);
+    
     const netlifyRegex = /^https:\/\/(?:[a-z0-9-]+\.)?scoolynk-app\.netlify\.app$/;
-
-    const cleanOrigin = origin.replace(/\/$/, '');
-
-    if (
-      allowedOrigins.includes(cleanOrigin) || // Check explicit origins from env
-      netlifyRegex.test(cleanOrigin) // Check Netlify deployment URLs
-    ) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS: ' + origin));
-    }
-  },
-  credentials: true,
+    const cleanOrigin = origin.replace(/\/$/, '');
+    
+    if (
+      allowedOrigins.includes(cleanOrigin) ||
+      netlifyRegex.test(cleanOrigin)
+    ) {
+      callback(null, true);
+    } else {
+      console.error('[CORS] Blocked origin:', origin);
+      callback(new Error('Not allowed by CORS: ' + origin));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Authorization'],
+  maxAge: 86400, // Cache preflight for 24 hours
 };
 
 app.use(cors(corsOptions));
-
+app.options('*', cors(corsOptions));
 // Define API routes
 app.get('/', (req, res) => {
   res.send('API is running...');
