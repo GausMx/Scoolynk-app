@@ -246,7 +246,7 @@ const ManageStudents = () => {
           </div>
         )}
 
-        {/* Delete Confirmation Modal */}
+        {/* Delete Conf irmation Modal */}
         <ConfirmationModal isOpen={confirmState.isOpen} title="Confirm Deletion" body={`Are you sure you want to delete student: ${confirmState.name}?`} onConfirm={confirmState.action} onCancel={handleCancelDelete} isSaving={loading} />
       </div>
     </div>

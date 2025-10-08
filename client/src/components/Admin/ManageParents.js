@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 
-// --- Icon Components ---
-const IconEdit = ({ className }) => <i className={`bi bi-pencil-square ${className}`}></i>;
-const IconTrash = ({ className }) => <i className={`bi bi-trash-fill ${className}`}></i>;
-const IconPlus = ({ className }) => <i className={`bi bi-plus-circle-fill ${className}`}></i>;
-const IconSearch = ({ className }) => <i className={`bi bi-search ${className}`}></i>;
-const IconParents = ({ className }) => <i className={`bi bi-people-fill fs-4 ${className}`}></i>;
+// --- Icons ---
+const IconEdit = ({ className = "" }) => <i className={`bi bi-pencil-square ${className}`}></i>;
+const IconTrash = ({ className = "" }) => <i className={`bi bi-trash-fill ${className}`}></i>;
+const IconPlus = ({ className = "" }) => <i className={`bi bi-plus-circle-fill ${className}`}></i>;
+const IconSearch = ({ className = "" }) => <i className={`bi bi-search ${className}`}></i>;
+const IconParents = ({ className = "" }) => <i className={`bi bi-people-fill fs-4 ${className}`}></i>;
 
-// --- MOCK DATA (Nigeria) ---
+// --- Mock Data ---
 const MOCK_PARENTS = [
     { id: 'p001', name: 'Mr. David Okoro', phone: '0803-123-4567', email: 'david.okoro@example.com', linkedStudents: 2 },
     { id: 'p002', name: 'Mrs. Chioma Eze', phone: '0809-876-5432', email: 'chioma.eze@example.com', linkedStudents: 1 },
@@ -22,7 +22,6 @@ const ManageParents = () => {
     const [message, setMessage] = useState('');
     const [modalState, setModalState] = useState({ isOpen: false, mode: 'add', currentParent: null });
 
-    // Filtered parents based on search
     const filteredParents = parents.filter(
         (p) =>
             p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -30,7 +29,6 @@ const ManageParents = () => {
             p.phone.includes(searchTerm)
     );
 
-    // --- Placeholder API Functions ---
     const handleAddOrEdit = (formData) => {
         setLoading(true);
         setMessage('');
@@ -38,12 +36,12 @@ const ManageParents = () => {
             if (modalState.mode === 'add') {
                 const newParent = { ...formData, id: 'p' + Date.now(), linkedStudents: 0 };
                 setParents((prev) => [...prev, newParent]);
-                setMessage(`Parent '${newParent.name}' added successfully. (API simulation)`);
+                setMessage(`Parent '${newParent.name}' added successfully.`);
             } else {
                 setParents((prev) =>
                     prev.map((p) => (p.id === formData.id ? { ...p, ...formData } : p))
                 );
-                setMessage(`Parent '${formData.name}' updated successfully. (API simulation)`);
+                setMessage(`Parent '${formData.name}' updated successfully.`);
             }
             setLoading(false);
             setModalState({ isOpen: false, mode: 'add', currentParent: null });
@@ -60,13 +58,12 @@ const ManageParents = () => {
             setMessage('');
             setTimeout(() => {
                 setParents((prev) => prev.filter((p) => p.id !== parentId));
-                setMessage(`Parent '${parentName}' deleted successfully. (API simulation)`);
+                setMessage(`Parent '${parentName}' deleted successfully.`);
                 setLoading(false);
             }, 800);
         }
     };
 
-    // --- Add/Edit Form ---
     const ParentForm = ({ initialData, onSubmit, onCancel, isSaving }) => {
         const [formData, setFormData] = useState({
             name: initialData?.name || '',
@@ -86,7 +83,7 @@ const ManageParents = () => {
         return (
             <form onSubmit={handleSubmit}>
                 <div className="mb-3">
-                    <label className="form-label">Full Name</label>
+                    <label className="form-label fw-semibold">Full Name</label>
                     <input
                         type="text"
                         className="form-control rounded-3"
@@ -97,7 +94,7 @@ const ManageParents = () => {
                     />
                 </div>
                 <div className="mb-3">
-                    <label className="form-label">Phone Number</label>
+                    <label className="form-label fw-semibold">Phone Number</label>
                     <input
                         type="tel"
                         className="form-control rounded-3"
@@ -108,7 +105,7 @@ const ManageParents = () => {
                     />
                 </div>
                 <div className="mb-4">
-                    <label className="form-label">Email Address</label>
+                    <label className="form-label fw-semibold">Email Address</label>
                     <input
                         type="email"
                         className="form-control rounded-3"
@@ -119,13 +116,7 @@ const ManageParents = () => {
                     />
                 </div>
                 <div className="d-flex justify-content-end">
-                    <button
-                        type="button"
-                        className="btn btn-secondary me-2 rounded-3"
-                        onClick={onCancel}
-                    >
-                        Cancel
-                    </button>
+                    <button type="button" className="btn btn-secondary me-2 rounded-3" onClick={onCancel} disabled={isSaving}>Cancel</button>
                     <button type="submit" className="btn btn-primary rounded-3" disabled={isSaving}>
                         {isSaving ? 'Saving...' : initialData ? 'Update Parent' : 'Add Parent'}
                     </button>
@@ -135,7 +126,7 @@ const ManageParents = () => {
     };
 
     return (
-        <div className="container-fluid container-md py-4">
+        <div className="container py-4">
             <div className="card shadow-lg rounded-4 p-4 mb-4 border-0">
 
                 {/* Header */}
@@ -146,23 +137,14 @@ const ManageParents = () => {
                     <button
                         className="btn btn-primary rounded-pill d-flex align-items-center px-3 py-2"
                         onClick={() => setModalState({ isOpen: true, mode: 'add', currentParent: null })}
+                        disabled={loading}
                     >
-                        <IconPlus className="fs-5 me-md-2" />
-                        <span className="d-none d-md-inline">Add New Parent</span>
+                        <IconPlus className="fs-5 me-2" /> Add New Parent
                     </button>
                 </div>
 
-                {/* Status Message */}
-                {message && (
-                    <div
-                        className={`alert ${
-                            message.includes('success') ? 'alert-success' : 'alert-info'
-                        } rounded-3`}
-                        role="alert"
-                    >
-                        {message}
-                    </div>
-                )}
+                {/* Status */}
+                {message && <div className={`alert alert-success rounded-3`}>{message}</div>}
 
                 {/* Search */}
                 <div className="input-group mb-4 w-100 w-md-75 w-lg-50">
@@ -192,27 +174,17 @@ const ManageParents = () => {
                         </thead>
                         <tbody>
                             {filteredParents.length > 0 ? (
-                                filteredParents.map((p) => (
+                                filteredParents.map(p => (
                                     <tr key={p.id}>
                                         <td className="fw-semibold">{p.name}</td>
                                         <td>{p.phone}</td>
                                         <td className="d-none d-md-table-cell">{p.email}</td>
                                         <td className="text-center d-none d-md-table-cell">{p.linkedStudents}</td>
                                         <td className="text-center">
-                                            <button
-                                                className="btn btn-sm btn-outline-secondary me-2 rounded-3"
-                                                onClick={() => setModalState({ isOpen: true, mode: 'edit', currentParent: p })}
-                                                title="Edit Parent"
-                                                disabled={loading}
-                                            >
+                                            <button className="btn btn-sm btn-outline-secondary me-2 rounded-3" onClick={() => setModalState({ isOpen: true, mode: 'edit', currentParent: p })} title="Edit Parent" disabled={loading}>
                                                 <IconEdit className="fs-6" />
                                             </button>
-                                            <button
-                                                className="btn btn-sm btn-outline-danger rounded-3"
-                                                onClick={() => handleDelete(p.id, p.name)}
-                                                title="Delete Parent"
-                                                disabled={loading || p.linkedStudents > 0}
-                                            >
+                                            <button className="btn btn-sm btn-outline-danger rounded-3" onClick={() => handleDelete(p.id, p.name)} title="Delete Parent" disabled={loading || p.linkedStudents > 0}>
                                                 <IconTrash className="fs-6" />
                                             </button>
                                         </td>
@@ -220,9 +192,7 @@ const ManageParents = () => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="5" className="text-center text-muted py-3">
-                                        No parents found.
-                                    </td>
+                                    <td colSpan="5" className="text-center text-muted py-3">No parents found.</td>
                                 </tr>
                             )}
                         </tbody>
@@ -235,24 +205,14 @@ const ManageParents = () => {
                         <div className="modal-dialog modal-dialog-centered">
                             <div className="modal-content rounded-4 shadow-lg border-0">
                                 <div className="modal-header bg-light border-bottom">
-                                    <h5 className="modal-title fw-bold text-dark">
-                                        {modalState.mode === 'add' ? 'Add New Parent' : 'Edit Parent'}
-                                    </h5>
-                                    <button
-                                        type="button"
-                                        className="btn-close"
-                                        onClick={() =>
-                                            setModalState({ isOpen: false, mode: 'add', currentParent: null })
-                                        }
-                                    ></button>
+                                    <h5 className="modal-title fw-bold">{modalState.mode === 'add' ? 'Add New Parent' : 'Edit Parent'}</h5>
+                                    <button type="button" className="btn-close" onClick={() => setModalState({ isOpen: false, mode: 'add', currentParent: null })}></button>
                                 </div>
                                 <div className="modal-body">
                                     <ParentForm
                                         initialData={modalState.currentParent}
                                         onSubmit={handleAddOrEdit}
-                                        onCancel={() =>
-                                            setModalState({ isOpen: false, mode: 'add', currentParent: null })
-                                        }
+                                        onCancel={() => setModalState({ isOpen: false, mode: 'add', currentParent: null })}
                                         isSaving={loading}
                                     />
                                 </div>
@@ -260,6 +220,7 @@ const ManageParents = () => {
                         </div>
                     </div>
                 )}
+
             </div>
         </div>
     );
