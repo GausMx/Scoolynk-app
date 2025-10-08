@@ -10,6 +10,11 @@ const Sidebar = ({ user, role }) => {
     { path: "/admin/review-results", label: "Review Results" },
     { path: "/admin/broadcast", label: "Broadcast Notification" },
     { path: "/admin/settings", label: "Settings" },
+    { path: "/admin/manage-parents", label: "Manage Parents" },
+    { path: "/admin/manage-teachers", label: "Manage Teachers" },
+    { path: "/admin/manage-students", label: "Manage Students" },
+    { path: "/admin/manage-classes", label: "Manage Classes" },
+    { path: "/admin/manage-courses", label: "Manage Courses" },
   ];
 
   const parentLinks = [
