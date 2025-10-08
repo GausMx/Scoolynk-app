@@ -1,189 +1,226 @@
+// src/components/Admin/ManageParents.js
 import React, { useState } from 'react';
 
-// Icon components using Bootstrap Icon classes (assuming Bootstrap Icons are available)
-const Check = ({ size, className }) => <i className={`bi bi-check-lg fs-${size === 18 ? 6 : 5} ${className}`}></i>;
-const X = ({ size, className }) => <i className={`bi bi-x-lg fs-${size === 18 ? 6 : 5} ${className}`}></i>;
-const Trash2 = ({ size, className }) => <i className={`bi bi-trash fs-${size === 18 ? 6 : 5} ${className}`}></i>;
-const Search = ({ size, className }) => <i className={`bi bi-search fs-${size === 20 ? 6 : 5} ${className}`}></i>;
-const UserPlus = ({ size, className }) => <i className={`bi bi-person-plus fs-${size === 20 ? 6 : 5} ${className}`}></i>;
+// Consistent Icon components using Bootstrap Icon classes
+const IconEdit = ({ className }) => <i className={`bi bi-pencil-square ${className}`}></i>;
+const IconTrash = ({ className }) => <i className={`bi bi-trash-fill ${className}`}></i>;
+const IconPlus = ({ className }) => <i className={`bi bi-plus-circle-fill ${className}`}></i>;
+const IconSearch = ({ className }) => <i className={`bi bi-search ${className}`}></i>;
+const IconParents = ({ className }) => <i className={`bi bi-people-fill fs-4 ${className}`}></i>;
 
-
-// Mock data including a 'status' for approval
-const MOCK_PARENT_DATA = [
-    { id: 'parent-1', name: 'Alice Johnson', email: 'alice@example.com', student: 'Leo Johnson (JSS 2)', status: 'Approved' },
-    { id: 'parent-2', name: 'Bob Smith', email: 'bob@example.com', student: 'Mia Smith (SSS 1)', status: 'Pending' },
-    { id: 'parent-3', name: 'Charlie Brown', email: 'charlie@example.com', student: 'Sam Brown (JSS 1)', status: 'Pending' },
-    { id: 'parent-4', name: 'Diana Prince', email: 'diana@example.com', student: 'Clark Prince (SSS 3)', status: 'Approved' },
+// Mock Data
+const MOCK_PARENTS = [
+    { id: 'p001', name: 'Mr. David Okoro', phone: '0803-123-4567', email: 'david.o@example.com', linkedStudents: 2 },
+    { id: 'p002', name: 'Mrs. Chioma Eze', phone: '0809-876-5432', email: 'chioma.e@example.com', linkedStudents: 1 },
+    { id: 'p003', name: 'Alhaji Abdul Bello', phone: '0705-555-1212', email: 'abdul.b@example.com', linkedStudents: 1 },
+    { id: 'p004', name: 'Ms. Tola Adebayo', phone: '0901-222-3333', email: 'tola.a@example.com', linkedStudents: 1 },
 ];
 
 const ManageParents = () => {
-    const [parents, setParents] = useState(MOCK_PARENT_DATA);
+    const [parents, setParents] = useState(MOCK_PARENTS);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
-
-    // ** API Integration Note: This should be run on mount to fetch all parents **
-    // useEffect(() => { fetchParents() }, []);
+    
+    const [modalState, setModalState] = useState({ isOpen: false, mode: 'add', currentParent: null });
 
     const filteredParents = parents.filter(p => 
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        p.email.toLowerCase().includes(searchTerm.toLowerCase())
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.phone.includes(searchTerm)
     );
 
-    const updateParentStatus = (parentId, newStatus) => {
+    /**
+     * Placeholder API Function: Handles creating a new parent or updating an existing one.
+     * Replace the setTimeout logic with your actual API call.
+     */
+    const handleAddOrEdit = (formData) => {
         setLoading(true);
         setMessage('');
-
-        // ** API Integration Note: Replace setTimeout with your actual API PUT call **
+        
+        // Simulating API latency
         setTimeout(() => {
-            setParents(prev => prev.map(p => 
-                p.id === parentId ? { ...p, status: newStatus } : p
-            ));
+            if (modalState.mode === 'add') {
+                const newParent = { ...formData, id: 'p' + Date.now(), linkedStudents: 0 };
+                setParents(prev => [...prev, newParent]);
+                setMessage(`Parent '${newParent.name}' added successfully. (API simulation)`);
+            } else {
+                setParents(prev => prev.map(p => 
+                    p.id === formData.id ? { ...p, ...formData } : p
+                ));
+                setMessage(`Parent '${formData.name}' updated successfully. (API simulation)`);
+            }
             setLoading(false);
-            setMessage(`Successfully updated parent status to ${newStatus}. (API simulation)`);
+            setModalState({ isOpen: false, mode: 'add', currentParent: null });
         }, 800);
     };
 
-    const deleteParent = (parentId) => {
-        setLoading(true);
-        setMessage('');
-
-        // ** API Integration Note: Replace setTimeout with your actual API DELETE call **
-        setTimeout(() => {
-            setParents(prev => prev.filter(p => p.id !== parentId));
-            setLoading(false);
-            setMessage('Parent deleted successfully. (API simulation)');
-        }, 800);
-    };
-
-    const getStatusClasses = (status) => {
-        switch (status) {
-            case 'Approved': return 'bg-success text-white';
-            case 'Pending': return 'bg-warning text-dark';
-            default: return 'bg-secondary text-white';
+    /**
+     * Placeholder API Function: Handles deleting a parent.
+     * Replace the setTimeout logic with your actual API call.
+     */
+    const handleDelete = (parentId, parentName) => {
+        if (window.confirm(`Are you sure you want to delete parent: ${parentName}? This will unlink all associated students.`)) {
+            setLoading(true);
+            setMessage('');
+            
+            // Simulating API latency
+            setTimeout(() => {
+                setParents(prev => prev.filter(p => p.id !== parentId));
+                setMessage(`Parent '${parentName}' deleted successfully. (API simulation)`);
+                setLoading(false);
+            }, 800);
         }
     };
+    
+    // Form component for Add/Edit Modal
+    const ParentForm = ({ initialData, onSubmit, onCancel, isSaving }) => {
+        const [formData, setFormData] = useState({ 
+            name: initialData?.name || '', 
+            phone: initialData?.phone || '',
+            email: initialData?.email || '',
+        });
+
+        const handleChange = (e) => {
+            setFormData({ ...formData, [e.target.name]: e.target.value });
+        };
+
+        const handleSubmit = (e) => {
+            e.preventDefault();
+            onSubmit({ ...initialData, ...formData });
+        };
+
+        return (
+            <form onSubmit={handleSubmit}>
+                <div className="mb-3">
+                    <label className="form-label">Full Name</label>
+                    <input type="text" className="form-control rounded-3" name="name" value={formData.name} onChange={handleChange} required />
+                </div>
+                <div className="mb-3">
+                    <label className="form-label">Phone Number</label>
+                    <input type="tel" className="form-control rounded-3" name="phone" value={formData.phone} onChange={handleChange} required />
+                </div>
+                <div className="mb-4">
+                    <label className="form-label">Email Address</label>
+                    <input type="email" className="form-control rounded-3" name="email" value={formData.email} onChange={handleChange} required />
+                </div>
+                <div className="d-flex justify-content-end">
+                    <button type="button" className="btn btn-secondary me-2 rounded-3" onClick={onCancel}>
+                        Cancel
+                    </button>
+                    <button type="submit" className="btn btn-primary rounded-3" disabled={isSaving}>
+                        {isSaving ? 'Saving...' : (initialData ? 'Update Parent' : 'Add Parent')}
+                    </button>
+                </div>
+            </form>
+        );
+    };
+
 
     return (
         <div className="container py-4">
-            <div className="card p-4 shadow-lg border-0 rounded-4">
-                
-                <h2 className="text-primary fw-bolder mb-4 d-flex align-items-center">
-                    <i className="bi bi-people-fill fs-4 me-3 text-secondary"></i> Manage Parents
-                </h2>
-
-                {/* Message / Alert Box (Bootstrap Alert) */}
-                {message && (
-                    <div 
-                        className={`alert rounded-3 mb-4 alert-dismissible fade show ${message.includes('success') || message.includes('deleted') ? 'alert-success' : 'alert-info'}`}
-                        role="alert"
-                    >
-                        {message}
-                        <button type="button" className="btn-close" onClick={() => setMessage('')} aria-label="Close"></button>
-                    </div>
-                )}
-
-                <div className="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
-                    {/* Search Bar (Bootstrap Input Group) */}
-                    <div className="input-group" style={{ maxWidth: '450px' }}>
-                        <span className="input-group-text bg-white border-end-0 rounded-start-3">
-                            <Search size={20} className="text-secondary" />
-                        </span>
-                        <input
-                            type="text"
-                            placeholder="Search by name or email..."
-                            className="form-control rounded-end-3 border-start-0 focus-ring shadow-none"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                    
-                    {/* Add Parent Button */}
+            <div className="card shadow-lg rounded-4 p-4 mb-4 border-0">
+                <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+                    <h4 className="card-title text-dark mb-0 d-flex align-items-center fw-bold">
+                        <IconParents className="text-primary me-2" /> Manage Parents/Guardians
+                    </h4>
                     <button 
-                        className="btn btn-primary rounded-3 shadow-sm d-flex align-items-center px-4"
-                        onClick={() => setMessage('Add Parent modal functionality goes here.')}
-                        disabled={loading}
+                        className="btn btn-primary rounded-pill d-flex align-items-center px-4 py-2"
+                        onClick={() => setModalState({ isOpen: true, mode: 'add', currentParent: null })}
                     >
-                        <UserPlus size={20} className="me-2" /> Add Parent
+                        <IconPlus className="me-2 fs-5" /> Add New Parent
                     </button>
                 </div>
 
-                {loading && <div className="text-center py-4 text-primary">
-                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    Loading...
-                </div>}
-
-                {/* Parents Table (Bootstrap Table) */}
-                <div className="table-responsive border rounded-4">
-                    <table className="table table-hover mb-0">
+                {message && (
+                    <div className={`alert ${message.includes('success') ? 'alert-success' : 'alert-info'} rounded-3`} role="alert">
+                        {message}
+                    </div>
+                )}
+                
+                {/* Search Input */}
+                <div className="input-group mb-4" style={{ maxWidth: '400px' }}>
+                    <span className="input-group-text bg-light rounded-start-pill border-0"><IconSearch className="fs-6" /></span>
+                    <input
+                        type="text"
+                        className="form-control rounded-end-pill"
+                        placeholder="Search by name, phone, or email..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                
+                {/* Parent Table */}
+                <div className="table-responsive">
+                    <table className="table table-striped table-hover align-middle">
                         <thead className="table-light">
                             <tr>
-                                <th scope="col" className="px-3 py-3 text-start text-uppercase fw-bold text-secondary">Name</th>
-                                <th scope="col" className="px-3 py-3 text-start text-uppercase fw-bold text-secondary">Email</th>
-                                <th scope="col" className="px-3 py-3 text-start text-uppercase fw-bold text-secondary">Student</th>
-                                <th scope="col" className="px-3 py-3 text-start text-uppercase fw-bold text-secondary">Status</th>
-                                <th scope="col" className="px-3 py-3 text-center text-uppercase fw-bold text-secondary">Actions</th>
+                                <th scope="col" className="fw-bold">Name</th>
+                                <th scope="col" className="fw-bold">Phone</th>
+                                <th scope="col" className="fw-bold">Email</th>
+                                <th scope="col" className="fw-bold text-center">Linked Students</th>
+                                <th scope="col" className="text-center fw-bold">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredParents.length > 0 ? (
-                                filteredParents.map((parent) => (
-                                    <tr key={parent.id}>
-                                        <td className="px-3 py-3 fw-bold">{parent.name}</td>
-                                        <td className="px-3 py-3 text-muted">{parent.email}</td>
-                                        <td className="px-3 py-3 text-muted">{parent.student}</td>
-                                        <td className="px-3 py-3">
-                                            <span className={`badge ${getStatusClasses(parent.status)} fw-normal p-2 rounded-pill`}>
-                                                {parent.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-3 py-3 text-center">
-                                            
-                                            {/* Action Buttons */}
-                                            {parent.status === 'Pending' && (
-                                                <button
-                                                    className="btn btn-sm btn-success mx-1 rounded-pill"
-                                                    title="Approve Registration"
-                                                    onClick={() => updateParentStatus(parent.id, 'Approved')}
-                                                    disabled={loading}
-                                                >
-                                                    <Check size={18} />
-                                                </button>
-                                            )}
-                                            {parent.status === 'Approved' && (
-                                                <button
-                                                    className="btn btn-sm btn-warning mx-1 rounded-pill text-dark"
-                                                    title="Deactivate Account"
-                                                    onClick={() => updateParentStatus(parent.id, 'Pending')}
-                                                    disabled={loading}
-                                                >
-                                                    <X size={18} />
-                                                </button>
-                                            )}
-                                            <button
-                                                className="btn btn-sm btn-outline-danger mx-1 rounded-pill"
-                                                title="Delete Account"
-                                                onClick={() => deleteParent(parent.id)}
+                                filteredParents.map((item) => (
+                                    <tr key={item.id}>
+                                        <td className="fw-semibold">{item.name}</td>
+                                        <td>{item.phone}</td>
+                                        <td>{item.email}</td>
+                                        <td className="text-center">{item.linkedStudents}</td>
+                                        <td className="text-center">
+                                            <button 
+                                                className="btn btn-sm btn-outline-secondary me-2 rounded-3"
+                                                onClick={() => setModalState({ isOpen: true, mode: 'edit', currentParent: item })}
+                                                title="Edit Parent"
                                                 disabled={loading}
                                             >
-                                                <Trash2 size={18} />
+                                                <IconEdit className="fs-6" />
+                                            </button>
+                                            {/* Fixed 'id' context issue by explicitly using item.id */}
+                                            <button 
+                                                className="btn btn-sm btn-outline-danger rounded-3"
+                                                onClick={() => handleDelete(item.id, item.name)} 
+                                                title="Delete Parent"
+                                                disabled={loading || item.linkedStudents > 0}
+                                            >
+                                                <IconTrash className="fs-6" />
                                             </button>
                                         </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="5" className="text-center text-muted py-4">No parents found matching your criteria.</td>
+                                    <td colSpan="5" className="text-center text-muted py-3">No parents found.</td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
 
-                <p className="mt-4 text-muted border-top pt-3">
-                    <i className="bi bi-info-circle-fill me-1"></i> 
-                    **API Integration Note:** Fetch data from `/api/admin/parents` and use mutation endpoints like `/api/admin/parents/{id}/approve` or `/api/admin/parents/{id}` (DELETE).
-                </p>
+                {/* Simple Modal Implementation */}
+                {modalState.isOpen && (
+                    <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+                        <div className="modal-dialog modal-dialog-centered">
+                            <div className="modal-content rounded-4 shadow-lg border-0">
+                                <div className="modal-header bg-light border-bottom">
+                                    <h5 className="modal-title fw-bold text-dark">{modalState.mode === 'add' ? 'Add New Parent' : 'Edit Parent'}</h5>
+                                    <button type="button" className="btn-close" onClick={() => setModalState({ isOpen: false, mode: 'add', currentParent: null })}></button>
+                                </div>
+                                <div className="modal-body">
+                                    <ParentForm 
+                                        initialData={modalState.currentParent} 
+                                        onSubmit={handleAddOrEdit} 
+                                        onCancel={() => setModalState({ isOpen: false, mode: 'add', currentParent: null })}
+                                        isSaving={loading}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
