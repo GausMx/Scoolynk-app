@@ -1,5 +1,3 @@
-// src/components/Admin/ManageCourses.js
-
 import React, { useState } from 'react';
 import { BookMarked, Edit, Trash2, PlusCircle, Search } from 'lucide-react';
 
@@ -40,6 +38,7 @@ const ManageCourses = () => {
         setLoading(true);
         setMessage('');
         
+        // Simulating API delay
         setTimeout(() => {
             if (modalState.mode === 'add') {
                 const newCourse = { ...formData, id: 'crs' + Date.now() };
@@ -57,7 +56,8 @@ const ManageCourses = () => {
     };
 
     const handleDelete = (courseId, courseName) => {
-        if (window.confirm(`Are you sure you want to delete course: ${courseName}?`)) {
+        // IMPORTANT: Use a custom modal in real production environment, not window.confirm
+        if (window.confirm(`Are you sure you want to delete course: ${courseName}?`)) { 
             setLoading(true);
             setMessage('');
             setTimeout(() => {
@@ -165,13 +165,16 @@ const ManageCourses = () => {
 
 
     return (
-        <div className="card shadow-sm rounded-4 p-4 mb-4">
-            <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-                <h4 className="card-title text-primary mb-0 d-flex align-items-center">
+        // Main Card Container with responsive padding (p-3 on mobile, p-4 on desktop)
+        <div className="card shadow-sm rounded-4 p-3 p-md-4 mb-4">
+            
+            {/* Header: Stacks on small screens, side-by-side on medium+ */}
+            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 border-bottom pb-3">
+                <h4 className="card-title text-primary mb-3 mb-md-0 d-flex align-items-center">
                     <BookMarked size={24} className="me-2" /> Manage Courses & Subjects
                 </h4>
                 <button 
-                    className="btn btn-primary rounded-3 d-flex align-items-center"
+                    className="btn btn-primary rounded-3 d-flex align-items-center w-100 w-md-auto" // Full width on mobile
                     onClick={() => setModalState({ isOpen: true, mode: 'add', currentCourse: null })}
                 >
                     <PlusCircle size={20} className="me-2" /> Add New Course
@@ -184,27 +187,31 @@ const ManageCourses = () => {
                 </div>
             )}
             
-            {/* Search Input */}
-            <div className="input-group mb-4" style={{ maxWidth: '300px' }}>
-                <span className="input-group-text bg-light rounded-start-3"><Search size={18} /></span>
-                <input
-                    type="text"
-                    className="form-control rounded-end-3"
-                    placeholder="Search courses or codes..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
+            {/* Search Input: Full width on mobile, constrained on desktop */}
+            <div className="mb-4 col-12 col-md-4 p-0">
+                <div className="input-group">
+                    <span className="input-group-text bg-light rounded-start-3"><Search size={18} /></span>
+                    <input
+                        type="text"
+                        className="form-control rounded-end-3"
+                        placeholder="Search courses or codes..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
             </div>
             
-            {/* Course Table */}
+            {/* Course Table: The table-responsive class handles horizontal scrolling on small screens */}
             <div className="table-responsive">
-                <table className="table table-hover align-middle">
+                <table className="table table-hover align-middle caption-top">
+                    {/* Caption for accessibility on mobile */}
+                    <caption>List of all managed courses</caption>
                     <thead className="table-light">
                         <tr>
                             <th scope="col">Name</th>
                             <th scope="col">Code</th>
-                            <th scope="col">Teacher</th>
-                            <th scope="col">Classes</th>
+                            <th scope="col" className="d-none d-sm-table-cell">Teacher</th> {/* Hide teacher on smallest screens */}
+                            <th scope="col" className="d-none d-lg-table-cell">Classes</th> {/* Hide classes on small/medium screens */}
                             <th scope="col" className="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -214,13 +221,14 @@ const ManageCourses = () => {
                                 <tr key={item.id}>
                                     <td className="fw-semibold">{item.name}</td>
                                     <td>{item.code}</td>
-                                    <td>{item.teacher}</td>
-                                    <td>
+                                    <td className="d-none d-sm-table-cell">{item.teacher}</td>
+                                    <td className="d-none d-lg-table-cell">
+                                        {/* Use smaller badges on mobile/tablet */}
                                         {item.classes.map(cls => 
-                                            <span key={cls} className="badge bg-secondary me-1">{cls}</span>
+                                            <span key={cls} className="badge bg-secondary me-1 text-truncate" style={{ maxWidth: '80px' }}>{cls}</span>
                                         )}
                                     </td>
-                                    <td className="text-center">
+                                    <td className="text-center text-nowrap">
                                         <button 
                                             className="btn btn-sm btn-outline-secondary me-2 rounded-3"
                                             onClick={() => setModalState({ isOpen: true, mode: 'edit', currentCourse: item })}
@@ -249,10 +257,11 @@ const ManageCourses = () => {
                 </table>
             </div>
 
-            {/* Simple Modal Implementation */}
+            {/* Simple Modal Implementation - Responsive by default */}
             {modalState.isOpen && (
                 <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
-                    <div className="modal-dialog modal-dialog-centered">
+                    {/* modal-dialog-centered is responsive. modal-lg can be added for extra large content */}
+                    <div className="modal-dialog modal-dialog-centered modal-lg"> 
                         <div className="modal-content rounded-4 shadow-lg">
                             <div className="modal-header">
                                 <h5 className="modal-title">{modalState.mode === 'add' ? 'Add New Course' : 'Edit Course'}</h5>

@@ -1,7 +1,5 @@
-// src/components/Admin/ManageStudents.js
-
 import React, { useState } from 'react';
-import { Users, Edit, Trash2, PlusCircle, Search } from 'lucide-react';
+import { Users, Edit, Trash2, PlusCircle, Search, AlertTriangle } from 'lucide-react';
 
 // Mock Data
 const MOCK_STUDENTS = [
@@ -20,6 +18,37 @@ const MOCK_PARENTS = [
     { id: 'p105', name: 'New Parent (Not yet linked)' },
 ];
 
+/**
+ * Custom Confirmation Modal to replace window.confirm
+ */
+const ConfirmationModal = ({ isOpen, title, body, onConfirm, onCancel, isSaving }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }} tabIndex="-1">
+            <div className="modal-dialog modal-dialog-centered modal-sm">
+                <div className="modal-content rounded-4 shadow-lg">
+                    <div className="modal-header bg-danger text-white">
+                        <h5 className="modal-title d-flex align-items-center"><AlertTriangle size={20} className="me-2" />{title}</h5>
+                        <button type="button" className="btn-close btn-close-white" onClick={onCancel}></button>
+                    </div>
+                    <div className="modal-body">
+                        <p>{body}</p>
+                    </div>
+                    <div className="modal-footer">
+                        <button type="button" className="btn btn-outline-secondary rounded-3" onClick={onCancel} disabled={isSaving}>
+                            Cancel
+                        </button>
+                        <button type="button" className="btn btn-danger rounded-3" onClick={onConfirm} disabled={isSaving}>
+                            {isSaving ? 'Deleting...' : 'Confirm Delete'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 const ManageStudents = () => {
     const [students, setStudents] = useState(MOCK_STUDENTS);
@@ -27,8 +56,11 @@ const ManageStudents = () => {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     
-    // State for the Add/Edit Modal (0: closed, 1: Add, 2: Edit)
+    // State for the Add/Edit Modal 
     const [modalState, setModalState] = useState({ isOpen: false, mode: 'add', currentStudent: null });
+    
+    // State for the Delete Confirmation Modal
+    const [confirmState, setConfirmState] = useState({ isOpen: false, id: null, name: '', action: () => {} });
 
     const filteredStudents = students.filter(s => 
         s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -58,16 +90,29 @@ const ManageStudents = () => {
     };
 
     const handleDelete = (studentId, studentName) => {
-        if (window.confirm(`Are you sure you want to delete student: ${studentName}?`)) {
-            setLoading(true);
-            setMessage('');
-            setTimeout(() => {
-                setStudents(prev => prev.filter(s => s.id !== studentId));
-                setMessage(`Student '${studentName}' deleted successfully. (API simulation)`);
-                setLoading(false);
-            }, 800);
-        }
+        // Open the custom confirmation modal
+        setConfirmState({
+            isOpen: true,
+            id: studentId,
+            name: studentName,
+            action: () => {
+                setLoading(true);
+                setMessage('');
+                setTimeout(() => {
+                    setStudents(prev => prev.filter(s => s.id !== studentId));
+                    setMessage(`Student '${studentName}' deleted successfully. (API simulation)`);
+                    setLoading(false);
+                    // Close the confirmation modal after deletion
+                    setConfirmState({ isOpen: false, id: null, name: '', action: () => {} });
+                }, 800);
+            }
+        });
     };
+    
+    const handleCancelDelete = () => {
+        setConfirmState({ isOpen: false, id: null, name: '', action: () => {} });
+    };
+
     
     // Form component for Add/Edit Modal
     const StudentForm = ({ initialData, onSubmit, onCancel, isSaving }) => {
@@ -90,7 +135,7 @@ const ManageStudents = () => {
         return (
             <form onSubmit={handleSubmit}>
                 <div className="mb-3">
-                    <label className="form-label">Full Name</label>
+                    <label className="form-label fw-semibold">Full Name</label>
                     <input 
                         type="text" 
                         className="form-control rounded-3" 
@@ -101,7 +146,7 @@ const ManageStudents = () => {
                     />
                 </div>
                 <div className="mb-3">
-                    <label className="form-label">Registration Number</label>
+                    <label className="form-label fw-semibold">Registration Number</label>
                     <input 
                         type="text" 
                         className="form-control rounded-3" 
@@ -112,8 +157,9 @@ const ManageStudents = () => {
                     />
                 </div>
                 <div className="row">
+                    {/* These cols stack perfectly on mobile by default */}
                     <div className="col-md-6 mb-3">
-                        <label className="form-label">Assigned Class</label>
+                        <label className="form-label fw-semibold">Assigned Class</label>
                         <select
                             className="form-select rounded-3"
                             name="class"
@@ -127,7 +173,7 @@ const ManageStudents = () => {
                         </select>
                     </div>
                     <div className="col-md-6 mb-4">
-                        <label className="form-label">Linked Parent</label>
+                        <label className="form-label fw-semibold">Linked Parent</label>
                         <select
                             className="form-select rounded-3"
                             name="parentName"
@@ -143,7 +189,7 @@ const ManageStudents = () => {
                     </div>
                 </div>
                 <div className="d-flex justify-content-end">
-                    <button type="button" className="btn btn-secondary me-2 rounded-3" onClick={onCancel}>
+                    <button type="button" className="btn btn-secondary me-2 rounded-3" onClick={onCancel} disabled={isSaving}>
                         Cancel
                     </button>
                     <button type="submit" className="btn btn-primary rounded-3" disabled={isSaving}>
@@ -156,107 +202,133 @@ const ManageStudents = () => {
 
 
     return (
-        <div className="card shadow-sm rounded-4 p-4 mb-4">
-            <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-                <h4 className="card-title text-primary mb-0 d-flex align-items-center">
-                    <Users size={24} className="me-2" /> Manage Students
-                </h4>
-                <button 
-                    className="btn btn-primary rounded-3 d-flex align-items-center"
-                    onClick={() => setModalState({ isOpen: true, mode: 'add', currentStudent: null })}
-                >
-                    <PlusCircle size={20} className="me-2" /> Add New Student
-                </button>
-            </div>
-
-            {message && (
-                <div className={`alert ${message.includes('success') ? 'alert-success' : 'alert-info'} rounded-3`} role="alert">
-                    {message}
+        // Main container uses Bootstrap padding and shadow
+        <div className="container-fluid py-4"> 
+            <div className="card shadow-lg rounded-4 p-4">
+                
+                {/* Header/Action Bar - Mobile Responsive Layout */}
+                <div className="d-block d-md-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+                    {/* Title stack/margin fix on mobile */}
+                    <h4 className="card-title text-primary mb-3 mb-md-0 d-flex align-items-center">
+                        <Users size={24} className="me-2" /> Manage Students
+                    </h4>
+                    
+                    {/* Button takes full width on mobile, auto-width on desktop */}
+                    <button 
+                        className="btn btn-primary rounded-3 d-flex align-items-center justify-content-center w-100 w-md-auto"
+                        onClick={() => setModalState({ isOpen: true, mode: 'add', currentStudent: null })}
+                    >
+                        <PlusCircle size={20} className="me-2" /> Add New Student
+                    </button>
                 </div>
-            )}
-            
-            {/* Search Input */}
-            <div className="input-group mb-4" style={{ maxWidth: '300px' }}>
-                <span className="input-group-text bg-light rounded-start-3"><Search size={18} /></span>
-                <input
-                    type="text"
-                    className="form-control rounded-end-3"
-                    placeholder="Search students, reg no or class..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-            </div>
-            
-            {/* Student Table */}
-            <div className="table-responsive">
-                <table className="table table-hover align-middle">
-                    <thead className="table-light">
-                        <tr>
-                            <th scope="col">Name</th>
-                            <th scope="col">Reg No</th>
-                            <th scope="col">Class</th>
-                            <th scope="col">Parent</th>
-                            <th scope="col" className="text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredStudents.length > 0 ? (
-                            filteredStudents.map((item) => (
-                                <tr key={item.id}>
-                                    <td className="fw-semibold">{item.name}</td>
-                                    <td>{item.regNo}</td>
-                                    <td><span className="badge bg-info text-dark">{item.class}</span></td>
-                                    <td>{item.parentName}</td>
-                                    <td className="text-center">
-                                        <button 
-                                            className="btn btn-sm btn-outline-secondary me-2 rounded-3"
-                                            onClick={() => setModalState({ isOpen: true, mode: 'edit', currentStudent: item })}
-                                            title="Edit Student"
-                                            disabled={loading}
-                                        >
-                                            <Edit size={16} />
-                                        </button>
-                                        <button 
-                                            className="btn btn-sm btn-outline-danger rounded-3"
-                                            onClick={() => handleDelete(item.id, item.name)}
-                                            title="Delete Student"
-                                            disabled={loading}
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan="5" className="text-center text-muted">No students found.</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
 
-            {/* Simple Modal Implementation */}
-            {modalState.isOpen && (
-                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
-                    <div className="modal-dialog modal-dialog-centered">
-                        <div className="modal-content rounded-4 shadow-lg">
-                            <div className="modal-header">
-                                <h5 className="modal-title">{modalState.mode === 'add' ? 'Add New Student' : 'Edit Student'}</h5>
-                                <button type="button" className="btn-close" onClick={() => setModalState({ isOpen: false, mode: 'add', currentStudent: null })}></button>
-                            </div>
-                            <div className="modal-body">
-                                <StudentForm 
-                                    initialData={modalState.currentStudent} 
-                                    onSubmit={handleAddOrEdit} 
-                                    onCancel={() => setModalState({ isOpen: false, mode: 'add', currentStudent: null })}
-                                    isSaving={loading}
-                                />
-                            </div>
+                {/* Message Alert */}
+                {message && (
+                    <div className={`alert ${message.includes('success') ? 'alert-success' : 'alert-info'} rounded-3`} role="alert">
+                        {message}
+                    </div>
+                )}
+                
+                {/* Search Input - Constrained on desktop, full width on mobile */}
+                <div className="row mb-4">
+                    <div className="col-12 col-md-6 col-lg-4">
+                        <div className="input-group">
+                            <span className="input-group-text bg-light rounded-start-3"><Search size={18} /></span>
+                            <input
+                                type="text"
+                                className="form-control rounded-end-3"
+                                placeholder="Search students, reg no or class..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
                         </div>
                     </div>
                 </div>
-            )}
+                
+                {/* Student Table - Responsive container keeps table scrollable on small screens */}
+                <div className="table-responsive">
+                    <table className="table table-hover align-middle caption-top">
+                        <caption className="fw-bold text-dark">Showing {filteredStudents.length} of {MOCK_STUDENTS.length} Students</caption>
+                        <thead className="table-light">
+                            <tr className="small">
+                                <th scope="col">Name</th>
+                                <th scope="col">Reg No</th>
+                                <th scope="col">Class</th>
+                                <th scope="col">Parent</th>
+                                <th scope="col" className="text-center text-nowrap">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredStudents.length > 0 ? (
+                                filteredStudents.map((item) => (
+                                    <tr key={item.id}>
+                                        <td className="fw-semibold text-nowrap">{item.name}</td>
+                                        <td className="text-nowrap">{item.regNo}</td>
+                                        <td><span className="badge bg-info text-dark">{item.class}</span></td>
+                                        <td className="text-nowrap">{item.parentName}</td>
+                                        <td className="text-center text-nowrap">
+                                            <button 
+                                                className="btn btn-sm btn-outline-secondary me-2 rounded-3"
+                                                onClick={() => setModalState({ isOpen: true, mode: 'edit', currentStudent: item })}
+                                                title="Edit Student"
+                                                disabled={loading}
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                            <button 
+                                                className="btn btn-sm btn-outline-danger rounded-3"
+                                                onClick={() => handleDelete(item.id, item.name)}
+                                                title="Delete Student"
+                                                disabled={loading}
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="5" className="text-center text-muted py-4">
+                                        No students matching your search criteria found.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Add/Edit Student Modal */}
+                {modalState.isOpen && (
+                    <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1040 }} tabIndex="-1">
+                        <div className="modal-dialog modal-dialog-centered">
+                            <div className="modal-content rounded-4 shadow-lg">
+                                <div className="modal-header">
+                                    <h5 className="modal-title">{modalState.mode === 'add' ? 'Add New Student' : 'Edit Student'}</h5>
+                                    <button type="button" className="btn-close" onClick={() => setModalState({ isOpen: false, mode: 'add', currentStudent: null })} disabled={loading}></button>
+                                </div>
+                                <div className="modal-body">
+                                    <StudentForm 
+                                        initialData={modalState.currentStudent} 
+                                        onSubmit={handleAddOrEdit} 
+                                        onCancel={() => setModalState({ isOpen: false, mode: 'add', currentStudent: null })}
+                                        isSaving={loading}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                
+                {/* Delete Confirmation Modal */}
+                <ConfirmationModal 
+                    isOpen={confirmState.isOpen}
+                    title="Confirm Deletion"
+                    body={`Are you sure you want to permanently delete the student: ${confirmState.name}? This action cannot be undone.`}
+                    onConfirm={confirmState.action}
+                    onCancel={handleCancelDelete}
+                    isSaving={loading}
+                />
+            </div>
         </div>
     );
 };

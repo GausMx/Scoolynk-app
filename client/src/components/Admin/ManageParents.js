@@ -1,4 +1,3 @@
-// src/components/Admin/ManageParents.js
 import React, { useState } from 'react';
 
 // Consistent Icon components using Bootstrap Icon classes
@@ -118,17 +117,24 @@ const ManageParents = () => {
 
 
     return (
-        <div className="container py-4">
+        // Added container-fluid on mobile, container-md on desktop
+        <div className="container-fluid container-md py-4">
             <div className="card shadow-lg rounded-4 p-4 mb-4 border-0">
-                <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-                    <h4 className="card-title text-dark mb-0 d-flex align-items-center fw-bold">
+                
+                {/* Responsive Header: Uses flex-column on small screens, reverts to row on medium screens and up */}
+                <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 border-bottom pb-3">
+                    <h4 className="card-title text-dark mb-3 mb-md-0 d-flex align-items-center fw-bold">
                         <IconParents className="text-primary me-2" /> Manage Parents/Guardians
                     </h4>
+                    
+                    {/* Responsive Button: Icon-only on small screen, icon + text on md and up */}
                     <button 
-                        className="btn btn-primary rounded-pill d-flex align-items-center px-4 py-2"
+                        className="btn btn-primary rounded-pill d-flex align-items-center px-3 py-2" // Smaller padding for better fit on small screens
                         onClick={() => setModalState({ isOpen: true, mode: 'add', currentParent: null })}
                     >
-                        <IconPlus className="me-2 fs-5" /> Add New Parent
+                        {/* Show icon only on mobile, text is hidden */}
+                        <IconPlus className="fs-5 me-md-2" /> 
+                        <span className="d-none d-md-inline">Add New Parent</span>
                     </button>
                 </div>
 
@@ -138,8 +144,8 @@ const ManageParents = () => {
                     </div>
                 )}
                 
-                {/* Search Input */}
-                <div className="input-group mb-4" style={{ maxWidth: '400px' }}>
+                {/* Search Input: Removed fixed width, uses w-100 on mobile and limits width on larger screens */}
+                <div className="input-group mb-4 w-100 w-md-75 w-lg-50">
                     <span className="input-group-text bg-light rounded-start-pill border-0"><IconSearch className="fs-6" /></span>
                     <input
                         type="text"
@@ -150,15 +156,17 @@ const ManageParents = () => {
                     />
                 </div>
                 
-                {/* Parent Table */}
+                {/* Parent Table - table-responsive is already present, hiding columns for better mobile view */}
                 <div className="table-responsive">
                     <table className="table table-striped table-hover align-middle">
                         <thead className="table-light">
                             <tr>
                                 <th scope="col" className="fw-bold">Name</th>
                                 <th scope="col" className="fw-bold">Phone</th>
-                                <th scope="col" className="fw-bold">Email</th>
-                                <th scope="col" className="fw-bold text-center">Linked Students</th>
+                                {/* Hidden on small screens (below md) */}
+                                <th scope="col" className="fw-bold d-none d-md-table-cell">Email</th>
+                                {/* Hidden on small screens (below md) */}
+                                <th scope="col" className="fw-bold text-center d-none d-md-table-cell">Linked Students</th>
                                 <th scope="col" className="text-center fw-bold">Actions</th>
                             </tr>
                         </thead>
@@ -168,8 +176,10 @@ const ManageParents = () => {
                                     <tr key={item.id}>
                                         <td className="fw-semibold">{item.name}</td>
                                         <td>{item.phone}</td>
-                                        <td>{item.email}</td>
-                                        <td className="text-center">{item.linkedStudents}</td>
+                                        {/* Hidden on small screens (below md) */}
+                                        <td className="d-none d-md-table-cell">{item.email}</td>
+                                        {/* Hidden on small screens (below md) */}
+                                        <td className="text-center d-none d-md-table-cell">{item.linkedStudents}</td>
                                         <td className="text-center">
                                             <button 
                                                 className="btn btn-sm btn-outline-secondary me-2 rounded-3"
@@ -179,7 +189,6 @@ const ManageParents = () => {
                                             >
                                                 <IconEdit className="fs-6" />
                                             </button>
-                                            {/* Fixed 'id' context issue by explicitly using item.id */}
                                             <button 
                                                 className="btn btn-sm btn-outline-danger rounded-3"
                                                 onClick={() => handleDelete(item.id, item.name)} 
@@ -202,6 +211,7 @@ const ManageParents = () => {
 
                 {/* Simple Modal Implementation */}
                 {modalState.isOpen && (
+                    // The modal is naturally responsive due to Bootstrap's modal-dialog-centered
                     <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
                         <div className="modal-dialog modal-dialog-centered">
                             <div className="modal-content rounded-4 shadow-lg border-0">

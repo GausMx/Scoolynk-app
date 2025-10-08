@@ -1,7 +1,5 @@
-// src/components/Admin/ManageClasses.js
-
 import React, { useState } from 'react';
-import { BookOpen, Edit, Trash2, PlusCircle, Search } from 'lucide-react';
+import { BookOpen, Edit, Trash2, PlusCircle, Search, AlertTriangle } from 'lucide-react';
 
 // Mock Data
 const MOCK_CLASSES = [
@@ -17,14 +15,19 @@ const ManageClasses = () => {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     
-    // State for the Add/Edit Modal (0: closed, 1: Add, 2: Edit)
-    const [modalState, setModalState] = useState({ isOpen: false, mode: 'add', currentClass: null });
+    // State for the Add/Edit/Delete Modal 
+    const [modalState, setModalState] = useState({ 
+        isOpen: false, 
+        mode: 'add', // 'add', 'edit', or 'delete'
+        currentClass: null 
+    });
 
     const filteredClasses = classes.filter(c => 
         c.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // Placeholder CRUD Handlers (Replace with API calls)
+    // --- CRUD Handlers ---
+
     const handleAddOrEdit = (formData) => {
         setLoading(true);
         setMessage('');
@@ -41,23 +44,26 @@ const ManageClasses = () => {
                 setMessage(`Class '${formData.name}' updated successfully. (API simulation)`);
             }
             setLoading(false);
-            setModalState({ isOpen: false, mode: 'add', currentClass: null });
+            setModalState({ isOpen: false, mode: 'add', currentClass: null }); // Close modal
         }, 800);
     };
 
-    const handleDelete = (classId, className) => {
-        if (window.confirm(`Are you sure you want to delete class: ${className}?`)) {
-            setLoading(true);
-            setMessage('');
-            setTimeout(() => {
-                setClasses(prev => prev.filter(c => c.id !== classId));
-                setMessage(`Class '${className}' deleted successfully. (API simulation)`);
-                setLoading(false);
-            }, 800);
-        }
+    // Confirmed delete handler (triggered from DeleteConfirmation component)
+    const handleDeleteConfirmed = (classId, className) => {
+        setLoading(true);
+        setMessage('');
+        setModalState({ isOpen: false, mode: 'add', currentClass: null }); // Close modal
+
+        setTimeout(() => {
+            setClasses(prev => prev.filter(c => c.id !== classId));
+            setMessage(`Class '${className}' deleted successfully. (API simulation)`);
+            setLoading(false);
+        }, 800);
     };
     
-    // Form component for Add/Edit Modal
+    // --- Sub Components ---
+
+    // Component to handle Add/Edit logic
     const ClassForm = ({ initialData, onSubmit, onCancel, isSaving }) => {
         const [formData, setFormData] = useState({ 
             name: initialData?.name || '', 
@@ -76,7 +82,7 @@ const ManageClasses = () => {
         return (
             <form onSubmit={handleSubmit}>
                 <div className="mb-3">
-                    <label className="form-label">Class Name (e.g., JSS 1)</label>
+                    <label className="form-label fw-semibold">Class Name (e.g., JSS 1)</label>
                     <input 
                         type="text" 
                         className="form-control rounded-3" 
@@ -87,7 +93,7 @@ const ManageClasses = () => {
                     />
                 </div>
                 <div className="mb-4">
-                    <label className="form-label">Max Capacity</label>
+                    <label className="form-label fw-semibold">Max Capacity</label>
                     <input 
                         type="number" 
                         className="form-control rounded-3" 
@@ -99,7 +105,7 @@ const ManageClasses = () => {
                     />
                 </div>
                 <div className="d-flex justify-content-end">
-                    <button type="button" className="btn btn-secondary me-2 rounded-3" onClick={onCancel}>
+                    <button type="button" className="btn btn-secondary me-2 rounded-3" onClick={onCancel} disabled={isSaving}>
                         Cancel
                     </button>
                     <button type="submit" className="btn btn-primary rounded-3" disabled={isSaving}>
@@ -110,110 +116,189 @@ const ManageClasses = () => {
         );
     };
 
-
-    return (
-        <div className="card shadow-sm rounded-4 p-4 mb-4">
-            <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-                <h4 className="card-title text-primary mb-0 d-flex align-items-center">
-                    <BookOpen size={24} className="me-2" /> Manage Academic Classes
-                </h4>
+    // Component to handle Delete Confirmation (replaces window.confirm)
+    const DeleteConfirmation = ({ classToDelete, onConfirm, onCancel, isDeleting }) => (
+        <>
+            <div className="alert alert-warning border-warning rounded-3 mb-4" role="alert">
+                <div className="d-flex align-items-center">
+                    <AlertTriangle size={24} className="me-3 text-warning flex-shrink-0" />
+                    <div>
+                        Are you sure you want to delete the class: <strong>{classToDelete.name}</strong>?
+                        This action cannot be undone.
+                    </div>
+                </div>
+            </div>
+            <div className="d-flex justify-content-end">
+                <button type="button" className="btn btn-secondary me-2 rounded-3" onClick={onCancel} disabled={isDeleting}>
+                    Cancel
+                </button>
                 <button 
-                    className="btn btn-primary rounded-3 d-flex align-items-center"
-                    onClick={() => setModalState({ isOpen: true, mode: 'add', currentClass: null })}
+                    type="button" 
+                    className="btn btn-danger rounded-3" 
+                    onClick={() => onConfirm(classToDelete.id, classToDelete.name)} 
+                    disabled={isDeleting}
                 >
-                    <PlusCircle size={20} className="me-2" /> Add New Class
+                    {isDeleting ? 'Deleting...' : 'Confirm Delete'}
                 </button>
             </div>
+        </>
+    );
 
-            {message && (
-                <div className={`alert ${message.includes('success') ? 'alert-success' : 'alert-info'} rounded-3`} role="alert">
-                    {message}
+    // Utility function to determine modal content based on mode
+    const renderModalContent = () => {
+        const { mode, currentClass } = modalState;
+        switch (mode) {
+            case 'add':
+            case 'edit':
+                return (
+                    <ClassForm 
+                        initialData={currentClass} 
+                        onSubmit={handleAddOrEdit} 
+                        onCancel={() => setModalState({ isOpen: false, mode: 'add', currentClass: null })}
+                        isSaving={loading}
+                    />
+                );
+            case 'delete':
+                return (
+                    <DeleteConfirmation
+                        classToDelete={currentClass}
+                        onConfirm={handleDeleteConfirmed}
+                        onCancel={() => setModalState({ isOpen: false, mode: 'add', currentClass: null })}
+                        isDeleting={loading}
+                    />
+                );
+            default:
+                return null;
+        }
+    }
+
+
+    return (
+        <div className="container py-4">
+            <div className="card shadow-lg rounded-4 p-3 p-sm-4 mb-4">
+                {/* Header (Stacks on mobile) */}
+                <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-4 border-bottom pb-3">
+                    {/* Responsive Title: Smaller on mobile */}
+                    <h4 className="card-title text-primary mb-2 mb-sm-0 d-flex align-items-center fs-5 fs-sm-4 fw-bold">
+                        <BookOpen size={24} className="me-2" /> Manage Academic Classes
+                    </h4>
+                    {/* Responsive Button: full width on mobile, standard on desktop */}
+                    <button 
+                        className="btn btn-primary rounded-3 d-flex justify-content-center align-items-center w-100 w-sm-auto order-first order-sm-last"
+                        onClick={() => setModalState({ isOpen: true, mode: 'add', currentClass: null })}
+                        disabled={loading}
+                    >
+                        <PlusCircle size={20} className="me-2" /> 
+                        <span className="fw-semibold">Add New Class</span>
+                    </button>
                 </div>
-            )}
-            
-            {/* Search Input */}
-            <div className="input-group mb-4" style={{ maxWidth: '300px' }}>
-                <span className="input-group-text bg-light rounded-start-3"><Search size={18} /></span>
-                <input
-                    type="text"
-                    className="form-control rounded-end-3"
-                    placeholder="Search classes..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-            </div>
-            
-            {/* Class Table */}
-            <div className="table-responsive">
-                <table className="table table-hover align-middle">
-                    <thead className="table-light">
-                        <tr>
-                            <th scope="col">Class Name</th>
-                            <th scope="col">Capacity</th>
-                            <th scope="col">Students</th>
-                            <th scope="col" className="text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredClasses.length > 0 ? (
-                            filteredClasses.map((item) => (
-                                <tr key={item.id}>
-                                    <td className="fw-semibold">{item.name}</td>
-                                    <td>{item.maxCapacity}</td>
-                                    <td>
-                                        {item.studentCount} / {item.maxCapacity}
-                                        {item.studentCount >= item.maxCapacity && <span className="badge bg-danger ms-2">Full</span>}
-                                    </td>
-                                    <td className="text-center">
-                                        <button 
-                                            className="btn btn-sm btn-outline-secondary me-2 rounded-3"
-                                            onClick={() => setModalState({ isOpen: true, mode: 'edit', currentClass: item })}
-                                            title="Edit Class"
-                                            disabled={loading}
-                                        >
-                                            <Edit size={16} />
-                                        </button>
-                                        <button 
-                                            className="btn btn-sm btn-outline-danger rounded-3"
-                                            onClick={() => handleDelete(item.id, item.name)}
-                                            title="Delete Class"
-                                            disabled={loading}
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan="4" className="text-center text-muted">No classes found.</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
 
-            {/* Simple Modal Implementation */}
-            {modalState.isOpen && (
-                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
-                    <div className="modal-dialog modal-dialog-centered">
-                        <div className="modal-content rounded-4 shadow-lg">
-                            <div className="modal-header">
-                                <h5 className="modal-title">{modalState.mode === 'add' ? 'Add New Class' : 'Edit Class'}</h5>
-                                <button type="button" className="btn-close" onClick={() => setModalState({ isOpen: false, mode: 'add', currentClass: null })}></button>
-                            </div>
-                            <div className="modal-body">
-                                <ClassForm 
-                                    initialData={modalState.currentClass} 
-                                    onSubmit={handleAddOrEdit} 
-                                    onCancel={() => setModalState({ isOpen: false, mode: 'add', currentClass: null })}
-                                    isSaving={loading}
-                                />
-                            </div>
+                {/* Message Box */}
+                {message && (
+                    <div className={`alert ${message.includes('success') ? 'alert-success' : 'alert-info'} rounded-3`} role="alert">
+                        {message}
+                    </div>
+                )}
+                
+                {/* Search Input: Full width on mobile */}
+                <div className="row mb-4">
+                    <div className="col-12 col-md-4">
+                        <div className="input-group">
+                            <span className="input-group-text bg-light rounded-start-3 border-end-0"><Search size={18} /></span>
+                            <input
+                                type="text"
+                                className="form-control rounded-end-3 border-start-0 ps-0"
+                                placeholder="Search classes..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
                         </div>
                     </div>
                 </div>
-            )}
+                
+                {/* Class Table */}
+                <div className="table-responsive">
+                    <table className="table table-hover align-middle">
+                        <thead className="table-light">
+                            <tr>
+                                <th scope="col" className="fw-bold">Class Name</th>
+                                {/* Hidden on small screens to save space */}
+                                <th scope="col" className="fw-bold d-none d-sm-table-cell">Capacity</th> 
+                                <th scope="col" className="fw-bold">Students</th>
+                                <th scope="col" className="text-center fw-bold text-nowrap">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredClasses.length > 0 ? (
+                                filteredClasses.map((item) => (
+                                    <tr key={item.id}>
+                                        <td className="fw-semibold text-nowrap">{item.name}</td>
+                                        <td className="d-none d-sm-table-cell">{item.maxCapacity}</td>
+                                        <td className="text-nowrap">
+                                            {item.studentCount} / {item.maxCapacity}
+                                            {/* Hide 'Full' badge on tiny screens */}
+                                            {item.studentCount >= item.maxCapacity && <span className="badge bg-danger ms-2 rounded-pill d-none d-sm-inline">Full</span>}
+                                        </td>
+                                        {/* Actions: Use d-flex and wrap for mobile for stability */}
+                                        <td className="text-center text-nowrap">
+                                            <div className="d-flex justify-content-center flex-wrap">
+                                                <button 
+                                                    className="btn btn-sm btn-outline-secondary me-1 my-1 rounded-3"
+                                                    onClick={() => setModalState({ isOpen: true, mode: 'edit', currentClass: item })}
+                                                    title="Edit Class"
+                                                    disabled={loading}
+                                                >
+                                                    <Edit size={16} />
+                                                    <span className="d-none d-lg-inline ms-1">Edit</span>
+                                                </button>
+                                                <button 
+                                                    className="btn btn-sm btn-outline-danger my-1 rounded-3"
+                                                    onClick={() => setModalState({ isOpen: true, mode: 'delete', currentClass: item })}
+                                                    title="Delete Class"
+                                                    disabled={loading}
+                                                >
+                                                    <Trash2 size={16} />
+                                                    <span className="d-none d-lg-inline ms-1">Delete</span>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="4" className="text-center text-muted py-3">No classes found matching your search.</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Simple Modal Implementation */}
+                {modalState.isOpen && (
+                    <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }} tabIndex="-1">
+                        <div className="modal-dialog modal-dialog-centered modal-md">
+                            <div className="modal-content rounded-4 shadow-lg">
+                                <div className="modal-header bg-light">
+                                    <h5 className="modal-title fw-bold">
+                                        {modalState.mode === 'add' && 'Add New Class'}
+                                        {modalState.mode === 'edit' && 'Edit Class Details'}
+                                        {modalState.mode === 'delete' && 'Confirm Deletion'}
+                                    </h5>
+                                    <button 
+                                        type="button" 
+                                        className="btn-close" 
+                                        onClick={() => setModalState({ isOpen: false, mode: 'add', currentClass: null })}
+                                        disabled={loading}
+                                    ></button>
+                                </div>
+                                <div className="modal-body">
+                                    {renderModalContent()}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

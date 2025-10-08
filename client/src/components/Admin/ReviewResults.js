@@ -5,8 +5,8 @@ import React, { useState } from 'react';
 const IconEdit = ({ className }) => <i className={`bi bi-pencil-square ${className}`}></i>;
 const IconTrash = ({ className }) => <i className={`bi bi-trash-fill ${className}`}></i>;
 const IconReview = ({ className }) => <i className={`bi bi-bar-chart-line-fill fs-4 ${className}`}></i>;
-const IconCheck = ({ className }) => <i className={`bi bi-check-circle-fill ${className}`}></i>; // Defined 'Check' replacement
-const IconX = ({ className }) => <i className={`bi bi-x-circle-fill ${className}`}></i>; // Defined 'X' replacement
+const IconCheck = ({ className }) => <i className={`bi bi-check-circle-fill ${className}`}></i>; 
+const IconX = ({ className }) => <i className={`bi bi-x-circle-fill ${className}`}></i>; 
 
 // Mock Data
 const MOCK_RESULTS = [
@@ -39,18 +39,19 @@ const ReviewResults = () => {
     };
 
     /**
-     * Placeholder API Function: Handles editing a result (opens modal).
+     * Placeholder function: Handles editing a result. 
+     * NOTE: Replaced the banned 'alert()' with a safe 'setMessage' call.
      */
     const handleEdit = (result) => {
-        // In a real app, open a modal with the result data for editing score/details.
-        alert(`Edit feature: Opening editor for result ID: ${result.id}`); 
+        setMessage(`[Action Triggered] Edit modal should open for result ID: ${result.id}.`); 
+        console.log(`Editing result: ${result.id}`);
     };
 
     return (
         <div className="container py-4">
-            <div className="card shadow-lg rounded-4 p-4 mb-4 border-0">
+            <div className="card shadow-lg rounded-4 p-3 p-sm-4 mb-4 border-0">
                 <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-                    <h4 className="card-title text-dark mb-0 d-flex align-items-center fw-bold">
+                    <h4 className="card-title text-dark mb-0 d-flex align-items-center fw-bold fs-5">
                         <IconReview className="text-primary me-2" /> Review Pending Results
                     </h4>
                 </div>
@@ -61,71 +62,79 @@ const ReviewResults = () => {
                     </div>
                 )}
                 
-                {/* Results Table */}
+                {/* Results Table: The table-responsive class handles horizontal scrolling on small screens */}
                 <div className="table-responsive">
                     <table className="table table-striped table-hover align-middle">
                         <thead className="table-light">
                             <tr>
+                                {/* Hide 'Class' and 'Subject' columns on extra-small devices to prioritize key info if table-responsive is insufficient */}
                                 <th scope="col" className="fw-bold">Student Name</th>
-                                <th scope="col" className="fw-bold">Class</th>
-                                <th scope="col" className="fw-bold">Subject</th>
+                                <th scope="col" className="fw-bold d-none d-sm-table-cell">Class</th> 
+                                <th scope="col" className="fw-bold d-none d-md-table-cell">Subject</th> 
                                 <th scope="col" className="fw-bold text-center">Score</th>
                                 <th scope="col" className="fw-bold text-center">Status</th>
-                                <th scope="col" className="text-center fw-bold">Actions</th>
+                                <th scope="col" className="text-center fw-bold text-nowrap">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {results.length > 0 ? (
                                 results.map((item) => (
                                     <tr key={item.id}>
-                                        <td className="fw-semibold">{item.studentName}</td>
-                                        <td>{item.class}</td>
-                                        <td>{item.subject}</td>
+                                        <td className="fw-semibold text-nowrap">{item.studentName}</td>
+                                        <td className="d-none d-sm-table-cell">{item.class}</td>
+                                        <td className="d-none d-md-table-cell">{item.subject}</td>
                                         <td className="text-center">{item.score}</td>
                                         <td className="text-center">
                                             {item.status === 'Pending' && <span className="badge bg-warning text-dark rounded-pill">Pending</span>}
                                             {item.status === 'Approved' && <span className="badge bg-success rounded-pill">Approved</span>}
                                             {item.status === 'Rejected' && <span className="badge bg-danger rounded-pill">Rejected</span>}
                                         </td>
-                                        <td className="text-center">
-                                            {item.status === 'Pending' ? (
-                                                <>
-                                                    {/* The ESLint errors for 'Check' and 'X' occurred here. Now using defined components: IconCheck and IconX */}
+                                        
+                                        {/* Mobile Optimization for Actions: use d-flex and small margins (me-1) */}
+                                        <td className="text-center text-nowrap">
+                                            <div className="d-flex justify-content-center flex-wrap">
+                                                {item.status === 'Pending' ? (
+                                                    <>
+                                                        <button 
+                                                            className="btn btn-sm btn-outline-success me-1 my-1 rounded-3"
+                                                            onClick={() => handleUpdateStatus(item.id, item.studentName, 'Approved')} 
+                                                            title="Approve Result"
+                                                            disabled={loading}
+                                                        >
+                                                            <IconCheck className="fs-6" />
+                                                            <span className="d-none d-lg-inline ms-1">Approve</span>
+                                                        </button>
+                                                        <button 
+                                                            className="btn btn-sm btn-outline-danger me-1 my-1 rounded-3"
+                                                            onClick={() => handleUpdateStatus(item.id, item.studentName, 'Rejected')} 
+                                                            title="Reject Result"
+                                                            disabled={loading}
+                                                        >
+                                                            <IconX className="fs-6" />
+                                                            <span className="d-none d-lg-inline ms-1">Reject</span>
+                                                        </button>
+                                                        <button 
+                                                            className="btn btn-sm btn-outline-secondary my-1 rounded-3"
+                                                            onClick={() => handleEdit(item)} 
+                                                            title="Edit Score"
+                                                            disabled={loading}
+                                                        >
+                                                            <IconEdit className="fs-6" />
+                                                            <span className="d-none d-lg-inline ms-1">Edit</span>
+                                                        </button>
+                                                    </>
+                                                ) : (
                                                     <button 
-                                                        className="btn btn-sm btn-outline-success me-2 rounded-3"
-                                                        onClick={() => handleUpdateStatus(item.id, item.studentName, 'Approved')} // Fixed 'id' context
-                                                        title="Approve Result"
-                                                        disabled={loading}
-                                                    >
-                                                        <IconCheck className="fs-6" />
-                                                    </button>
-                                                    <button 
-                                                        className="btn btn-sm btn-outline-danger me-2 rounded-3"
-                                                        onClick={() => handleUpdateStatus(item.id, item.studentName, 'Rejected')} // Fixed 'id' context
-                                                        title="Reject Result"
-                                                        disabled={loading}
-                                                    >
-                                                        <IconX className="fs-6" />
-                                                    </button>
-                                                    <button 
-                                                        className="btn btn-sm btn-outline-secondary rounded-3"
+                                                        className="btn btn-sm btn-outline-secondary my-1 rounded-3"
                                                         onClick={() => handleEdit(item)} 
-                                                        title="Edit Score"
+                                                        title="View Details"
                                                         disabled={loading}
                                                     >
                                                         <IconEdit className="fs-6" />
+                                                        <span className="d-none d-lg-inline ms-1">View</span>
                                                     </button>
-                                                </>
-                                            ) : (
-                                                <button 
-                                                    className="btn btn-sm btn-outline-secondary rounded-3"
-                                                    onClick={() => handleEdit(item)} 
-                                                    title="View Details"
-                                                    disabled={loading}
-                                                >
-                                                    <IconEdit className="fs-6" />
-                                                </button>
-                                            )}
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
