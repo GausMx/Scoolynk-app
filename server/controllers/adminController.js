@@ -73,6 +73,19 @@ export const getAdminDashboard = (req, res) => {
   });
 };
 
+// GET /api/school/code
+// Returns the school code for the currently logged-in admin
+export const getSchoolCode = async (req, res) => {
+  try {
+    const school = await School.findById(req.user.schoolId);
+    if (!school) return res.status(404).json({ message: 'School not found.' });
+    res.json({ schoolCode: school.schoolCode });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // -------------------------
 // Get Admin Settings (Fetches all pre-registered data + other settings)
 // -------------------------

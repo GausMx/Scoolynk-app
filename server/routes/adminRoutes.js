@@ -8,7 +8,8 @@ import {
   broadcastNotification,
   getAdminSettings,
   updateAdminSettings,
-  getAdminDashboard // Import the dashboard controller
+  getAdminDashboard,
+   getSchoolCode // Import the new controller
 } from '../controllers/adminController.js';
 
 const router = express.Router();
@@ -26,5 +27,6 @@ router.post('/broadcast', protect, requireRole('admin'), broadcastNotification);
 // Settings
 router.get('/settings', protect, requireRole('admin'), getAdminSettings);
 router.put('/settings', protect, requireRole('admin'), updateAdminSettings); // Changed to PUT for updateAdminSettings
-
+// School code
+router.get('/school/code', protect, requireRole('admin'), getSchoolCode);
 export default router;
