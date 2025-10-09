@@ -67,11 +67,11 @@ const StatusMessage = ({ status, message }) => {
   );
 };
 
-// --- SCHOOL CODE COMPONENT (real API) ---
+// --- SCHOOL CODE COMPONENT (real API, always visible) ---
 const AdminSchoolCode = () => {
   const [schoolCode, setSchoolCode] = useState('');
-  const [showCode, setShowCode] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchCode = async () => {
@@ -79,9 +79,10 @@ const AdminSchoolCode = () => {
         const res = await axios.get('/api/school/code', {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         });
-        setSchoolCode(res.data.schoolCode);
+        setSchoolCode(res.data.schoolCode || '');
       } catch (err) {
         console.error('Error fetching school code:', err);
+        setError('Failed to load school code. Please check your connection or login again.');
       } finally {
         setLoading(false);
       }
@@ -95,17 +96,11 @@ const AdminSchoolCode = () => {
         <i className="bi bi-shield-lock-fill me-2"></i>School Code
       </h5>
       {loading ? (
-        <p>Loading school code...</p>
+        <p className="text-muted">Loading school code...</p>
+      ) : error ? (
+        <p className="text-danger">{error}</p>
       ) : (
-        <p className="fs-5">
-          {showCode ? schoolCode : '••••••••••••••••'}
-          <button
-            className="btn btn-sm btn-outline-primary ms-3"
-            onClick={() => setShowCode((prev) => !prev)}
-          >
-            {showCode ? 'Hide' : 'Show'}
-          </button>
-        </p>
+        <p className="fs-5 fw-bold text-success">{schoolCode}</p>
       )}
       <small className="text-muted">
         Share this code with teachers and parents in your school. It’s required during registration.
@@ -113,6 +108,7 @@ const AdminSchoolCode = () => {
     </div>
   );
 };
+
 
 // --- MAIN SETTINGS COMPONENT ---
 const Settings = () => {
