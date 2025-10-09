@@ -76,7 +76,7 @@ const AdminSchoolCode = () => {
   useEffect(() => {
     const fetchCode = async () => {
       try {
-        const res = await axios.get('/api/school/code', {
+        const res = await axios.get('/api/admin/school/code', {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         });
         setSchoolCode(res.data.schoolCode || '');
