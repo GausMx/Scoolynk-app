@@ -76,7 +76,7 @@ const AdminSchoolCode = () => {
   useEffect(() => {
     const fetchCode = async () => {
       try {
-        const res = await axios.get('/api/admin/school/code', {
+        const res = await axios.get('https://scoolynk-app.onrender.com/api/admin/school/code', {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         });
         setSchoolCode(res.data.schoolCode || '');
