@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
 
 // --- MOCK DATA (Nigeria) ---
 const INITIAL_MOCK_DATA = {
@@ -31,9 +32,7 @@ const mockFetchSettings = async () => {
 
 const mockSaveSettings = async (section, payload) => {
   await new Promise((resolve) => setTimeout(resolve, 1200));
-  if (section !== 'security') {
-    currentMockData[section] = payload;
-  }
+  if (section !== 'security') currentMockData[section] = payload;
   if (section === 'security' && payload.newPassword !== payload.confirmPassword) {
     throw new Error('New password and confirm password do not match.');
   }
@@ -68,7 +67,54 @@ const StatusMessage = ({ status, message }) => {
   );
 };
 
-// --- MAIN COMPONENT ---
+// --- SCHOOL CODE COMPONENT (real API) ---
+const AdminSchoolCode = () => {
+  const [schoolCode, setSchoolCode] = useState('');
+  const [showCode, setShowCode] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCode = async () => {
+      try {
+        const res = await axios.get('/api/school/code', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        });
+        setSchoolCode(res.data.schoolCode);
+      } catch (err) {
+        console.error('Error fetching school code:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCode();
+  }, []);
+
+  return (
+    <div className="card p-4 shadow-sm border-0 rounded-4 mt-4">
+      <h5 className="text-primary fw-bold mb-3">
+        <i className="bi bi-shield-lock-fill me-2"></i>School Code
+      </h5>
+      {loading ? (
+        <p>Loading school code...</p>
+      ) : (
+        <p className="fs-5">
+          {showCode ? schoolCode : '••••••••••••••••'}
+          <button
+            className="btn btn-sm btn-outline-primary ms-3"
+            onClick={() => setShowCode((prev) => !prev)}
+          >
+            {showCode ? 'Hide' : 'Show'}
+          </button>
+        </p>
+      )}
+      <small className="text-muted">
+        Share this code with teachers and parents in your school. It’s required during registration.
+      </small>
+    </div>
+  );
+};
+
+// --- MAIN SETTINGS COMPONENT ---
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [editMode, setEditMode] = useState(false);
@@ -147,7 +193,6 @@ const Settings = () => {
   };
 
   const formatFieldName = (field) => field.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
-
   const handleCancelEdit = () => {
     if (activeTab === 'profile') setProfile(originalProfile);
     setEditMode(false);
@@ -219,6 +264,10 @@ const Settings = () => {
         {renderField('address', profile.address, setProfile)}
         {renderField('motto', profile.motto, setProfile)}
       </div>
+
+      {/* Insert the real school code display */}
+      <AdminSchoolCode />
+
       {renderActionButtons('profile')}
     </form>
   );
@@ -304,7 +353,7 @@ const Settings = () => {
                 setEditMode(false);
               }}
             >
-              {formatFieldName(id)}
+              {id.charAt(0).toUpperCase() + id.slice(1)}
             </button>
           </li>
         ))}
