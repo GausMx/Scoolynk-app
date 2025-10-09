@@ -60,7 +60,7 @@ const RegisterForm = () => {
       if (formData.role === 'parent') {
         payload.children = formData.children ? formData.children.split(',').map(s => s.trim()) : [];
       }
-      await API.post('/api/auth/register', payload);
+      await API.post('https://scoolynk-app.onrender.com/api/auth/register', payload);
       setMessage('Registration successful! Redirecting to login...');
       setTimeout(() => {
         navigate('/login');
