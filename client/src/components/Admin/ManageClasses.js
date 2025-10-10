@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BookOpen, Edit, Trash2, PlusCircle } from 'lucide-react';
-import { Chart } from 'react-apexcharts';
+import  Chart  from 'react-apexcharts';
 
 
 // Mock data
