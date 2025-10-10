@@ -1,10 +1,28 @@
 import React, { useState } from 'react';
+import { PeopleFill, EnvelopeOpenFill, PencilSquare, Send } from 'react-bootstrap-icons';
+import Chart from 'react-apexcharts'; // For mini charts
 
-// Bootstrap icons
-const Send = ({ className }) => <i className={`bi bi-send-fill ${className}`}></i>;
-const Mail = ({ className }) => <i className={`bi bi-envelope-open-fill fs-3 ${className}`}></i>;
-const UserIcon = ({ className }) => <i className={`bi bi-people-fill ${className}`}></i>;
-const SubjectIcon = ({ className }) => <i className={`bi bi-pencil-square ${className}`}></i>;
+const MOCK_STATS = {
+  totalSent: 128,
+  pending: 4,
+  recipients: 352,
+  recentOpenRate: 78, // %
+};
+
+// Mini chart config
+const chartOptions = {
+  chart: {
+    type: 'radialBar',
+    height: 100,
+  },
+  plotOptions: {
+    radialBar: {
+      hollow: { size: '60%' },
+      dataLabels: { name: { show: false }, value: { fontSize: '14px', color: '#000' } },
+    },
+  },
+  labels: ['Open Rate'],
+};
 
 const Broadcast = () => {
   const [recipient, setRecipient] = useState('all');
@@ -14,20 +32,14 @@ const Broadcast = () => {
   const [statusMessage, setStatusMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Placeholder backend call (API ready)
-  const fakeAPICall = () => {
-    return new Promise((resolve, reject) => {
+  const fakeAPICall = () =>
+    new Promise((resolve, reject) => {
       setTimeout(() => {
-        // Simulate random success/failure for realism
-        const success = Math.random() > 0.1;
-        if (success) {
-          resolve({ message: `Successfully broadcasted message to ${recipient}.` });
-        } else {
-          reject(new Error('Network error occurred.'));
-        }
+        Math.random() > 0.1
+          ? resolve({ message: `Broadcast sent to ${recipient}` })
+          : reject(new Error('Network error'));
       }, 1500);
     });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,13 +48,11 @@ const Broadcast = () => {
     setLoading(true);
 
     try {
-      // Simulated placeholder (replace later with real fetch call)
       const data = await fakeAPICall();
       setStatusMessage(data.message);
       setSubject('');
       setMessageBody('');
     } catch (error) {
-      console.error('Broadcast Error:', error);
       setErrorMessage('Failed to send broadcast. Please try again.');
     } finally {
       setLoading(false);
@@ -51,116 +61,70 @@ const Broadcast = () => {
 
   return (
     <div className="container py-5">
-      {/* Custom CSS */}
-      <style jsx="true">{`
-        body {
-          font-family: 'Inter', sans-serif;
-        }
+      {/* Stats Cards */}
+      <div className="row g-4 mb-5">
+        <div className="col-12 col-md-3">
+          <div className="card p-3 text-center shadow-sm rounded-4">
+            <PeopleFill className="fs-2 text-primary mb-2" />
+            <h6 className="text-muted">Total Messages Sent</h6>
+            <h4 className="fw-bold">{MOCK_STATS.totalSent}</h4>
+          </div>
+        </div>
+        <div className="col-12 col-md-3">
+          <div className="card p-3 text-center shadow-sm rounded-4">
+            <EnvelopeOpenFill className="fs-2 text-info mb-2" />
+            <h6 className="text-muted">Pending Messages</h6>
+            <h4 className="fw-bold">{MOCK_STATS.pending}</h4>
+          </div>
+        </div>
+        <div className="col-12 col-md-3">
+          <div className="card p-3 text-center shadow-sm rounded-4">
+            <PeopleFill className="fs-2 text-success mb-2" />
+            <h6 className="text-muted">Active Recipients</h6>
+            <h4 className="fw-bold">{MOCK_STATS.recipients}</h4>
+          </div>
+        </div>
+        <div className="col-12 col-md-3">
+          <div className="card p-3 text-center shadow-sm rounded-4">
+            <Chart
+              options={chartOptions}
+              series={[MOCK_STATS.recentOpenRate]}
+              type="radialBar"
+              height={100}
+            />
+            <h6 className="text-muted mt-2">Recent Open Rate</h6>
+          </div>
+        </div>
+      </div>
 
-        .sleek-card {
-          background: #ffffff;
-          border: 1px solid #e0e0e0;
-          border-radius: 1.5rem !important;
-          box-shadow: 0 16px 32px rgba(0, 0, 0, 0.08),
-            0 3px 6px rgba(0, 0, 0, 0.05);
-        }
-
-        .sleek-title {
-          color: #2563eb; /* blue-600 */
-          font-weight: 700 !important;
-          padding-bottom: 0.5rem;
-          border-bottom: 2px solid #eff6ff;
-        }
-
-        .form-control,
-        .form-select {
-          border-radius: 0.75rem;
-          padding: 0.75rem 1rem;
-          border-color: #ddd;
-          transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .form-control:focus,
-        .form-select:focus {
-          border-color: #2563eb;
-          box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.25);
-        }
-
-        .sleek-btn {
-          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-          border: none;
-          transition: all 0.3s ease;
-          font-size: 1.1rem;
-          padding: 0.75rem 1.5rem;
-        }
-
-        .sleek-btn:hover:not(:disabled) {
-          background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
-          transform: translateY(-2px);
-          box-shadow: 0 8px 15px rgba(37, 99, 235, 0.4);
-        }
-
-        .sleek-btn:disabled {
-          opacity: 0.6;
-        }
-
-        @media (max-width: 768px) {
-          .sleek-card {
-            padding: 1.5rem !important;
-          }
-          .py-5 {
-            padding-top: 1.5rem !important;
-            padding-bottom: 1.5rem !important;
-          }
-        }
-      `}</style>
-
-      <div className="sleek-card p-4 p-md-5 mx-auto" style={{ maxWidth: '700px' }}>
-        {/* Header */}
-        <h2 className="text-2xl sleek-title mb-4 d-flex align-items-center">
-          <Mail className="me-3" /> Broadcast Communication
+      {/* Broadcast Form Card */}
+      <div className="card p-4 p-md-5 shadow-lg rounded-4">
+        <h2 className="fs-4 fs-md-2 fw-bold text-primary mb-3 d-flex align-items-center">
+          <EnvelopeOpenFill className="me-3 fs-3" /> Broadcast Communication
         </h2>
         <p className="text-secondary mb-4">
           Craft and send real-time announcements to specific user groups across your school.
         </p>
 
-        {/* Alert Messages */}
+        {/* Alerts */}
         {statusMessage && (
-          <div
-            className="alert alert-success d-flex align-items-center rounded-3 mb-4 fade show"
-            role="alert"
-          >
-            <i className="bi bi-check-circle-fill me-2 fs-5"></i>
-            <div>{statusMessage}</div>
-            <button
-              type="button"
-              className="btn-close ms-auto"
-              onClick={() => setStatusMessage('')}
-              aria-label="Close"
-            ></button>
+          <div className="alert alert-success alert-dismissible fade show rounded-3 mb-4">
+            <i className="bi bi-check-circle-fill me-2"></i>
+            {statusMessage}
+            <button type="button" className="btn-close" onClick={() => setStatusMessage('')} />
           </div>
         )}
-
         {errorMessage && (
-          <div
-            className="alert alert-danger d-flex align-items-center rounded-3 mb-4 fade show"
-            role="alert"
-          >
-            <i className="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-            <div>{errorMessage}</div>
-            <button
-              type="button"
-              className="btn-close ms-auto"
-              onClick={() => setErrorMessage('')}
-              aria-label="Close"
-            ></button>
+          <div className="alert alert-danger alert-dismissible fade show rounded-3 mb-4">
+            <i className="bi bi-exclamation-triangle-fill me-2"></i>
+            {errorMessage}
+            <button type="button" className="btn-close" onClick={() => setErrorMessage('')} />
           </div>
         )}
 
         {/* Form */}
         <form onSubmit={handleSubmit}>
           <div className="row g-3 mb-3">
-            {/* Recipient */}
             <div className="col-12 col-md-6">
               <div className="form-floating">
                 <select
@@ -176,13 +140,9 @@ const Broadcast = () => {
                   <option value="jss1">JSS 1 Students/Parents</option>
                   <option value="sss3">SSS 3 Students/Parents</option>
                 </select>
-                <label htmlFor="recipient">
-                  <UserIcon className="me-2" /> Recipient Group
-                </label>
+                <label htmlFor="recipient">Recipient Group</label>
               </div>
             </div>
-
-            {/* Subject */}
             <div className="col-12 col-md-6">
               <div className="form-floating">
                 <input
@@ -194,14 +154,11 @@ const Broadcast = () => {
                   placeholder="Subject"
                   required
                 />
-                <label htmlFor="subject">
-                  <SubjectIcon className="me-2" /> Subject
-                </label>
+                <label htmlFor="subject">Subject</label>
               </div>
             </div>
           </div>
 
-          {/* Message Body */}
           <div className="mb-4">
             <label htmlFor="messageBody" className="form-label fw-semibold text-dark">
               Message Content
@@ -218,25 +175,19 @@ const Broadcast = () => {
             ></textarea>
           </div>
 
-          {/* Submit Button */}
           <div className="d-grid">
             <button
               type="submit"
-              className="btn sleek-btn btn-lg rounded-3 shadow-sm d-flex align-items-center justify-content-center fw-bold text-white"
+              className="btn btn-primary btn-lg rounded-3 d-flex align-items-center justify-content-center fw-bold"
               disabled={loading || !subject || !messageBody}
             >
               {loading ? (
                 <>
-                  <span
-                    className="spinner-border spinner-border-sm me-2"
-                    role="status"
-                    aria-hidden="true"
-                  ></span>
-                  Sending Broadcast...
+                  <span className="spinner-border spinner-border-sm me-2"></span> Sending...
                 </>
               ) : (
                 <>
-                  <Send className="me-2 fs-5" /> Send Broadcast Now
+                  <Send className="me-2" /> Send Broadcast
                 </>
               )}
             </button>
