@@ -11,10 +11,10 @@ const IconChildren = (props) => <Users {...props} />;
 
 // --- Mock Data ---
 const MOCK_PARENTS = [
-  { id: 'p001', name: 'Mr. David Okoro', children: ['John Okoro', 'Mary Okoro'] },
-  { id: 'p002', name: 'Mrs. Chioma Eze', children: ['Chuka Eze'] },
-  { id: 'p003', name: 'Alhaji Abdul Bello', children: ['Sadiq Bello'] },
-  { id: 'p004', name: 'Ms. Tola Adebayo', children: ['Tobi Adebayo'] },
+  { id: 'p001', name: 'Mr. David Okoro', phone: '0803-123-4567', email: 'david.okoro@example.com', children: ['John Okoro', 'Mary Okoro'] },
+  { id: 'p002', name: 'Mrs. Chioma Eze', phone: '0809-876-5432', email: 'chioma.eze@example.com', children: ['Chuka Eze'] },
+  { id: 'p003', name: 'Alhaji Abdul Bello', phone: '0705-555-1212', email: 'abdul.bello@example.com', children: ['Sadiq Bello'] },
+  { id: 'p004', name: 'Ms. Tola Adebayo', phone: '0901-222-3333', email: 'tola.adebayo@example.com', children: ['Tobi Adebayo'] },
 ];
 
 const ManageParents = () => {
@@ -27,6 +27,8 @@ const ManageParents = () => {
   const filteredParents = parents.filter(
     p => p.name.toLowerCase().includes(searchTerm.toLowerCase())
       || p.children.join(', ').toLowerCase().includes(searchTerm.toLowerCase())
+      || p.phone.toLowerCase().includes(searchTerm.toLowerCase())
+      || p.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleEdit = (updatedParent) => {
@@ -54,16 +56,18 @@ const ManageParents = () => {
     const [formData, setFormData] = useState({ ...initialData });
 
     const handleChange = (e, index) => {
-      const newChildren = [...formData.children];
-      newChildren[index] = e.target.value;
-      setFormData({ ...formData, children: newChildren });
+      const { name, value } = e.target;
+      if (name === 'children') {
+        const newChildren = [...formData.children];
+        newChildren[index] = value;
+        setFormData({ ...formData, children: newChildren });
+      } else {
+        setFormData({ ...formData, [name]: value });
+      }
     };
 
     const addChild = () => setFormData({ ...formData, children: [...formData.children, ''] });
-    const removeChild = (index) => {
-      const newChildren = formData.children.filter((_, i) => i !== index);
-      setFormData({ ...formData, children: newChildren });
-    };
+    const removeChild = (index) => setFormData({ ...formData, children: formData.children.filter((_, i) => i !== index) });
 
     const handleSubmit = (e) => {
       e.preventDefault();
@@ -74,13 +78,23 @@ const ManageParents = () => {
       <form onSubmit={handleSubmit}>
         <div className="mb-3">
           <label className="form-label fw-semibold">Parent Name</label>
-          <input type="text" className="form-control rounded-3" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+          <input type="text" name="name" className="form-control rounded-3" value={formData.name} onChange={handleChange} required />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label fw-semibold">Phone Number</label>
+          <input type="tel" name="phone" className="form-control rounded-3" value={formData.phone} onChange={handleChange} required />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label fw-semibold">Email Address</label>
+          <input type="email" name="email" className="form-control rounded-3" value={formData.email} onChange={handleChange} required />
         </div>
 
         <label className="form-label fw-semibold">Children</label>
         {formData.children.map((child, i) => (
           <div className="input-group mb-2" key={i}>
-            <input type="text" className="form-control rounded-3" value={child} onChange={(e) => handleChange(e, i)} required />
+            <input type="text" name="children" className="form-control rounded-3" value={child} onChange={(e) => handleChange(e, i)} required />
             <button type="button" className="btn btn-outline-danger rounded-3" onClick={() => removeChild(i)}>Remove</button>
           </div>
         ))}
@@ -137,7 +151,7 @@ const ManageParents = () => {
           <input
             type="text"
             className="form-control rounded-end-pill"
-            placeholder="Search by parent or child name..."
+            placeholder="Search by parent, child, phone or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -149,6 +163,8 @@ const ManageParents = () => {
             <thead className="table-light">
               <tr>
                 <th>Parent Name</th>
+                <th>Phone</th>
+                <th>Email</th>
                 <th>Children</th>
                 <th className="text-center">Number of Children</th>
                 <th className="text-center">Actions</th>
@@ -158,6 +174,8 @@ const ManageParents = () => {
               {filteredParents.length > 0 ? filteredParents.map(p => (
                 <tr key={p.id}>
                   <td className="fw-semibold">{p.name}</td>
+                  <td>{p.phone}</td>
+                  <td>{p.email}</td>
                   <td>{p.children.join(', ')}</td>
                   <td className="text-center">{p.children.length}</td>
                   <td className="text-center">
@@ -170,7 +188,7 @@ const ManageParents = () => {
                   </td>
                 </tr>
               )) : (
-                <tr><td colSpan="4" className="text-center text-muted py-3">No parents found.</td></tr>
+                <tr><td colSpan="6" className="text-center text-muted py-3">No parents found.</td></tr>
               )}
             </tbody>
           </table>
