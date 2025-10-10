@@ -1,6 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-// Mock Data
+
+const MOCK_COURSES = [
+  { id: 'crs101', name: 'Mathematics', teacher: 'Mrs. Jane Doe', classes: ['JSS 1', 'JSS 2'] },
+  { id: 'crs202', name: 'Physics', teacher: 'Mr. Ken Adams', classes: ['SSS 1', 'SSS 3'] },
+  { id: 'crs303', name: 'English Language', teacher: 'Ms. Sarah Connor', classes: ['JSS 1', 'SSS 1'] },
+  { id: 'crs404', name: 'Chemistry', teacher: 'Dr. John Miller', classes: ['SSS 3'] },
+];
+
 const MOCK_TEACHERS = [
   { id: 't001', name: 'Mrs. Jane Doe' },
   { id: 't002', name: 'Mr. Ken Adams' },
@@ -8,334 +15,223 @@ const MOCK_TEACHERS = [
   { id: 't004', name: 'Dr. John Miller' },
 ];
 
-const MOCK_CLASS_OPTIONS = ['JSS 1', 'JSS 2', 'JSS 3', 'SSS 1', 'SSS 2', 'SSS 3'];
-
-const MOCK_COURSES = [
-  { id: 'crs101', name: 'Mathematics', code: 'MAT101', teacherId: 't001', classes: ['JSS 1', 'JSS 2'] },
-  { id: 'crs202', name: 'Physics', code: 'PHY202', teacherId: 't002', classes: ['SSS 1', 'SSS 3'] },
-  { id: 'crs303', name: 'English Language', code: 'ENG101', teacherId: 't003', classes: ['JSS 1', 'JSS 3', 'SSS 1'] },
-  { id: 'crs404', name: 'Chemistry', code: 'CHE303', teacherId: 't004', classes: ['SSS 3'] },
-];
+const MOCK_CLASS_OPTIONS = ['JSS 1', 'JSS 2', 'SSS 1', 'SSS 2', 'SSS 3'];
 
 const ManageCourses = () => {
   const [courses, setCourses] = useState(MOCK_COURSES);
   const [searchTerm, setSearchTerm] = useState('');
+  const [modalState, setModalState] = useState({ isOpen: false, mode: 'add', currentCourse: null });
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(''); // user feedback
-  const [modalState, setModalState] = useState({ open: false, mode: 'add', course: null });
+  const [message, setMessage] = useState('');
 
-  // Modal helpers
-  const openAdd = () => setModalState({ open: true, mode: 'add', course: null });
-  const openEdit = (c) => setModalState({ open: true, mode: 'edit', course: c });
-  const openDelete = (c) => setModalState({ open: true, mode: 'delete', course: c });
-  const closeModal = () => setModalState({ open: false, mode: 'add', course: null });
+  const openAddModal = () => setModalState({ isOpen: true, mode: 'add', currentCourse: null });
+  const openEditModal = (course) => setModalState({ isOpen: true, mode: 'edit', currentCourse: course });
+  const openDeleteModal = (course) => setModalState({ isOpen: true, mode: 'delete', currentCourse: course });
+  const closeModal = () => setModalState({ isOpen: false, mode: 'add', currentCourse: null });
 
-  // Filtered list
-  const filtered = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    if (!q) return courses;
-    return courses.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.code.toLowerCase().includes(q) ||
-        (getTeacherName(c.teacherId) || '').toLowerCase().includes(q) ||
-        c.classes.some((cl) => cl.toLowerCase().includes(q))
-    );
-  }, [courses, searchTerm]);
+  const filteredCourses = useMemo(() =>
+    courses.filter(c =>
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.teacher.toLowerCase().includes(searchTerm.toLowerCase())
+    ), [courses, searchTerm]);
 
-  function getTeacherName(id) {
-    const t = MOCK_TEACHERS.find((x) => x.id === id);
-    return t ? t.name : 'Unassigned';
-  }
-
-  // CRUD handlers (mock async behaviour)
-  const handleSave = (payload) => {
+  const handleAddOrEdit = (formData) => {
     setLoading(true);
     setMessage('');
     setTimeout(() => {
       if (modalState.mode === 'add') {
-        const newCourse = { ...payload, id: 'crs' + Date.now() };
-        setCourses((p) => [newCourse, ...p]);
-        setMessage(`Course '${newCourse.name}' added.`);
+        const newCourse = { ...formData, id: 'crs' + Date.now() };
+        setCourses(prev => [...prev, newCourse]);
+        setMessage(`✅ '${newCourse.name}' added successfully.`);
       } else {
-        setCourses((p) => p.map((c) => (c.id === payload.id ? { ...c, ...payload } : c)));
-        setMessage(`Course '${payload.name}' updated.`);
+        setCourses(prev => prev.map(c => c.id === formData.id ? { ...c, ...formData } : c));
+        setMessage(`✅ '${formData.name}' updated successfully.`);
       }
       setLoading(false);
       closeModal();
-      setTimeout(() => setMessage(''), 3500);
-    }, 600);
+    }, 700);
   };
 
-  const handleDelete = (id) => {
+  const handleDeleteConfirmed = (courseId, courseName) => {
     setLoading(true);
-    setMessage('');
+    closeModal();
     setTimeout(() => {
-      const removed = courses.find((c) => c.id === id);
-      setCourses((p) => p.filter((c) => c.id !== id));
-      setMessage(`Course '${removed?.name || ''}' deleted.`);
+      setCourses(prev => prev.filter(c => c.id !== courseId));
+      setMessage(`🗑️ '${courseName}' deleted.`);
       setLoading(false);
-      closeModal();
-      setTimeout(() => setMessage(''), 3500);
-    }, 500);
+    }, 700);
   };
 
-  // Small stats
-  const totalCourses = courses.length;
-  const uniqueTeachers = new Set(courses.map((c) => c.teacherId)).size;
-  const assignedClasses = new Set(courses.flatMap((c) => c.classes)).size;
-
-  // Subcomponents: CourseForm & DeleteConfirm
-  const CourseForm = ({ initial = {}, onCancel, onSubmit, saving }) => {
-    const [form, setForm] = useState({
-      id: initial.id || null,
-      name: initial.name || '',
-      code: initial.code || '',
-      teacherId: initial.teacherId || MOCK_TEACHERS[0].id,
-      classes: initial.classes ? [...initial.classes] : [],
+  const CourseForm = ({ initialData, onSubmit, onCancel, isSaving }) => {
+    const [formData, setFormData] = useState({
+      name: initialData?.name || '',
+      teacher: initialData?.teacher || MOCK_TEACHERS[0].name,
+      classes: initialData?.classes || [],
     });
 
-    const toggleClass = (val) => {
-      setForm((f) => {
-        const exists = f.classes.includes(val);
-        return {
-          ...f,
-          classes: exists ? f.classes.filter((c) => c !== val) : [...f.classes, val],
-        };
-      });
+    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+    const handleClassChange = (e) => {
+      const value = Array.from(e.target.selectedOptions, opt => opt.value);
+      setFormData({ ...formData, classes: value });
     };
 
     const handleSubmit = (e) => {
       e.preventDefault();
-      // minimal validation
-      if (!form.name.trim() || !form.code.trim()) return;
-      onSubmit(form);
+      onSubmit({ ...initialData, ...formData });
     };
 
     return (
       <form onSubmit={handleSubmit}>
         <div className="mb-3">
           <label className="form-label fw-semibold">Course Name</label>
-          <input
-            className="form-control rounded-3"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-          />
+          <input type="text" className="form-control rounded-3" name="name" value={formData.name} onChange={handleChange} required />
         </div>
-
-        <div className="mb-3">
-          <label className="form-label fw-semibold">Course Code</label>
-          <input
-            className="form-control rounded-3"
-            value={form.code}
-            onChange={(e) => setForm({ ...form, code: e.target.value })}
-            required
-          />
-        </div>
-
         <div className="mb-3">
           <label className="form-label fw-semibold">Assigned Teacher</label>
-          <select
-            className="form-select rounded-3"
-            value={form.teacherId}
-            onChange={(e) => setForm({ ...form, teacherId: e.target.value })}
-            required
-          >
-            {MOCK_TEACHERS.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
+          <select className="form-select rounded-3" name="teacher" value={formData.teacher} onChange={handleChange}>
+            {MOCK_TEACHERS.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
           </select>
         </div>
-
-        <div className="mb-3">
-          <label className="form-label fw-semibold">Applicable Classes (multi-select)</label>
-          <div className="d-flex flex-wrap gap-2">
-            {MOCK_CLASS_OPTIONS.map((opt) => {
-              const active = form.classes.includes(opt);
-              return (
-                <button
-                  type="button"
-                  key={opt}
-                  onClick={() => toggleClass(opt)}
-                  className={`btn btn-sm ${active ? 'btn-primary' : 'btn-outline-secondary'} rounded-pill`}
-                >
-                  {opt}
-                </button>
-              );
-            })}
-          </div>
+        <div className="mb-4">
+          <label className="form-label fw-semibold">Applicable Classes</label>
+          <select className="form-select rounded-3" multiple size="4" value={formData.classes} onChange={handleClassChange}>
+            {MOCK_CLASS_OPTIONS.map(cls => <option key={cls} value={cls}>{cls}</option>)}
+          </select>
         </div>
-
-        <div className="d-flex justify-content-end">
-          <button type="button" className="btn btn-light me-2 rounded-3" onClick={onCancel} disabled={saving}>
-            Cancel
-          </button>
-          <button type="submit" className="btn btn-primary rounded-3" disabled={saving}>
-            {saving ? 'Saving...' : initial.id ? 'Update Course' : 'Add Course'}
+        <div className="text-end">
+          <button type="button" className="btn btn-outline-secondary me-2 rounded-3" onClick={onCancel}>Cancel</button>
+          <button type="submit" className="btn btn-primary rounded-3" disabled={isSaving}>
+            {isSaving ? 'Saving...' : (initialData ? 'Update Course' : 'Add Course')}
           </button>
         </div>
       </form>
     );
   };
 
-  const DeleteConfirm = ({ course, onCancel, onConfirm, deleting }) => (
+  const DeleteConfirmation = ({ course, onConfirm, onCancel, isDeleting }) => (
     <>
-      <div className="alert alert-warning d-flex align-items-start gap-3">
-        <i className="bi bi-exclamation-triangle-fill fs-4 text-warning"></i>
-        <div>
-          <div className="fw-semibold">Confirm deletion</div>
-          <div className="small text-muted">Delete <strong>{course?.name}</strong>. This action cannot be undone.</div>
-        </div>
+      <div className="alert alert-warning d-flex align-items-center rounded-3 mb-3">
+        <i className="bi bi-exclamation-triangle-fill me-2"></i>
+        <div>Are you sure you want to delete <strong>{course.name}</strong>? This cannot be undone.</div>
       </div>
-
-      <div className="d-flex justify-content-end">
-        <button className="btn btn-light me-2" onClick={onCancel} disabled={deleting}>
-          Cancel
-        </button>
-        <button className="btn btn-danger" onClick={() => onConfirm(course.id)} disabled={deleting}>
-          {deleting ? 'Deleting...' : 'Confirm Delete'}
+      <div className="text-end">
+        <button className="btn btn-outline-secondary me-2 rounded-3" onClick={onCancel}>Cancel</button>
+        <button className="btn btn-danger rounded-3" onClick={() => onConfirm(course.id, course.name)} disabled={isDeleting}>
+          {isDeleting ? 'Deleting...' : 'Confirm Delete'}
         </button>
       </div>
     </>
   );
 
+  const renderModalContent = () => {
+    const { mode, currentCourse } = modalState;
+    if (mode === 'add' || mode === 'edit')
+      return <CourseForm initialData={currentCourse} onSubmit={handleAddOrEdit} onCancel={closeModal} isSaving={loading} />;
+    if (mode === 'delete')
+      return <DeleteConfirmation course={currentCourse} onConfirm={handleDeleteConfirmed} onCancel={closeModal} isDeleting={loading} />;
+    return null;
+  };
+
   return (
-    <div className="container py-4">
-      <div className="mb-3 d-flex justify-content-between align-items-center">
-        <h3 className="mb-0 fw-bold text-primary">Manage Courses & Subjects</h3>
-
-        <div className="d-flex gap-2 align-items-center">
-          <div className="input-group">
-            <span className="input-group-text bg-white border-end-0"><i className="bi bi-search"></i></span>
-            <input
-              className="form-control"
-              placeholder="Search courses, codes, teachers, classes..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <button className="btn btn-primary ms-2 d-flex align-items-center" onClick={openAdd}>
-            <i className="bi bi-plus-circle me-2"></i> Add Course
-          </button>
-        </div>
+    <div className="card shadow-sm rounded-4 p-4 mb-4 bg-white">
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 border-bottom pb-3">
+        <h4 className="fw-bold text-primary d-flex align-items-center mb-3 mb-md-0">
+          <i className="bi bi-journal-bookmark-fill me-2"></i> Manage Courses
+        </h4>
+        <button className="btn btn-primary rounded-3 d-flex align-items-center" onClick={openAddModal}>
+          <i className="bi bi-plus-circle me-2"></i> Add Course
+        </button>
       </div>
 
-      {/* top stat cards */}
+      {/* Overview Cards */}
       <div className="row g-3 mb-4">
-        <div className="col-6 col-md-3">
-          <div className="card rounded-4 shadow-sm p-3 text-center h-100">
-            <div className="text-muted small">Total Courses</div>
-            <div className="fw-bold fs-4">{totalCourses}</div>
-          </div>
-        </div>
-        <div className="col-6 col-md-3">
-          <div className="card rounded-4 shadow-sm p-3 text-center h-100">
-            <div className="text-muted small">Active Teachers</div>
-            <div className="fw-bold fs-4">{uniqueTeachers}</div>
-          </div>
-        </div>
-        <div className="col-6 col-md-3">
-          <div className="card rounded-4 shadow-sm p-3 text-center h-100">
-            <div className="text-muted small">Assigned Classes</div>
-            <div className="fw-bold fs-4">{assignedClasses}</div>
-          </div>
-        </div>
-        <div className="col-6 col-md-3">
-          <div className="card rounded-4 shadow-sm p-3 h-100">
+        <div className="col-md-4">
+          <div className="card bg-light border-0 shadow-sm rounded-4 p-3">
             <div className="d-flex justify-content-between align-items-center">
               <div>
-                <div className="text-muted small">Quick Note</div>
-                <div className="fw-semibold">MVP mode</div>
+                <h6 className="text-muted mb-1">Total Courses</h6>
+                <h5 className="fw-bold mb-0">{courses.length}</h5>
               </div>
-              <i className="bi bi-lightning-fill fs-3 text-primary"></i>
+              <i className="bi bi-journal-richtext fs-3 text-primary"></i>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="card bg-light border-0 shadow-sm rounded-4 p-3">
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 className="text-muted mb-1">Teachers Assigned</h6>
+                <h5 className="fw-bold mb-0">{new Set(courses.map(c => c.teacher)).size}</h5>
+              </div>
+              <i className="bi bi-person-workspace fs-3 text-success"></i>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="card bg-light border-0 shadow-sm rounded-4 p-3">
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 className="text-muted mb-1">Classes Covered</h6>
+                <h5 className="fw-bold mb-0">{new Set(courses.flatMap(c => c.classes)).size}</h5>
+              </div>
+              <i className="bi bi-mortarboard-fill fs-3 text-info"></i>
             </div>
           </div>
         </div>
       </div>
 
-      {/* main table card */}
-      <div className="card shadow-lg rounded-4">
-        <div className="card-body p-3 p-md-4">
-          {message && <div className="alert alert-success mb-3">{message}</div>}
-
-          <div className="table-responsive">
-            <table className="table table-hover align-middle mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th>Course</th>
-                  <th>Code</th>
-                  <th className="d-none d-md-table-cell">Teacher</th>
-                  <th className="d-none d-lg-table-cell">Classes</th>
-                  <th className="text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan="5" className="text-center text-muted py-4">No courses found.</td>
-                  </tr>
-                )}
-                {filtered.map((c) => (
-                  <tr key={c.id}>
-                    <td className="fw-semibold">{c.name}</td>
-                    <td>{c.code}</td>
-                    <td className="d-none d-md-table-cell">{getTeacherName(c.teacherId)}</td>
-                    <td className="d-none d-lg-table-cell">
-                      {c.classes.map((cl) => (
-                        <span key={cl} className="badge bg-secondary me-1">{cl}</span>
-                      ))}
-                    </td>
-                    <td className="text-center">
-                      <div className="d-flex justify-content-center gap-2">
-                        <button className="btn btn-sm btn-outline-secondary" onClick={() => openEdit(c)}>
-                          <i className="bi bi-pencil-square"></i>
-                        </button>
-                        <button className="btn btn-sm btn-outline-danger" onClick={() => openDelete(c)}>
-                          <i className="bi bi-trash"></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      {/* Table */}
+      <div className="table-responsive">
+        <table className="table align-middle table-hover caption-top">
+          <caption>List of all available courses</caption>
+          <thead className="table-light">
+            <tr>
+              <th>Course Name</th>
+              <th>Teacher</th>
+              <th>Classes</th>
+              <th className="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredCourses.length > 0 ? filteredCourses.map(course => (
+              <tr key={course.id}>
+                <td className="fw-semibold">{course.name}</td>
+                <td>{course.teacher}</td>
+                <td>
+                  {course.classes.map(cls => (
+                    <span key={cls} className="badge bg-secondary me-1">{cls}</span>
+                  ))}
+                </td>
+                <td className="text-center">
+                  <button className="btn btn-sm btn-outline-primary me-2 rounded-3" onClick={() => openEditModal(course)}>
+                    <i className="bi bi-pencil-square"></i>
+                  </button>
+                  <button className="btn btn-sm btn-outline-danger rounded-3" onClick={() => openDeleteModal(course)}>
+                    <i className="bi bi-trash3"></i>
+                  </button>
+                </td>
+              </tr>
+            )) : (
+              <tr><td colSpan="4" className="text-center text-muted">No courses found.</td></tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
-      {/* Modal overlay */}
-      {modalState.open && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.45)', zIndex: 1050 }}>
+      {/* Modal */}
+      {modalState.isOpen && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered modal-lg">
-            <div className="modal-content rounded-4">
+            <div className="modal-content rounded-4 shadow-lg">
               <div className="modal-header">
                 <h5 className="modal-title">
-                  {modalState.mode === 'add' && <><i className="bi bi-plus-circle me-2"></i> Add Course</>}
-                  {modalState.mode === 'edit' && <><i className="bi bi-pencil-square me-2"></i> Edit Course</>}
-                  {modalState.mode === 'delete' && <><i className="bi bi-trash me-2"></i> Delete Course</>}
+                  {modalState.mode === 'add' ? 'Add New Course' :
+                   modalState.mode === 'edit' ? 'Edit Course' : 'Delete Course'}
                 </h5>
-                <button type="button" className="btn-close" onClick={closeModal} disabled={loading}></button>
+                <button type="button" className="btn-close" onClick={closeModal}></button>
               </div>
               <div className="modal-body">
-                {modalState.mode === 'delete' ? (
-                  <DeleteConfirm
-                    course={modalState.course}
-                    onCancel={closeModal}
-                    onConfirm={handleDelete}
-                    deleting={loading}
-                  />
-                ) : (
-                  <CourseForm
-                    initial={modalState.course}
-                    onCancel={closeModal}
-                    onSubmit={handleSave}
-                    saving={loading}
-                  />
-                )}
+                {renderModalContent()}
               </div>
             </div>
           </div>
