@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Settings, User, Lock, CreditCard, Book, BarChart2, PieChart } from 'lucide-react';
+import { Settings as SettingsIcon, User, Lock, CreditCard, Book, BarChart2, PieChart } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart as RePieChart, Pie, Cell } from 'recharts';
 
 // --- MOCK DATA (Nigeria) ---
@@ -238,7 +238,7 @@ const Settings = () => {
       <div className="mt-4 pt-3 border-top d-flex flex-column flex-md-row justify-content-end gap-2">
         {!editMode ? (
           <button type="button" className="btn btn-outline-primary rounded-3 px-4" onClick={() => setEditMode(true)}>
-            <Settings className="me-2" size={16} /> Edit {formatFieldName(section)}
+            <SettingsIcon className="me-2" size={16} /> Edit {formatFieldName(section)}
           </button>
         ) : (
           <>
