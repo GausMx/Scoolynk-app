@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { Gear, User, Lock, CreditCard, Book, BarChart2, PieChart } from 'lucide-react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart as RePieChart, Pie, Cell } from 'recharts';
 
 // --- MOCK DATA (Nigeria) ---
 const INITIAL_MOCK_DATA = {
@@ -53,21 +55,12 @@ const StatusMessage = ({ status, message }) => {
   else if (status === 'error') alertClass = 'alert-danger';
   return (
     <div className={`alert ${alertClass} rounded-3 d-flex align-items-center mb-4`} role="alert">
-      <i
-        className={`bi ${
-          status === 'info'
-            ? 'bi-hourglass-split'
-            : status === 'success'
-            ? 'bi-check-circle-fill'
-            : 'bi-exclamation-triangle-fill'
-        } me-2`}
-      ></i>
       {message}
     </div>
   );
 };
 
-// --- SCHOOL CODE COMPONENT (real API, always visible) ---
+// --- SCHOOL CODE COMPONENT ---
 const AdminSchoolCode = () => {
   const [schoolCode, setSchoolCode] = useState('');
   const [loading, setLoading] = useState(true);
@@ -93,7 +86,7 @@ const AdminSchoolCode = () => {
   return (
     <div className="card p-4 shadow-sm border-0 rounded-4 mt-4">
       <h5 className="text-primary fw-bold mb-3">
-        <i className="bi bi-shield-lock-fill me-2"></i>School Code
+        <Lock className="me-2" size={18} /> School Code
       </h5>
       {loading ? (
         <p className="text-muted">Loading school code...</p>
@@ -109,6 +102,21 @@ const AdminSchoolCode = () => {
   );
 };
 
+// --- MOCK STATS DATA ---
+const statsMockData = {
+  classesDistribution: [
+    { name: 'JSS1', students: 120 },
+    { name: 'JSS2', students: 100 },
+    { name: 'JSS3', students: 90 },
+    { name: 'SSS1', students: 110 },
+    { name: 'SSS2', students: 95 },
+    { name: 'SSS3', students: 85 },
+  ],
+  feeCollection: [
+    { name: 'Collected', value: 4000000 },
+    { name: 'Pending', value: 1200000 },
+  ],
+};
 
 // --- MAIN SETTINGS COMPONENT ---
 const Settings = () => {
@@ -230,7 +238,7 @@ const Settings = () => {
       <div className="mt-4 pt-3 border-top d-flex flex-column flex-md-row justify-content-end gap-2">
         {!editMode ? (
           <button type="button" className="btn btn-outline-primary rounded-3 px-4" onClick={() => setEditMode(true)}>
-            <i className="bi bi-pencil-fill me-2"></i>Edit {formatFieldName(section)}
+            <Gear className="me-2" size={16} /> Edit {formatFieldName(section)}
           </button>
         ) : (
           <>
@@ -250,9 +258,48 @@ const Settings = () => {
     );
   };
 
+  // --- STATS WIDGET ---
+  const renderStatsWidgets = () => (
+    <div className="row g-3 mb-4">
+      <div className="col-md-6 col-lg-3">
+        <div className="card shadow-sm rounded-4 p-3 border-0">
+          <div className="d-flex align-items-center mb-2">
+            <User className="text-primary me-2" /> Total Classes
+          </div>
+          <h4 className="fw-bold">{academic.classes?.length || 0}</h4>
+        </div>
+      </div>
+      <div className="col-md-6 col-lg-3">
+        <div className="card shadow-sm rounded-4 p-3 border-0">
+          <div className="d-flex align-items-center mb-2">
+            <CreditCard className="text-success me-2" /> Default Fee
+          </div>
+          <h4 className="fw-bold">₦{fees.defaultFee || 0}</h4>
+        </div>
+      </div>
+      <div className="col-md-6 col-lg-3">
+        <div className="card shadow-sm rounded-4 p-3 border-0">
+          <div className="d-flex align-items-center mb-2">
+            <BarChart2 className="text-warning me-2" /> Total Students
+          </div>
+          <h4 className="fw-bold">{statsMockData.classesDistribution.reduce((a, c) => a + c.students, 0)}</h4>
+        </div>
+      </div>
+      <div className="col-md-6 col-lg-3">
+        <div className="card shadow-sm rounded-4 p-3 border-0">
+          <div className="d-flex align-items-center mb-2">
+            <Book className="text-info me-2" /> Subjects
+          </div>
+          <h4 className="fw-bold">{academic.subjects?.length || 0}</h4>
+        </div>
+      </div>
+    </div>
+  );
+
   // --- SECTION RENDERERS ---
   const renderProfileSection = () => (
     <form onSubmit={(e) => { e.preventDefault(); handleSave('profile'); }}>
+      {renderStatsWidgets()}
       <div className="mb-4">
         {renderField('schoolName', profile.schoolName, setProfile)}
         {renderField('schoolEmail', profile.schoolEmail, setProfile, 'email', true)}
@@ -260,10 +307,7 @@ const Settings = () => {
         {renderField('address', profile.address, setProfile)}
         {renderField('motto', profile.motto, setProfile)}
       </div>
-
-      {/* Insert the real school code display */}
       <AdminSchoolCode />
-
       {renderActionButtons('profile')}
     </form>
   );
@@ -332,7 +376,7 @@ const Settings = () => {
     <div className="container py-5">
       <header className="mb-5 border-bottom pb-3 text-center text-md-start">
         <h1 className="text-primary fw-bolder">
-          <i className="bi bi-gear-fill me-2"></i>School Settings Management
+          <Gear className="me-2" size={24} /> School Settings Management
         </h1>
         <p className="text-muted">Configure core school information, fees, and academic parameters.</p>
       </header>
@@ -344,10 +388,7 @@ const Settings = () => {
           <li className="nav-item" key={id}>
             <button
               className={`nav-link ${activeTab === id ? 'active' : ''}`}
-              onClick={() => {
-                setActiveTab(id);
-                setEditMode(false);
-              }}
+              onClick={() => { setActiveTab(id); setEditMode(false); }}
             >
               {id.charAt(0).toUpperCase() + id.slice(1)}
             </button>
