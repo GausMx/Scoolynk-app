@@ -376,7 +376,7 @@ const Settings = () => {
     <div className="container py-5">
       <header className="mb-5 border-bottom pb-3 text-center text-md-start">
         <h1 className="text-primary fw-bolder">
-          <Gear className="me-2" size={24} /> School Settings Management
+          <SettingsIcon className="me-2" size={24} /> School Settings Management
         </h1>
         <p className="text-muted">Configure core school information, fees, and academic parameters.</p>
       </header>
