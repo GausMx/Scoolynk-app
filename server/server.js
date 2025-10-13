@@ -96,8 +96,6 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/teacher', teacherRoutes);
-app.use("/api/test", testEmailRoutes);
-
 // Test route
 app.post('/test', (req, res) => {
   res.json({ message: 'Test route working!' });
