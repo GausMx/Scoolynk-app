@@ -57,9 +57,6 @@ const RegisterForm = () => {
         payload.classes = formData.classes ? formData.classes.split(',').map(s => s.trim()) : [];
         payload.courses = formData.courses ? formData.courses.split(',').map(s => s.trim()) : [];
       }
-      if (formData.role === 'parent') {
-        payload.children = formData.children ? formData.children.split(',').map(s => s.trim()) : [];
-      }
       await API.post('https://scoolynk-app.onrender.com/api/auth/register', payload);
       setMessage('Registration successful! Redirecting to login...');
       setTimeout(() => {
@@ -73,7 +70,6 @@ const RegisterForm = () => {
         schoolName: '',
         schoolCode: '',
         role: '',
-        children: '',
         classes: '',
         courses: '',
       });
@@ -126,7 +122,6 @@ const RegisterForm = () => {
                     <option value="">Select role</option>
                     <option value="admin">Admin</option>
                     <option value="teacher">Teacher</option>
-                    <option value="parent">Parent</option>
                   </select>
                 </div>
                 <div className="mb-3">
@@ -186,7 +181,8 @@ const RegisterForm = () => {
                     />
                   </div>
                 )}
-                {(formData.role === 'teacher' || formData.role === 'parent') && (
+                {formData.role === 'teacher' && (
+                  <>
                   <div className="mb-3">
                     <label className="form-label">School Code</label>
                     <input
@@ -201,9 +197,6 @@ const RegisterForm = () => {
                       placeholder="Enter 16-digit school code"
                     />
                   </div>
-                )}
-                {formData.role === 'teacher' && (
-                  <>
                     <div className="mb-3">
                       <label className="form-label">Classes (comma separated)</label>
                       <input
@@ -227,19 +220,6 @@ const RegisterForm = () => {
                       />
                     </div>
                   </>
-                )}
-                {formData.role === 'parent' && (
-                  <div className="mb-3">
-                    <label className="form-label">Children (comma separated names)</label>
-                    <input
-                      type="text"
-                      className="form-control rounded-3"
-                      name="children"
-                      value={formData.children}
-                      onChange={handleChange}
-                      placeholder="e.g. John Doe, Jane Doe"
-                    />
-                  </div>
                 )}
                 <div className="d-grid gap-2">
                   <button type="submit" className="btn btn-primary rounded-3 shadow-sm">

@@ -8,21 +8,13 @@ const Sidebar = ({ user, role }) => {
   const adminLinks = [
     { path: "/admin", label: "Home" },
     { path: "/admin/review-results", label: "Review Results" },
-    { path: "/admin/broadcast", label: "Broadcast Notification" },
     { path: "/admin/settings", label: "Settings" },
-    { path: "/admin/manage-parents", label: "Manage Parents" },
     { path: "/admin/manage-teachers", label: "Manage Teachers" },
     { path: "/admin/manage-students", label: "Manage Students" },
     { path: "/admin/manage-classes", label: "Manage Classes" },
     { path: "/admin/manage-courses", label: "Manage Courses" },
   ];
 
-  const parentLinks = [
-    { path: "/parent", label: "Dashboard" },
-    { path: "/parent/notifications", label: "Notifications" },
-    { path: "/parent/results", label: "Results" },
-    { path: "/parent/payments", label: "Payments" },
-  ];
 
   const teacherLinks = [
     { path: "/teacher", label: "Dashboard" },

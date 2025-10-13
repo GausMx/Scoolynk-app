@@ -34,8 +34,6 @@ export const redirectByRole = (role) => {
       return '/admin';
     case 'teacher':
       return '/teacher';
-    case 'parent':
-      return '/parent';
     default:
       return '/';
   }

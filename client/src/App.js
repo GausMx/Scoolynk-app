@@ -5,7 +5,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 // pages & auth
 import AdminDashboard from './components/pages/AdminDashboard';
 import TeacherDashboard from './components/pages/TeacherDashboard';
-import ParentDashboard from './components/pages/ParentDashboard';
 import LoginForm from './components/Auth/LoginForm';
 import RegisterForm from './components/Auth/RegisterForm';
 import PasswordResetForm from './components/Auth/PasswordResetForm';
@@ -57,16 +56,6 @@ const App = () => {
           element={
             <ProtectedRoute roles={['teacher']}>
               <TeacherDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Parent routes */}
-        <Route
-          path="/parent/*"
-          element={
-            <ProtectedRoute roles={['parent']}>
-              <ParentDashboard />
             </ProtectedRoute>
           }
         />
