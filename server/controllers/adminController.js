@@ -45,26 +45,6 @@ export const reviewResult = async (req, res) => {
 };
 
 // -------------------------
-// Broadcast notification to all users in school
-// -------------------------
-export const broadcastNotification = async (req, res) => {
-  try {
-    const { message } = req.body;
-    const schoolId = req.user.schoolId;
-    const users = await User.find({ schoolId });
-
-    users.forEach(u => {
-      console.log(`[Broadcast] To: ${u.email} | Message: ${message}`);
-    });
-
-    res.json({ message: 'Notification broadcasted.' });
-  } catch (err) {
-    console.error('[AdminBroadcast]', err);
-    res.status(500).json({ message: 'Failed to broadcast notification.' });
-  }
-};
-
-// -------------------------
 // Admin dashboard
 // -------------------------
 export const getAdminDashboard = (req, res) => {

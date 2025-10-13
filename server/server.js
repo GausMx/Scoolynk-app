@@ -6,7 +6,6 @@ import { fileURLToPath } from 'url';
 
 import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
-import parentRoutes from './routes/parentRoutes.js';
 import teacherRoutes from './routes/teacherRoutes.js';
 import connectDB from './config/db.js';
 import protect from './middleware/authMiddleware.js';
@@ -98,7 +97,6 @@ app.get('/', (req, res) => {
 // Mount all API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/parent', parentRoutes);
 app.use('/api/teacher', teacherRoutes);
 app.use("/api/test", testEmailRoutes);
 

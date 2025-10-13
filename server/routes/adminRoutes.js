@@ -21,8 +21,6 @@ router.get('/', protect, subscriptionGuard, requireRole('admin'), getAdminDashbo
 router.get('/results', protect, requireRole('admin'), getSubmittedResults);
 router.post('/results/review', protect, requireRole('admin'), reviewResult);
 
-// Broadcast notification
-router.post('/broadcast', protect, requireRole('admin'), broadcastNotification);
 
 // Settings
 router.get('/settings', protect, requireRole('admin'), getAdminSettings);

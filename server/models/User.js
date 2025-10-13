@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   phone: { type: String, required: true, unique: true },
   passwordHash: { type: String, required: true },
-  role: { type: String, enum: ['admin', 'teacher', 'parent'], required: true },
+  role: { type: String, enum: ['admin', 'teacher'], required: true },
   schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
   // For parents: array of children (students)
   children: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Student' }],

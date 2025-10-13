@@ -21,7 +21,7 @@ router.post(
     check('email', 'Please include a valid email').isEmail(),
     check('phone', 'Phone number is required').not().isEmpty(),
     check('password', 'Please enter a password with 6 or more characters').isLength({ min: 6 }),
-    check('role', 'Role is required').isIn(['admin', 'teacher', 'parent']),
+    check('role', 'Role is required').isIn(['admin', 'teacher']),
   ],
   register
 );

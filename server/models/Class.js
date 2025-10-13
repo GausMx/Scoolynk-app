@@ -8,7 +8,7 @@ const classSchema = new mongoose.Schema({
   fee: { type: Number, required: true },
   teachers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // teachers for this class
   students: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Student' }],
-});
+}); 
 
 const Class = mongoose.model('Class', classSchema);
 

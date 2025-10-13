@@ -5,6 +5,7 @@ import { validationResult } from 'express-validator';
 import User from '../models/User.js';
 import School from '../models/School.js';
 import mongoose from 'mongoose';
+import Student from '../models/Student.js';
 
 // Helper function to generate a JWT token
 const generateToken = (id, schoolId, role) => {
@@ -93,7 +94,7 @@ const register = async (req, res) => {
       await tempUser.save();
       schoolId = school._id;
       
-    } else if (role === 'teacher' || role === 'parent') {
+    } else if (role === 'teacher') {
       if (!schoolCode || schoolCode.length !== 16) {
         return res.status(400).json({ message: 'A valid 16-digit school code is required.' });
       }
@@ -110,12 +111,7 @@ const register = async (req, res) => {
         return res.status(400).json({ message: 'All fields are required.' });
       }
       
-      if (role === 'teacher') {
-        // Optionally require classes/courses
-      }
-      if (role === 'parent') {
-        // Optionally require children
-      }
+
       
       const passwordHash = await User.hashPassword(password);
       await User.create({
@@ -125,8 +121,7 @@ const register = async (req, res) => {
         passwordHash,
         role,
         schoolId,
-        ...(role === 'teacher' ? { classes, courses } : {}),
-        ...(role === 'parent' ? { children } : {}),
+        ...(role === 'teacher' ? { classes, courses } : {})
       });
       
     } else {
