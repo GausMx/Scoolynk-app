@@ -75,7 +75,7 @@ const Dashboard = () => {
         <StatCard
           title="Unpaid Fees"
           value={`₦${stats.unpaidFees}`}
-          iconClass="bi-currency-dollar"
+          iconClass="bi-currency-naira"
           bgClass="bg-success bg-opacity-10"
           textClass="text-success"
         />
