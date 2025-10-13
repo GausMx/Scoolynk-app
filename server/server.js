@@ -11,8 +11,6 @@ import connectDB from './config/db.js';
 import protect from './middleware/authMiddleware.js';
 import subscriptionGuard from './middleware/subscriptionMiddleware.js';
 import requireRole from './middleware/roleMiddleware.js';
-import testEmailRoutes from "./routes/test.js";
-
 // Load environment variables
 dotenv.config();
 
