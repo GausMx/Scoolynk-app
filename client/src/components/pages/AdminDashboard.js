@@ -17,9 +17,7 @@ const AdminDashboard = ({ user }) => {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/review-results" element={<ReviewResults />} />
-        <Route path="/broadcast" element={<Broadcast />} />
         <Route path="/settings" element={<Settings />} />
-        <Route path="/manage-parents" element={<ManageParents />} />
         <Route path="/manage-teachers" element={<ManageTeachers />} />
         <Route path="/manage-students" element={<ManageStudents />} />
         <Route path="/manage-classes" element={<ManageClasses />} />

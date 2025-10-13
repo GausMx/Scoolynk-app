@@ -22,7 +22,7 @@ const Sidebar = ({ user, role }) => {
   ];
 
   const links =
-    role === "admin" ? adminLinks : role === "teacher" ? teacherLinks : parentLinks;
+    role === "admin" ? adminLinks : role === "teacher" ? teacherLinks : [];
 
   const displayName =
     user && (role === "admin" ? user.schoolName : user.name);
