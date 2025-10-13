@@ -6,9 +6,7 @@ import Layout from '../common/Layout';
 // Admin subpages
 import Dashboard from '../Admin/Dashboard'; // this is your Home
 import ReviewResults from '../Admin/ReviewResults';
-import Broadcast from '../Admin/Broadcast';
 import Settings from '../Admin/Settings';
-import ManageParents from '../Admin/ManageParents';
 import ManageTeachers from '../Admin/ManageTeachers';
 import ManageStudents from '../Admin/ManageStudents';
 import ManageClasses from '../Admin/ManageClasses';
