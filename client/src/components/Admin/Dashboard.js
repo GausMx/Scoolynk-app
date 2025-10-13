@@ -12,7 +12,7 @@ const MOCK_STATS = {
 };
 
 const StatCard = ({ title, value, iconClass, bgClass, textClass }) => (
-  <div className="col-12 col-md-6 col-lg-3">
+  <div className="col-12 col-md-4">
     <div
       className={`card shadow-sm rounded-4 p-3 ${bgClass} hover:shadow-lg transition`}
       style={{ cursor: 'pointer' }}
