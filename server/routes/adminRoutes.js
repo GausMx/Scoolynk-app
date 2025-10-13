@@ -5,7 +5,6 @@ import subscriptionGuard from '../middleware/subscriptionMiddleware.js'; // Impo
 import {
   getSubmittedResults,
   reviewResult,
-  broadcastNotification,
   getAdminSettings,
   updateAdminSettings,
   getAdminDashboard,
