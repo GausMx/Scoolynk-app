@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Settings as SettingsIcon, User, Lock, CreditCard, Book, BarChart2, PieChart } from 'lucide-react';
+import { Settings as SettingsIcon, User, Lock, CreditCard, BarChart2 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart as RePieChart, Pie, Cell } from 'recharts';
 
 // --- MOCK DATA (Nigeria) ---
@@ -15,13 +15,6 @@ const INITIAL_MOCK_DATA = {
   fees: {
     defaultFee: '120000.00',
     lateFee: '5000.00',
-  },
-  academic: {
-    classes: ['JSS1', 'JSS2', 'JSS3', 'SSS1', 'SSS2', 'SSS3'],
-    subjects: ['Mathematics', 'English', 'Biology', 'Chemistry', 'Physics'],
-    gradingSystem: 'A-F (5.0 Scale)',
-    termStart: '2025-01-10',
-    termEnd: '2025-12-20',
   },
 };
 
@@ -128,7 +121,6 @@ const Settings = () => {
   const [originalProfile, setOriginalProfile] = useState({});
   const [security, setSecurity] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [fees, setFees] = useState({});
-  const [academic, setAcademic] = useState({});
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -138,7 +130,6 @@ const Settings = () => {
       setProfile(data.profile || {});
       setOriginalProfile(data.profile || {});
       setFees(data.fees || {});
-      setAcademic(data.academic || {});
       setStatus({ type: 'success', message: 'Settings loaded successfully!' });
     } catch (err) {
       setStatus({ type: 'error', message: err.message || 'Failed to load settings.' });
@@ -177,9 +168,6 @@ const Settings = () => {
           break;
         case 'fees':
           payload = fees;
-          break;
-        case 'academic':
-          payload = academic;
           break;
         default:
           payload = {};
@@ -264,14 +252,6 @@ const Settings = () => {
       <div className="col-md-6 col-lg-3">
         <div className="card shadow-sm rounded-4 p-3 border-0">
           <div className="d-flex align-items-center mb-2">
-            <User className="text-primary me-2" /> Total Classes
-          </div>
-          <h4 className="fw-bold">{academic.classes?.length || 0}</h4>
-        </div>
-      </div>
-      <div className="col-md-6 col-lg-3">
-        <div className="card shadow-sm rounded-4 p-3 border-0">
-          <div className="d-flex align-items-center mb-2">
             <CreditCard className="text-success me-2" /> Default Fee
           </div>
           <h4 className="fw-bold">₦{fees.defaultFee || 0}</h4>
@@ -283,14 +263,6 @@ const Settings = () => {
             <BarChart2 className="text-warning me-2" /> Total Students
           </div>
           <h4 className="fw-bold">{statsMockData.classesDistribution.reduce((a, c) => a + c.students, 0)}</h4>
-        </div>
-      </div>
-      <div className="col-md-6 col-lg-3">
-        <div className="card shadow-sm rounded-4 p-3 border-0">
-          <div className="d-flex align-items-center mb-2">
-            <Book className="text-info me-2" /> Subjects
-          </div>
-          <h4 className="fw-bold">{academic.subjects?.length || 0}</h4>
         </div>
       </div>
     </div>
@@ -347,44 +319,19 @@ const Settings = () => {
     </form>
   );
 
-  const renderAcademicSection = () => (
-    <form onSubmit={(e) => { e.preventDefault(); handleSave('academic'); }}>
-      <h5 className="mb-4 text-primary text-center text-md-start">Academic Term & Grading</h5>
-      <div className="row justify-content-center mb-4">
-        <div className="col-12 col-md-8 col-lg-6">
-          {renderField('gradingSystem', academic.gradingSystem, setAcademic)}
-          {renderField('termStart', academic.termStart, setAcademic, editMode ? 'date' : 'text')}
-          {renderField('termEnd', academic.termEnd, setAcademic, editMode ? 'date' : 'text')}
-        </div>
-      </div>
-      <div className="row mb-3 border-top pt-3">
-        <div className="col-12 col-md-4 col-form-label text-muted fw-bold">Classes:</div>
-        <div className="col-12 col-md-8">
-          <p className="form-control-plaintext fw-bold text-success">
-            {academic.classes?.join(', ') || 'None configured'}
-          </p>
-          <small className="text-warning">
-            {editMode && "Note: Classes and Subjects require a complex editor and are only displayed here."}
-          </small>
-        </div>
-      </div>
-      {renderActionButtons('academic')}
-    </form>
-  );
-
   return (
     <div className="container py-5">
       <header className="mb-5 border-bottom pb-3 text-center text-md-start">
         <h1 className="text-primary fw-bolder">
           <SettingsIcon className="me-2" size={24} /> School Settings Management
         </h1>
-        <p className="text-muted">Configure core school information, fees, and academic parameters.</p>
+        <p className="text-muted">Configure core school information and fees.</p>
       </header>
 
       <StatusMessage status={status.type} message={status.message} />
 
       <ul className="nav nav-tabs flex-wrap mb-4 justify-content-center justify-content-md-start">
-        {['profile', 'security', 'fees', 'academic'].map((id) => (
+        {['profile', 'security', 'fees'].map((id) => (
           <li className="nav-item" key={id}>
             <button
               className={`nav-link ${activeTab === id ? 'active' : ''}`}
@@ -401,7 +348,6 @@ const Settings = () => {
           {activeTab === 'profile' && renderProfileSection()}
           {activeTab === 'security' && renderSecuritySection()}
           {activeTab === 'fees' && renderFeesSection()}
-          {activeTab === 'academic' && renderAcademicSection()}
         </div>
       </div>
     </div>
