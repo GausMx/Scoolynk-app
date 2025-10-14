@@ -92,7 +92,6 @@ const gradeFromPercent = (percent) => {
 };
 
 const PrintableResult = React.forwardRef(({ student }, ref) => {
-  // Build printable markup similar to your image (clean, compact)
   const totalPoints = student.subjects.reduce((s, sub) => s + (Number(sub.ca1) + Number(sub.ca2) + Number(sub.exam)), 0);
   const maxTotal = student.subjects.length * 100;
   const percent = Math.round((totalPoints / maxTotal) * 100);
@@ -107,7 +106,6 @@ const PrintableResult = React.forwardRef(({ student }, ref) => {
         </div>
         <div className="text-end">
           <div className="border rounded-2 p-2" style={{ width: 96, height: 96 }}>
-            {/* Placeholder for photo */}
             <div className="h-100 w-100 d-flex align-items-center justify-content-center bg-light">Photo</div>
           </div>
         </div>
@@ -128,42 +126,44 @@ const PrintableResult = React.forwardRef(({ student }, ref) => {
         </div>
       </div>
 
-      <table className="table table-bordered mb-3">
-        <thead className="table-light">
-          <tr>
-            <th>Subject</th>
-            <th className="text-center">1st C.A</th>
-            <th className="text-center">2nd C.A</th>
-            <th className="text-center">Exam</th>
-            <th className="text-center">Total</th>
-            <th className="text-center">Grade</th>
-            <th className="text-center">Remark</th>
-          </tr>
-        </thead>
-        <tbody>
-          {student.subjects.map((s, idx) => {
-            const t = Number(s.ca1) + Number(s.ca2) + Number(s.exam);
-            const perc = Math.round((t / 100) * 100) / 1;
-            const g = gradeFromPercent(perc);
-            return (
-              <tr key={idx}>
-                <td>{s.subject}</td>
-                <td className="text-center">{s.ca1}</td>
-                <td className="text-center">{s.ca2}</td>
-                <td className="text-center">{s.exam}</td>
-                <td className="text-center">{t}</td>
-                <td className="text-center">{g.grade}</td>
-                <td className="text-center small">{g.remark}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div className="d-flex justify-content-center">
+        <table className="table table-bordered mb-3" style={{ maxWidth: '90%', fontSize: '1rem' }}>
+          <thead className="table-light">
+            <tr>
+              <th>Subject</th>
+              <th className="text-center">1st C.A</th>
+              <th className="text-center">2nd C.A</th>
+              <th className="text-center">Exam</th>
+              <th className="text-center">Total</th>
+              <th className="text-center">Grade</th>
+              <th className="text-center">Remark</th>
+            </tr>
+          </thead>
+          <tbody>
+            {student.subjects.map((s, idx) => {
+              const t = Number(s.ca1) + Number(s.ca2) + Number(s.exam);
+              const perc = Math.round((t / 100) * 100) / 1;
+              const g = gradeFromPercent(perc);
+              return (
+                <tr key={idx}>
+                  <td>{s.subject}</td>
+                  <td className="text-center">{s.ca1}</td>
+                  <td className="text-center">{s.ca2}</td>
+                  <td className="text-center">{s.exam}</td>
+                  <td className="text-center">{t}</td>
+                  <td className="text-center">{g.grade}</td>
+                  <td className="text-center small">{g.remark}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       <div className="row mb-3">
-        <div className="col-md-6">
-          <h6 className="mb-2">Affective Traits</h6>
-          <table className="table table-sm table-borderless">
+        <div className="col-md-6 d-flex justify-content-center">
+          <table className="table table-sm table-borderless" style={{ maxWidth: '90%', fontSize: '1rem' }}>
+            <thead><tr><th colSpan={2}>Affective Traits</th></tr></thead>
             <tbody>
               {Object.entries(student.affective).map(([k, v]) => (
                 <tr key={k}><td className="text-capitalize">{k.replace(/([A-Z])/g, ' $1')}</td><td>{v} / 5</td></tr>
@@ -171,9 +171,9 @@ const PrintableResult = React.forwardRef(({ student }, ref) => {
             </tbody>
           </table>
         </div>
-        <div className="col-md-6">
-          <h6 className="mb-2">School Bills</h6>
-          <table className="table table-sm table-borderless">
+        <div className="col-md-6 d-flex justify-content-center">
+          <table className="table table-sm table-borderless" style={{ maxWidth: '90%', fontSize: '1rem' }}>
+            <thead><tr><th colSpan={2}>School Bills</th></tr></thead>
             <tbody>
               {Object.entries(student.fees).map(([k, v]) => (
                 <tr key={k}><td className="text-capitalize">{k}</td><td>₦{v.toLocaleString()}</td></tr>
@@ -210,13 +210,11 @@ const StudentResults = () => {
   const [message, setMessage] = useState('');
   const printRef = useRef(null);
 
-  // classes list from students
   const classes = useMemo(() => {
     const s = Array.from(new Set(students.map((st) => st.className)));
     return s.sort();
   }, [students]);
 
-  // grouped and filtered
   const grouped = useMemo(() => {
     const byClass = {};
     students
@@ -230,7 +228,6 @@ const StudentResults = () => {
     return byClass;
   }, [students, filterClass, search, sortAsc]);
 
-  // Edit handlers (update subject scores, comments, affective etc.)
   const updateStudent = (studentId, patch) => {
     setStudents(prev => prev.map(s => s.id === studentId ? { ...s, ...patch } : s));
     setMessage('Saved locally. (Replace with API call to persist)');
@@ -247,17 +244,13 @@ const StudentResults = () => {
 
   const saveStudent = (studentId) => {
     const st = students.find(s => s.id === studentId);
-    // placeholder: call API to save
-    updateStudent(studentId, {}); // this triggers message
+    updateStudent(studentId, {});
   };
 
   const printStudent = (studentId) => {
-    // Render printable content to a new window to avoid CSS bleed
     const student = students.find(s => s.id === studentId);
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     const markup = document.createElement('div');
-    // render simple markup similar to PrintableResult, but we can reuse component by serializing HTML
-    // We'll build a small HTML using the same structure (safe for demo)
     const totalPoints = student.subjects.reduce((s, sub) => s + (Number(sub.ca1) + Number(sub.ca2) + Number(sub.exam)), 0);
     const maxTotal = student.subjects.length * 100;
     const percent = Math.round((totalPoints / maxTotal) * 100);
@@ -284,7 +277,7 @@ const StudentResults = () => {
         <head>
           <title>Result - ${student.name}</title>
           <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
-          <style>body{padding:20px;font-family:Arial,Helvetica,sans-serif} table{width:100%;border-collapse:collapse} table th,table td{border:1px solid #ddd;padding:.35rem}</style>
+          <style>body{padding:20px;font-family:Arial,Helvetica,sans-serif} table{width:100%;border-collapse:collapse; font-size:1rem} table th,table td{border:1px solid #ddd;padding:.5rem}</style>
         </head>
         <body>
           <h3>Spotlight Comprehensive College</h3>
@@ -327,7 +320,6 @@ const StudentResults = () => {
   };
 
   const sendAllToParents = () => {
-    // placeholder: send all approved results to parents
     setMessage('Sending results to parents... (simulated)');
     setTimeout(()=>setMessage('All results dispatched to parents (simulated).'), 1400);
   };
@@ -377,8 +369,8 @@ const StudentResults = () => {
                   const g = gradeFromPercent(percent);
 
                   return (
-                    <div key={st.id} className="col-12 col-md-6">
-                      <div className="card shadow-sm rounded-4">
+                    <div key={st.id} className="col-12 col-md-6 d-flex justify-content-center">
+                      <div className="card shadow-sm rounded-4 w-100">
                         <div className="card-body p-3">
                           <div className="d-flex justify-content-between align-items-start mb-2">
                             <div>
@@ -391,9 +383,8 @@ const StudentResults = () => {
                             </div>
                           </div>
 
-                          {/* Subjects editable small table */}
-                          <div className="table-responsive mb-2">
-                            <table className="table table-sm mb-0">
+                          <div className="table-responsive mb-2 d-flex justify-content-center">
+                            <table className="table table-sm mb-0" style={{ minWidth: '80%', fontSize: '0.95rem' }}>
                               <thead className="table-light">
                                 <tr>
                                   <th>Subject</th>
