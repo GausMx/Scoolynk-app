@@ -5,7 +5,7 @@ import axios from 'axios';
 // Create a new Axios instance with a base URL and CORS configuration
 const API = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'https://scoolynk-app.onrender.com',
-  withCredentials: true, // CRITICAL: Allows cookies and credentials to be sent
+  withCredentials: false, // CRITICAL: Allows cookies and credentials to be sent
   headers: {
     'Content-Type': 'application/json',
   },
