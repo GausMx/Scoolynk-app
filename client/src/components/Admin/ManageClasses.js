@@ -9,7 +9,7 @@ const ManageClasses = () => {
   const [message, setMessage] = useState('');
   const [modalState, setModalState] = useState({ isOpen: false, mode: 'add', currentClass: null });
 
-  const API_BASE = REACT_APP_API_URL || 'http://localhost:5000/api/admin';
+  const API_BASE = `${REACT_APP_API_URL}/api/admin`;
   const token = localStorage.getItem('token');
 
   const fetchClasses = async () => {
