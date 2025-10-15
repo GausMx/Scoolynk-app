@@ -2,10 +2,69 @@ import bcrypt from 'bcrypt';
 import User from '../models/User.js';
 import School from '../models/School.js';
 import Result from '../models/Result.js';
+import Class from '../models/Class.js';
 
 // -------------------------
 // Get all submitted results for admin's school
 // -------------------------
+export const getClasses = async (req, res) => {
+  try {
+    const classes = await Class.find({ schoolId: req.user.schoolId }).sort({createdAt: -1 });
+    res.json({ classes });
+  }
+  catch (err) {
+    console.error('[AdminGetClasses]', err);
+    res.status(500).json({ message: 'Failed to fetch classes.' });
+  } 
+};
+
+// POST /api/classes - Create new class (no teacher dependency)
+export const createClass = async (req, res) => {
+  try {
+    const { name, fee} = req.body;  
+    if (!name) return res.status(400).json({ message: 'Class name is required.' });
+    if (fee == null || isNaN(fee) || fee < 0) return res.status(400).json({ message: 'Valid class fee is required.' });
+    const newClass = new Class({ name, fee, schoolId: req.user.schoolId });
+    await newClass.save();
+    res.status(201).json({ message: 'Class created successfully.', class: newClass });
+  } catch (err) {
+    console.error('[CreateClass]', err);
+    res.status(500).json({ message: 'Failed to create class.' });
+  }
+};
+
+export const updateClass = async (req, res) => {
+  try {
+    const {id} = req.params;
+    const {name, fee} = req.body;
+    const cls = await Class.findOne(
+      { _id: id, schoolId: req.user.schoolId},
+      {name, fee},
+      {new: true}
+    );
+    if (!cls) return res.status(404).json({ message: 'Class not found.' });
+    if (name) cls.name = name;
+    if (fee != null && !isNaN(fee) && fee >= 0) cls.fee = fee;
+    await cls.save();
+    res.json({ message: 'Class updated successfully.', class: cls });
+  } catch (err) { 
+    console.error('[UpdateClass]', err);
+    res.status(500).json({ message: 'Failed to update class.' });
+  }
+};
+
+export const deleteClass = async (req, res) => {
+  try {
+    const {id} = req.params;
+    const cls = await Class.findOneAndDelete({ _id: id, schoolId: req.user.schoolId });
+    if (!cls) return res.status(404).json({ message: 'Class not found.' });
+    res.json({ message: 'Class deleted successfully.' });
+  } catch (err) {
+    console.error('[DeleteClass]', err);
+    res.status(500).json({ message: 'Failed to delete class.' });
+  }
+};
+
 export const getSubmittedResults = async (req, res) => {
   try {
     const schoolId = req.user.schoolId;

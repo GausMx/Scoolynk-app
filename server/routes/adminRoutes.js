@@ -8,7 +8,11 @@ import {
   getAdminSettings,
   updateAdminSettings,
   getAdminDashboard,
-   getSchoolCode // Import the new controller
+   getSchoolCode,
+   getClasses,
+   updateClass,
+   deleteClass,
+   createClass
 } from '../controllers/adminController.js';
 
 const router = express.Router();
@@ -27,3 +31,9 @@ router.put('/settings', protect, requireRole('admin'), updateAdminSettings); // 
 // School code
 router.get('/school/code', protect, requireRole('admin'), getSchoolCode);
 export default router;
+
+//class routes
+router.get('/classes', protect, requireRole('admin'), getClasses);
+router.post('/classes', protect, requireRole('admin'), createClass);
+router.put('/classes/:id', protect, requireRole('admin'), updateClass);
+router.delete('/classes/:id', protect, requireRole('admin'), deleteClass);
