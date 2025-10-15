@@ -13,10 +13,10 @@ const ManageClasses = () => {
   const token = localStorage.getItem('token');
 
   const fetchClasses = async () => {
-    try {
+    try { 
       setLoading(true);
       const res = await axios.get(`${API_BASE}/classes`, { headers: { Authorization: `Bearer ${token}` } });
-      setClasses(res.data);
+      setClasses(res.data.classes || res.data || []);
     } catch (err) {
       console.error(err);
       setMessage('Failed to load classes');
