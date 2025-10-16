@@ -24,7 +24,6 @@ const ManageCourses = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const openAddModal = () => setModalState({ isOpen: true, mode: 'add', currentCourse: null });
   const openEditModal = (course) => setModalState({ isOpen: true, mode: 'edit', currentCourse: course });
   const openDeleteModal = (course) => setModalState({ isOpen: true, mode: 'delete', currentCourse: course });
   const closeModal = () => setModalState({ isOpen: false, mode: 'add', currentCourse: null });
@@ -39,14 +38,8 @@ const ManageCourses = () => {
     setLoading(true);
     setMessage('');
     setTimeout(() => {
-      if (modalState.mode === 'add') {
-        const newCourse = { ...formData, id: 'crs' + Date.now() };
-        setCourses(prev => [...prev, newCourse]);
-        setMessage(`✅ '${newCourse.name}' added successfully.`);
-      } else {
-        setCourses(prev => prev.map(c => c.id === formData.id ? { ...c, ...formData } : c));
-        setMessage(`✅ '${formData.name}' updated successfully.`);
-      }
+      setCourses(prev => prev.map(c => c.id === formData.id ? { ...c, ...formData } : c));
+      setMessage(`✅ '${formData.name}' updated successfully.`);
       setLoading(false);
       closeModal();
     }, 700);
@@ -101,7 +94,7 @@ const ManageCourses = () => {
         <div className="text-end">
           <button type="button" className="btn btn-outline-secondary me-2 rounded-3" onClick={onCancel}>Cancel</button>
           <button type="submit" className="btn btn-primary rounded-3" disabled={isSaving}>
-            {isSaving ? 'Saving...' : (initialData ? 'Update Course' : 'Add Course')}
+            {isSaving ? 'Saving...' : 'Update Course'}
           </button>
         </div>
       </form>
@@ -125,7 +118,7 @@ const ManageCourses = () => {
 
   const renderModalContent = () => {
     const { mode, currentCourse } = modalState;
-    if (mode === 'add' || mode === 'edit')
+    if (mode === 'edit')
       return <CourseForm initialData={currentCourse} onSubmit={handleAddOrEdit} onCancel={closeModal} isSaving={loading} />;
     if (mode === 'delete')
       return <DeleteConfirmation course={currentCourse} onConfirm={handleDeleteConfirmed} onCancel={closeModal} isDeleting={loading} />;
@@ -138,9 +131,6 @@ const ManageCourses = () => {
         <h4 className="fw-bold text-primary d-flex align-items-center mb-3 mb-md-0">
           <i className="bi bi-journal-bookmark-fill me-2"></i> Manage Courses
         </h4>
-        <button className="btn btn-primary rounded-3 d-flex align-items-center" onClick={openAddModal}>
-          <i className="bi bi-plus-circle me-2"></i> Add Course
-        </button>
       </div>
 
       {/* Overview Cards */}
@@ -225,8 +215,7 @@ const ManageCourses = () => {
             <div className="modal-content rounded-4 shadow-lg">
               <div className="modal-header">
                 <h5 className="modal-title">
-                  {modalState.mode === 'add' ? 'Add New Course' :
-                   modalState.mode === 'edit' ? 'Edit Course' : 'Delete Course'}
+                  {modalState.mode === 'edit' ? 'Edit Course' : 'Delete Course'}
                 </h5>
                 <button type="button" className="btn-close" onClick={closeModal}></button>
               </div>
@@ -242,3 +231,4 @@ const ManageCourses = () => {
 };
 
 export default ManageCourses;
+    
