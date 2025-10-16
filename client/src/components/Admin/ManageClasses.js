@@ -43,7 +43,7 @@ const ManageClasses = () => {
         await axios.post(`${API_BASE}/classes`, formData, { headers: { Authorization: `Bearer ${token}` } });
         setMessage(`Class '${formData.name}' added`);
       } else {
-        await axios.put(`${API_BASE}/classes/${formData.id}`, formData, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.put(`${API_BASE}/classes/${formData._id}`, formData, { headers: { Authorization: `Bearer ${token}` } });
         setMessage(`Class '${formData.name}' updated`);
       }
       await fetchClasses();
@@ -59,8 +59,8 @@ const ManageClasses = () => {
   const handleDeleteConfirmed = async (classId, className) => {
     try {
       setLoading(true);
-      closeModal();
       await axios.delete(`${API_BASE}/classes/${classId}`, { headers: { Authorization: `Bearer ${token}` } });
+      closeModal();
       setMessage(`Class '${className}' deleted`);
       await fetchClasses();
     } catch (err) {
@@ -82,7 +82,7 @@ const ManageClasses = () => {
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
     const handleSubmit = (e) => {
       e.preventDefault();
-      onSubmit({ ...initialData, ...formData, fee: parseFloat(formData.fee) });
+      onSubmit({ ...initialData, ...formData, fee: parseFloat(formData.fee) || 0});
     };
 
     return (
@@ -109,7 +109,7 @@ const ManageClasses = () => {
       <div className="alert alert-warning">Delete <strong>{cls.name}</strong>? This cannot be reversed.</div>
       <div className="d-flex justify-content-end">
         <button className="btn btn-secondary me-2" onClick={onCancel} disabled={isDeleting}>Cancel</button>
-        <button className="btn btn-danger" onClick={() => onConfirm(cls.id, cls.name)} disabled={isDeleting}>
+        <button className="btn btn-danger" onClick={() => onConfirm(cls._id, cls.name)} disabled={isDeleting}>
           {isDeleting ? 'Deleting...' : 'Confirm Delete'}
         </button>
       </div>
