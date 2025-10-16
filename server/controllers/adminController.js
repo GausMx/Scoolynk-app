@@ -37,7 +37,7 @@ export const updateClass = async (req, res) => {
   try {
     const {id} = req.params;
     const {name, fee} = req.body;
-    const cls = await Class.findOne(
+    const cls = await Class.findOneAndUpdate(
       { _id: id, schoolId: req.user.schoolId},
       {name, fee},
       {new: true}
