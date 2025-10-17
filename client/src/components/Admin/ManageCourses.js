@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-import API from '../../utils/api'; // ✅ Use centralized axios instance (with baseURL + token handling)
+import API from '../utils/api'; // ✅ Use centralized axios instance (with baseURL + token handling)
 
 const ManageCourses = () => {
   const [courses, setCourses] = useState([]);
