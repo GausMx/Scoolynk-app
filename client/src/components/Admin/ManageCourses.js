@@ -1,7 +1,6 @@
 import React, { useState, useMemo, use } from 'react';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import axios from 'axios';
-import { set } from 'mongoose';
 const { REACT_APP_API_URL } = process.env;
 const ManageCourses = () => {
   const [courses, setCourses] = useState(MOCK_COURSES);
