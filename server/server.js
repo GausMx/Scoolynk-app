@@ -74,14 +74,6 @@ app.use((req, res, next) => {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// -----------------------------------------------------
-// STATIC FILE SERVING (Production Only - Before Routes)
-// -----------------------------------------------------
-if (process.env.NODE_ENV === 'production') {
-  const buildPath = path.join(__dirname, '..', 'client', 'build');
-  console.log(`[Prod Config] Serving static files from: ${buildPath}`);
-  app.use(express.static(buildPath));
-}
 
 // -----------------------------------------------------
 // API ROUTES (Must come AFTER static files, BEFORE catch-all)
@@ -101,31 +93,10 @@ app.post('/test', (req, res) => {
   res.json({ message: 'Test route working!' });
 });
 
-// -----------------------------------------------------
-// CATCH-ALL ROUTE FOR CLIENT-SIDE ROUTING (Must be LAST)
-// -----------------------------------------------------
-if (process.env.NODE_ENV === 'production') {
-  const buildPath = path.join(__dirname, '..', 'client', 'build');
-  
-  // This MUST be the last middleware - catches all remaining requests
-  // and serves index.html for client-side routing (React Router)
-  // Using app.use() with custom logic to avoid path-to-regexp wildcard issues
-  app.use((req, res, next) => {
-    // Only handle GET requests that haven't been handled by API routes
-    if (req.method === 'GET') {
-      console.log(`[Catch-All] Serving index.html for: ${req.path}`);
-      res.sendFile(path.resolve(buildPath, 'index.html'), (err) => {
-        if (err) {
-          console.error('[Catch-All Error]', err);
-          res.status(500).send('Error loading page');
-        }
-      });
-    } else {
-      // For non-GET methods, pass to error handler
-      next();
-    }
-  });
-}
+// No frontend serving needed for Netlify frontend
+// Keep only API routes
+console.log('[Prod Config] Frontend is hosted on Netlify, skipping static serving');
+
 
 // -----------------------------------------------------
 // ERROR HANDLING MIDDLEWARE
