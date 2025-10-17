@@ -1,8 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-import axios from 'axios';
-
-const { REACT_APP_API_URL } = process.env;
+import API from '../../utils/api'; // ✅ Use centralized axios instance (with baseURL + token handling)
 
 const ManageCourses = () => {
   const [courses, setCourses] = useState([]);
@@ -13,17 +11,14 @@ const ManageCourses = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const token = localStorage.getItem('token');
-  const API_BASE = `${REACT_APP_API_URL}/api/admin`;
-
   // ---------- Fetch Data ----------
   const fetchCourses = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_BASE}/courses`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await API.get('/api/admin/courses');
       setCourses(res.data.courses || res.data || []);
     } catch (err) {
-      console.error(err);
+      console.error('[FetchCourses]', err);
       setMessage('Failed to load courses');
     } finally {
       setLoading(false);
@@ -32,19 +27,19 @@ const ManageCourses = () => {
 
   const fetchTeachers = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/teachers`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await API.get('/api/admin/teachers');
       setTeachers(res.data.teachers || []);
     } catch (err) {
-      console.error('Failed to load teachers');
+      console.error('[FetchTeachers]', err);
     }
   };
 
   const fetchClasses = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/classes`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await API.get('/api/admin/classes');
       setClassOptions(res.data.classes || []);
     } catch (err) {
-      console.error('Failed to load classes');
+      console.error('[FetchClasses]', err);
     }
   };
 
@@ -54,9 +49,10 @@ const ManageCourses = () => {
     fetchClasses();
   }, []);
 
+  // ---------- Search Filter ----------
   const filteredCourses = useMemo(() =>
     courses.filter(c =>
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (c.teacher?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
     ), [courses, searchTerm]);
 
@@ -66,16 +62,16 @@ const ManageCourses = () => {
       setLoading(true);
       setMessage('');
       if (modalState.mode === 'add') {
-        await axios.post(`${API_BASE}/courses`, formData, { headers: { Authorization: `Bearer ${token}` } });
+        await API.post('/api/admin/courses', formData);
         setMessage(`Course '${formData.name}' added`);
       } else {
-        await axios.put(`${API_BASE}/courses/${formData._id}`, formData, { headers: { Authorization: `Bearer ${token}` } });
+        await API.put(`/api/admin/courses/${formData._id}`, formData);
         setMessage(`Course '${formData.name}' updated`);
       }
       await fetchCourses();
       closeModal();
     } catch (err) {
-      console.error(err);
+      console.error('[Add/Edit Course]', err);
       setMessage(err.response?.data?.message || 'Error saving course');
     } finally {
       setLoading(false);
@@ -85,12 +81,12 @@ const ManageCourses = () => {
   const handleDeleteConfirmed = async (courseId, courseName) => {
     try {
       setLoading(true);
-      await axios.delete(`${API_BASE}/courses/${courseId}`, { headers: { Authorization: `Bearer ${token}` } });
+      await API.delete(`/api/admin/courses/${courseId}`);
       closeModal();
       setMessage(`Course '${courseName}' deleted`);
       await fetchCourses();
     } catch (err) {
-      console.error(err);
+      console.error('[Delete Course]', err);
       setMessage(err.response?.data?.message || 'Error deleting course');
     } finally {
       setLoading(false);
@@ -174,13 +170,14 @@ const ManageCourses = () => {
   const openDeleteModal = (course) => setModalState({ isOpen: true, mode: 'delete', currentCourse: course });
   const closeModal = () => setModalState({ isOpen: false, mode: 'add', currentCourse: null });
 
+  // ---------- UI ----------
   return (
     <div className="card shadow-sm rounded-4 p-4 mb-4 bg-white">
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 border-bottom pb-3">
         <h4 className="fw-bold text-primary d-flex align-items-center mb-3 mb-md-0">
           <i className="bi bi-journal-bookmark-fill me-2"></i> Manage Courses
         </h4>
-        <button 
+        <button
           className="btn btn-primary rounded-3 d-flex align-items-center px-3 py-2"
           style={{ fontSize: '0.9rem', width: 'auto', whiteSpace: 'nowrap' }}
           onClick={openAddModal}
@@ -245,7 +242,7 @@ const ManageCourses = () => {
                 <td>{course.teacher?.name || '—'}</td>
                 <td>
                   {course.classes?.map(cls => (
-                    <span key={cls._id} className="badge bg-secondary me-1">{cls.name}</span>
+                    <span key={cls._id || cls} className="badge bg-secondary me-1">{cls.name || cls}</span>
                   ))}
                 </td>
                 <td className="text-center">
