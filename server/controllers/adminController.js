@@ -3,10 +3,64 @@ import User from '../models/User.js';
 import School from '../models/School.js';
 import Result from '../models/Result.js';
 import Class from '../models/Class.js';
+import Course from '../models/Course.js';
+// -------------------------
+// Get all you need for admin's school
+// -------------------------
+export const getCourses = async (req, res) => {
+  try {
+    const courses = await Course.find({ schoolId: req.user.schoolId }).sort({createdAt: -1 });
+    res.json({ courses });
+  } catch (err) {
+    console.error('[AdminGetCourses]', err);
+    res.status(500).json({ message: 'Failed to fetch courses.' });
+  }
+};
+  //Create courses
 
-// -------------------------
-// Get all submitted results for admin's school
-// -------------------------
+export const createCourse = async (req, res) => {
+  try {
+    const { name, teacher, classes } = req.body;
+    const course = new Course({
+      name,
+      teacher,
+      classes,
+      schoolId: req.user.schoolId
+    });
+    await course.save();
+    res.status(201).json({ message: 'Course created successfully', course });
+  } catch (err) {
+    console.error('[CreateCourse]', err);
+    res.status(500).json({ message: 'Failed to create course.' });
+  }
+};
+// Update course
+export const updateCourse = async (req, res) => {
+  try {
+    const course = await Course.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+    res.json({ message: 'Course updated successfully', course });
+  } catch (err) {
+    console.error('[UpdateCourse]', err);
+    res.status(500).json({ message: 'Failed to update course.' });
+  }
+};
+//delete course
+export const deleteCourse = async (req, res) => {
+  try {
+    const course = await Course.findByIdAndDelete(req.params.id);
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+    res.json({ message: 'Course deleted successfully' });
+  } catch (err) {
+    console.error('[DeleteCourse]', err);
+    res.status(500).json({ message: 'Failed to delete course.' });
+  }
+};
+// GET /api/classes - Get all classes
 export const getClasses = async (req, res) => {
   try {
     const classes = await Class.find({ schoolId: req.user.schoolId }).sort({createdAt: -1 });
