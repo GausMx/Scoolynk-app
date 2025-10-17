@@ -1,72 +1,108 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import 'bootstrap-icons/font/bootstrap-icons.css';
+import axios from 'axios';
 
-const MOCK_COURSES = [
-  { id: 'crs101', name: 'Mathematics', teacher: 'Mrs. Jane Doe', classes: ['JSS 1', 'JSS 2'] },
-  { id: 'crs202', name: 'Physics', teacher: 'Mr. Ken Adams', classes: ['SSS 1', 'SSS 3'] },
-  { id: 'crs303', name: 'English Language', teacher: 'Ms. Sarah Connor', classes: ['JSS 1', 'SSS 1'] },
-  { id: 'crs404', name: 'Chemistry', teacher: 'Dr. John Miller', classes: ['SSS 3'] },
-];
-
-const MOCK_TEACHERS = [
-  { id: 't001', name: 'Mrs. Jane Doe' },
-  { id: 't002', name: 'Mr. Ken Adams' },
-  { id: 't003', name: 'Ms. Sarah Connor' },
-  { id: 't004', name: 'Dr. John Miller' },
-];
-
-const MOCK_CLASS_OPTIONS = ['JSS 1', 'JSS 2', 'SSS 1', 'SSS 2', 'SSS 3'];
+const { REACT_APP_API_URL } = process.env;
 
 const ManageCourses = () => {
-  const [courses, setCourses] = useState(MOCK_COURSES);
+  const [courses, setCourses] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  const [classOptions, setClassOptions] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [modalState, setModalState] = useState({ isOpen: false, mode: 'add', currentCourse: null });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const openAddModal = () => setModalState({ isOpen: true, mode: 'add', currentCourse: null });
-  const openEditModal = (course) => setModalState({ isOpen: true, mode: 'edit', currentCourse: course });
-  const openDeleteModal = (course) => setModalState({ isOpen: true, mode: 'delete', currentCourse: course });
-  const closeModal = () => setModalState({ isOpen: false, mode: 'add', currentCourse: null });
+  const token = localStorage.getItem('token');
+  const API_BASE = `${REACT_APP_API_URL}/api/admin`;
+
+  // ---------- Fetch Data ----------
+  const fetchCourses = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`${API_BASE}/courses`, { headers: { Authorization: `Bearer ${token}` } });
+      setCourses(res.data.courses || res.data || []);
+    } catch (err) {
+      console.error(err);
+      setMessage('Failed to load courses');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTeachers = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/teachers`, { headers: { Authorization: `Bearer ${token}` } });
+      setTeachers(res.data.teachers || []);
+    } catch (err) {
+      console.error('Failed to load teachers');
+    }
+  };
+
+  const fetchClasses = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/classes`, { headers: { Authorization: `Bearer ${token}` } });
+      setClassOptions(res.data.classes || []);
+    } catch (err) {
+      console.error('Failed to load classes');
+    }
+  };
+
+  useEffect(() => {
+    fetchCourses();
+    fetchTeachers();
+    fetchClasses();
+  }, []);
 
   const filteredCourses = useMemo(() =>
     courses.filter(c =>
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.teacher.toLowerCase().includes(searchTerm.toLowerCase())
+      (c.teacher?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
     ), [courses, searchTerm]);
 
-  const handleAddOrEdit = (formData) => {
-    setLoading(true);
-    setMessage('');
-    setTimeout(() => {
+  // ---------- CRUD ----------
+  const handleAddOrEdit = async (formData) => {
+    try {
+      setLoading(true);
+      setMessage('');
       if (modalState.mode === 'add') {
-        const newCourse = { ...formData, id: 'crs' + Date.now() };
-        setCourses(prev => [...prev, newCourse]);
-        setMessage(`✅ '${newCourse.name}' added successfully.`);
+        await axios.post(`${API_BASE}/courses`, formData, { headers: { Authorization: `Bearer ${token}` } });
+        setMessage(`Course '${formData.name}' added`);
       } else {
-        setCourses(prev => prev.map(c => c.id === formData.id ? { ...c, ...formData } : c));
-        setMessage(`✅ '${formData.name}' updated successfully.`);
+        await axios.put(`${API_BASE}/courses/${formData._id}`, formData, { headers: { Authorization: `Bearer ${token}` } });
+        setMessage(`Course '${formData.name}' updated`);
       }
-      setLoading(false);
+      await fetchCourses();
       closeModal();
-    }, 700);
-  };
-
-  const handleDeleteConfirmed = (courseId, courseName) => {
-    setLoading(true);
-    closeModal();
-    setTimeout(() => {
-      setCourses(prev => prev.filter(c => c.id !== courseId));
-      setMessage(`🗑️ '${courseName}' deleted.`);
+    } catch (err) {
+      console.error(err);
+      setMessage(err.response?.data?.message || 'Error saving course');
+    } finally {
       setLoading(false);
-    }, 700);
+    }
   };
 
+  const handleDeleteConfirmed = async (courseId, courseName) => {
+    try {
+      setLoading(true);
+      await axios.delete(`${API_BASE}/courses/${courseId}`, { headers: { Authorization: `Bearer ${token}` } });
+      closeModal();
+      setMessage(`Course '${courseName}' deleted`);
+      await fetchCourses();
+    } catch (err) {
+      console.error(err);
+      setMessage(err.response?.data?.message || 'Error deleting course');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ---------- Forms ----------
   const CourseForm = ({ initialData, onSubmit, onCancel, isSaving }) => {
     const [formData, setFormData] = useState({
       name: initialData?.name || '',
-      teacher: initialData?.teacher || MOCK_TEACHERS[0].name,
-      classes: initialData?.classes || [],
+      teacher: initialData?.teacher?._id || '',
+      classes: initialData?.classes?.map(c => c._id) || [],
     });
 
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -89,13 +125,14 @@ const ManageCourses = () => {
         <div className="mb-3">
           <label className="form-label fw-semibold">Assigned Teacher</label>
           <select className="form-select rounded-3" name="teacher" value={formData.teacher} onChange={handleChange}>
-            {MOCK_TEACHERS.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+            <option value="">-- Select Teacher --</option>
+            {teachers.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
           </select>
         </div>
         <div className="mb-4">
           <label className="form-label fw-semibold">Applicable Classes</label>
           <select className="form-select rounded-3" multiple size="4" value={formData.classes} onChange={handleClassChange}>
-            {MOCK_CLASS_OPTIONS.map(cls => <option key={cls} value={cls}>{cls}</option>)}
+            {classOptions.map(cls => <option key={cls._id} value={cls._id}>{cls.name}</option>)}
           </select>
         </div>
         <div className="text-end">
@@ -116,7 +153,7 @@ const ManageCourses = () => {
       </div>
       <div className="text-end">
         <button className="btn btn-outline-secondary me-2 rounded-3" onClick={onCancel}>Cancel</button>
-        <button className="btn btn-danger rounded-3" onClick={() => onConfirm(course.id, course.name)} disabled={isDeleting}>
+        <button className="btn btn-danger rounded-3" onClick={() => onConfirm(course._id, course.name)} disabled={isDeleting}>
           {isDeleting ? 'Deleting...' : 'Confirm Delete'}
         </button>
       </div>
@@ -132,23 +169,27 @@ const ManageCourses = () => {
     return null;
   };
 
+  const openAddModal = () => setModalState({ isOpen: true, mode: 'add', currentCourse: null });
+  const openEditModal = (course) => setModalState({ isOpen: true, mode: 'edit', currentCourse: course });
+  const openDeleteModal = (course) => setModalState({ isOpen: true, mode: 'delete', currentCourse: course });
+  const closeModal = () => setModalState({ isOpen: false, mode: 'add', currentCourse: null });
+
   return (
     <div className="card shadow-sm rounded-4 p-4 mb-4 bg-white">
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 border-bottom pb-3">
         <h4 className="fw-bold text-primary d-flex align-items-center mb-3 mb-md-0">
           <i className="bi bi-journal-bookmark-fill me-2"></i> Manage Courses
         </h4>
-<button 
-  className="btn btn-primary rounded-3 d-flex align-items-center px-3 py-2"
-  style={{ fontSize: '0.9rem', width: 'auto', whiteSpace: 'nowrap' }}
-  onClick={openAddModal}
->
-  <i className="bi bi-plus-circle me-2"></i> Add Course
-</button>
-
+        <button 
+          className="btn btn-primary rounded-3 d-flex align-items-center px-3 py-2"
+          style={{ fontSize: '0.9rem', width: 'auto', whiteSpace: 'nowrap' }}
+          onClick={openAddModal}
+        >
+          <i className="bi bi-plus-circle me-2"></i> Add Course
+        </button>
       </div>
 
-      {/* Overview Cards */}
+      {/* Overview */}
       <div className="row g-3 mb-4">
         <div className="col-md-4">
           <div className="card bg-light border-0 shadow-sm rounded-4 p-3">
@@ -166,7 +207,7 @@ const ManageCourses = () => {
             <div className="d-flex justify-content-between align-items-center">
               <div>
                 <h6 className="text-muted mb-1">Teachers Assigned</h6>
-                <h5 className="fw-bold mb-0">{new Set(courses.map(c => c.teacher)).size}</h5>
+                <h5 className="fw-bold mb-0">{new Set(courses.map(c => c.teacher?.name)).size}</h5>
               </div>
               <i className="bi bi-person-workspace fs-3 text-success"></i>
             </div>
@@ -177,7 +218,7 @@ const ManageCourses = () => {
             <div className="d-flex justify-content-between align-items-center">
               <div>
                 <h6 className="text-muted mb-1">Classes Covered</h6>
-                <h5 className="fw-bold mb-0">{new Set(courses.flatMap(c => c.classes)).size}</h5>
+                <h5 className="fw-bold mb-0">{new Set(courses.flatMap(c => c.classes?.map(cl => cl.name))).size}</h5>
               </div>
               <i className="bi bi-mortarboard-fill fs-3 text-info"></i>
             </div>
@@ -199,12 +240,12 @@ const ManageCourses = () => {
           </thead>
           <tbody>
             {filteredCourses.length > 0 ? filteredCourses.map(course => (
-              <tr key={course.id}>
+              <tr key={course._id}>
                 <td className="fw-semibold">{course.name}</td>
-                <td>{course.teacher}</td>
+                <td>{course.teacher?.name || '—'}</td>
                 <td>
-                  {course.classes.map(cls => (
-                    <span key={cls} className="badge bg-secondary me-1">{cls}</span>
+                  {course.classes?.map(cls => (
+                    <span key={cls._id} className="badge bg-secondary me-1">{cls.name}</span>
                   ))}
                 </td>
                 <td className="text-center">
@@ -235,9 +276,7 @@ const ManageCourses = () => {
                 </h5>
                 <button type="button" className="btn-close" onClick={closeModal}></button>
               </div>
-              <div className="modal-body">
-                {renderModalContent()}
-              </div>
+              <div className="modal-body">{renderModalContent()}</div>
             </div>
           </div>
         </div>
@@ -245,5 +284,5 @@ const ManageCourses = () => {
     </div>
   );
 };
-  
+
 export default ManageCourses;
