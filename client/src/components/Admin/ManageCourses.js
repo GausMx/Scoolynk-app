@@ -186,7 +186,7 @@ const ManageCourses = () => {
 
       {/* Overview */}
       <div className="row g-3 mb-4">
-        <div className="col-md-4">
+        <div className="col-md-6">
           <div className="card bg-light border-0 shadow-sm rounded-4 p-3">
             <div className="d-flex justify-content-between align-items-center">
               <div>
@@ -197,7 +197,7 @@ const ManageCourses = () => {
             </div>
           </div>
         </div>
-        <div className="col-md-4">
+        <div className="col-md-6">
           <div className="card bg-light border-0 shadow-sm rounded-4 p-3">
             <div className="d-flex justify-content-between align-items-center">
               <div>
@@ -205,17 +205,6 @@ const ManageCourses = () => {
                 <h5 className="fw-bold mb-0">{new Set(courses.map(c => c.teacher?._id)).size}</h5>
               </div>
               <i className="bi bi-person-workspace fs-3 text-success"></i>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-4">
-          <div className="card bg-light border-0 shadow-sm rounded-4 p-3">
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="text-muted mb-1">Classes Covered</h6>
-                <h5 className="fw-bold mb-0">{new Set(courses.flatMap(c => c.classes?.map(cl => cl._id))).size}</h5>
-              </div>
-              <i className="bi bi-mortarboard-fill fs-3 text-info"></i>
             </div>
           </div>
         </div>
@@ -229,7 +218,6 @@ const ManageCourses = () => {
             <tr>
               <th>Course Name</th>
               <th>Teacher</th>
-              <th>Classes</th>
               <th className="text-center">Actions</th>
             </tr>
           </thead>
@@ -238,11 +226,6 @@ const ManageCourses = () => {
               <tr key={course._id}>
                 <td className="fw-semibold">{course.name}</td>
                 <td>{course.teacher?.name || '—'}</td>
-                <td>
-                  {course.classes?.map(cls => (
-                    <span key={cls._id} className="badge bg-secondary me-1">{cls.name}</span>
-                  ))}
-                </td>
                 <td className="text-center">
                   <button className="btn btn-sm btn-outline-primary me-2 rounded-3" onClick={() => openEditModal(course)}>
                     <i className="bi bi-pencil-square"></i>
@@ -253,7 +236,7 @@ const ManageCourses = () => {
                 </td>
               </tr>
             )) : (
-              <tr><td colSpan="4" className="text-center text-muted">No courses found.</td></tr>
+              <tr><td colSpan="3" className="text-center text-muted">No courses found.</td></tr>
             )}
           </tbody>
         </table>
