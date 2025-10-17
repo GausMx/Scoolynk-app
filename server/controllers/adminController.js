@@ -9,13 +9,18 @@ import Course from '../models/Course.js';
 // -------------------------
 export const getCourses = async (req, res) => {
   try {
-    const courses = await Course.find({ schoolId: req.user.schoolId }).sort({createdAt: -1 });
+    const courses = await Course.find({ schoolId: req.user.schoolId })
+      .populate('teacher', 'name email') // populate teacher name & email
+      .populate('classes', 'name')       // populate class names
+      .sort({ createdAt: -1 });
+
     res.json({ courses });
   } catch (err) {
     console.error('[AdminGetCourses]', err);
     res.status(500).json({ message: 'Failed to fetch courses.' });
   }
 };
+
   //Create courses
 
 export const createCourse = async (req, res) => {
