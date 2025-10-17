@@ -7,6 +7,16 @@ import Course from '../models/Course.js';
 // -------------------------
 // Get all you need for admin's school
 // -------------------------
+export const getClassCourses = async (req, res) => {
+    try {
+    const courses = await Course.find({ classes: req.params.id, schoolId: req.user.schoolId })
+      .populate('teacher', 'name email');
+    res.json({ courses });
+  } catch (err) {
+    console.error('[GetClassCourses]', err);
+    res.status(500).json({ message: 'Failed to fetch courses for class.' });
+  }
+}
 export const getCourses = async (req, res) => {
   try {
     const courses = await Course.find({ schoolId: req.user.schoolId })

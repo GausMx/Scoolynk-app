@@ -16,7 +16,8 @@ import {
    getCourses,
    createCourse,
    updateCourse,
-   deleteCourse
+   deleteCourse,
+   getClassCourses
 } from '../controllers/adminController.js';
 
 const router = express.Router();
@@ -41,7 +42,7 @@ router.get('/classes', protect, requireRole('admin'), getClasses);
 router.post('/classes', protect, requireRole('admin'), createClass);
 router.put('/classes/:id', protect, requireRole('admin'), updateClass);
 router.delete('/classes/:id', protect, requireRole('admin'), deleteClass);
-
+router.get('/classes/:id/courses', protect, requireRole('admin'), getClassCourses);
 //Course routes
 router.get('/courses', protect, requireRole('admin'), getCourses);
 router.post('/courses', protect, requireRole('admin'), createCourse);

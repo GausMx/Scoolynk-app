@@ -8,17 +8,18 @@ const CourseSchema = new mongoose.Schema(
       required: true,
       trim: true
     },
-    teacher: {
-      type: String,
-      required: false,
-      trim: true
-    },
-    classes: [
-      {
-        type: String, // could also be ObjectId if you link to Class model
-        required: true
-      }
+teacher: {
+     type: mongoose.Schema.Types.ObjectId,
+     ref: 'User',
+     required: false
+   },
+classes: [
+    {
+       type: mongoose.Schema.Types.ObjectId,
+       ref: 'Class'
+     }
     ],
+
     schoolId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'School',
