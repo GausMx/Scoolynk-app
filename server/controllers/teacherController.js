@@ -84,9 +84,23 @@ export const getClassesAndCourses = async (req, res) => {
 // -------------------------
 export const getTeacherSchoolClasses = async (req, res) => {
   try {
+    console.log('[GetTeacherSchoolClasses] Request received');
+    console.log('[GetTeacherSchoolClasses] User:', req.user ? 'Authenticated' : 'Not authenticated');
+    console.log('[GetTeacherSchoolClasses] User role:', req.user?.role);
+    console.log('[GetTeacherSchoolClasses] School ID:', req.user?.schoolId);
+    
+    if (!req.user) {
+      return res.status(401).json({ message: 'User not authenticated.' });
+    }
+    
     const teacherSchoolId = req.user.schoolId;
     
+    if (!teacherSchoolId) {
+      return res.status(400).json({ message: 'School ID not found for teacher.' });
+    }
+    
     const classes = await Class.find({ schoolId: teacherSchoolId }).select('_id name');
+    console.log('[GetTeacherSchoolClasses] Classes found:', classes.length);
     
     res.json({ classes });
   } catch (err) {
