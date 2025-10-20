@@ -4,7 +4,6 @@ import User from '../models/User.js';
 import Class from '../models/Class.js';
 import Course from '../models/Course.js';
 import Student from '../models/Student.js';
-import School from '../models/School.js';
 import mongoose from 'mongoose';
 
 // -------------------------
@@ -55,7 +54,7 @@ export const getTeacherDashboard = async (req, res) => {
 };
 
 // -------------------------
-// Get Classes and Courses for Registration Dropdown
+// Get Classes and Courses for Registration Dropdown (Public)
 // -------------------------
 export const getClassesAndCourses = async (req, res) => {
   try {
@@ -77,6 +76,22 @@ export const getClassesAndCourses = async (req, res) => {
   } catch (err) {
     console.error('[GetClassesAndCourses]', err);
     res.status(500).json({ message: 'Failed to fetch classes and courses.' });
+  }
+};
+
+// -------------------------
+// Get Classes for Authenticated Teacher (for onboarding)
+// -------------------------
+export const getTeacherSchoolClasses = async (req, res) => {
+  try {
+    const teacherSchoolId = req.user.schoolId;
+    
+    const classes = await Class.find({ schoolId: teacherSchoolId }).select('_id name');
+    
+    res.json({ classes });
+  } catch (err) {
+    console.error('[GetTeacherSchoolClasses]', err);
+    res.status(500).json({ message: 'Failed to fetch classes.' });
   }
 };
 

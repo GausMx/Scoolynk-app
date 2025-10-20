@@ -6,6 +6,7 @@ import requireRole from '../middleware/roleMiddleware.js';
 import {
   getTeacherDashboard,
   getClassesAndCourses,
+  getTeacherSchoolClasses,
   saveClassTeacherInfo,
   bulkAddStudents,
   updateTeacherProfile,
@@ -19,6 +20,9 @@ router.get('/dashboard', protect, requireRole('teacher'), getTeacherDashboard);
 
 // Get Classes and Courses for Registration (Public - needs schoolCode)
 router.get('/classes-courses', getClassesAndCourses);
+
+// Get Classes for Authenticated Teacher (for onboarding)
+router.get('/school-classes', protect, requireRole('teacher'), getTeacherSchoolClasses);
 
 // Save Class Teacher Info (Onboarding step)
 router.post('/onboarding/class-teacher', protect, requireRole('teacher'), saveClassTeacherInfo);
