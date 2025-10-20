@@ -1,9 +1,39 @@
-import React, { useState } from "react";
+// src/components/common/Sidebar.js
+
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import axios from 'axios';
+
+const { REACT_APP_API_URL } = process.env;
 
 const Sidebar = ({ user, role }) => {
   const location = useLocation();
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const [teacherClasses, setTeacherClasses] = useState([]);
+  const [isClassTeacher, setIsClassTeacher] = useState(false);
+
+  const token = localStorage.getItem('token');
+
+  // Fetch teacher's classes if role is teacher
+  useEffect(() => {
+    if (role === 'teacher') {
+      fetchTeacherClasses();
+    }
+  }, [role]);
+
+  const fetchTeacherClasses = async () => {
+    try {
+      const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/dashboard`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const teacherData = res.data;
+      setTeacherClasses(teacherData.teacher.classes || []);
+      setIsClassTeacher(teacherData.teacher.classTeacherFor && teacherData.teacher.classTeacherFor.length > 0);
+    } catch (err) {
+      console.error('Failed to fetch teacher classes:', err);
+    }
+  };
 
   const adminLinks = [
     { path: "/admin", label: "Home" },
@@ -15,10 +45,15 @@ const Sidebar = ({ user, role }) => {
     { path: "/admin/manage-courses", label: "Manage Courses" },
   ];
 
-
+  // Dynamic teacher links based on their classes
   const teacherLinks = [
     { path: "/teacher", label: "Dashboard" },
-    { path: "/teacher/grade-input", label: "Grade Input" },
+    ...(isClassTeacher ? [{ path: "/teacher/my-class", label: "My Class" }] : []),
+    ...teacherClasses.map((cls) => ({
+      path: `/teacher/class/${cls._id}`,
+      label: cls.name,
+    })),
+    { path: "/teacher/edit-profile", label: "Edit Profile" },
   ];
 
   const links =
@@ -38,7 +73,7 @@ const Sidebar = ({ user, role }) => {
         className="d-none d-md-flex flex-column flex-shrink-0 p-3 bg-dark text-white"
         style={{ width: "250px", height: "100vh", position: "sticky", top: 0 }}
       >
-        <h5 className="mb-3">{displayName || "Loading..."}</h5>
+        <h5 className="mb-3">{displayName || "SCOOLYNK"}</h5>
         <hr />
         <ul className="nav nav-pills flex-column mb-auto">
           {links.map((link) => (
@@ -88,7 +123,7 @@ const Sidebar = ({ user, role }) => {
                     className={`nav-link ${
                       location.pathname === link.path ? "active" : ""
                     }`}
-                    onClick={closeNav} // closes navbar after navigation
+                    onClick={closeNav}
                   >
                     {link.label}
                   </Link>
@@ -99,7 +134,7 @@ const Sidebar = ({ user, role }) => {
         </div>
       </nav>
 
-      {/* Add margin so page content doesn’t hide under navbar */}
+      {/* Add margin so page content doesn't hide under navbar */}
       <div className="d-md-none" style={{ marginTop: "70px" }}></div>
     </>
   );

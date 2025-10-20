@@ -3,6 +3,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 // pages & auth
+import TeacherDashboard from './components/Teacher/TeacherDashboard';
+import TeacherOnboarding from './components/Teacher/TeacherOnboarding';
 import AdminDashboard from './components/pages/AdminDashboard';
 import TeacherDashboard from './components/pages/TeacherDashboard';
 import LoginForm from './components/Auth/LoginForm';
@@ -51,14 +53,8 @@ const App = () => {
         />
 
         {/* Teacher routes */}
-        <Route
-          path="/teacher/*"
-          element={
-            <ProtectedRoute roles={['teacher']}>
-              <TeacherDashboard />
-            </ProtectedRoute>
-          }
-        />
+<Route path="/teacher/onboarding" element={<TeacherOnboarding />} />
+<Route path="/teacher/*" element={<TeacherDashboard />} />
       </Routes>
     </Router>
   );

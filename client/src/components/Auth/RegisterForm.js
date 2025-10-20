@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import API from '../utils/api';
-import { setToken } from '../utils/auth';
+import API from '../../utils/api';
 import { Link } from 'react-router-dom';
-
+import axios from 'axios';
 
 const RegisterForm = () => {
   const navigate = useNavigate();
@@ -14,17 +13,21 @@ const RegisterForm = () => {
     email: '',
     phone: '',
     password: '',
-    schoolName: '', // Only for admin
-    schoolCode: '', // Only for teacher/parent
+    schoolName: '',
+    schoolCode: '',
     role: '',
-    children: '', // For parent (optional, comma-separated)
-    classes: '', // For teacher (optional, comma-separated)
-    courses: '', // For teacher (optional, comma-separated)
+    classes: [], // Changed to array for multiple selection
+    courses: [], // Changed to array for multiple selection
   });
   const [message, setMessage] = useState('');
   const [adminExists, setAdminExists] = useState(false);
+  
+  // NEW: State for dropdowns
+  const [availableClasses, setAvailableClasses] = useState([]);
+  const [availableCourses, setAvailableCourses] = useState([]);
+  const [loadingOptions, setLoadingOptions] = useState(false);
 
-  // Check if an admin already exists for the entered school name (only for admin role)
+  // Check if admin exists
   useEffect(() => {
     if (formData.role !== 'admin' || !formData.schoolName) {
       setAdminExists(false);
@@ -35,33 +38,80 @@ const RegisterForm = () => {
         process.env.REACT_APP_API_URL + '/api/auth/admin-exists?schoolName=' + encodeURIComponent(formData.schoolName)
       )
         .then(res => res.json())
-        .then(data => {
-          setAdminExists(!!data.exists);
-        })
+        .then(data => setAdminExists(!!data.exists))
         .catch(() => setAdminExists(false));
     }, 500);
     return () => clearTimeout(checkAdmin);
   }, [formData.schoolName, formData.role]);
 
+  // NEW: Fetch classes and courses when teacher enters school code
+  useEffect(() => {
+    if (formData.role === 'teacher' && formData.schoolCode.length === 16) {
+      fetchClassesAndCourses();
+    } else {
+      setAvailableClasses([]);
+      setAvailableCourses([]);
+    }
+  }, [formData.schoolCode, formData.role]);
+
+  const fetchClassesAndCourses = async () => {
+    try {
+      setLoadingOptions(true);
+      const res = await axios.get(
+        `${process.env.REACT_APP_API_URL}/api/teacher/classes-courses?schoolCode=${formData.schoolCode}`
+      );
+      setAvailableClasses(res.data.classes || []);
+      setAvailableCourses(res.data.courses || []);
+    } catch (err) {
+      console.error('Failed to fetch classes/courses:', err);
+      setMessage('Invalid school code or failed to load classes/courses.');
+      setAvailableClasses([]);
+      setAvailableCourses([]);
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // NEW: Handle multi-select for classes and courses
+  const handleMultiSelect = (e, fieldName) => {
+    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+    setFormData({ ...formData, [fieldName]: selectedOptions });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
     try {
-      // Prepare payload
       const payload = { ...formData };
+      
+      // Send classes and courses as arrays of IDs
       if (formData.role === 'teacher') {
-        payload.classes = formData.classes ? formData.classes.split(',').map(s => s.trim()) : [];
-        payload.courses = formData.courses ? formData.courses.split(',').map(s => s.trim()) : [];
+        payload.classes = formData.classes; // Array of Class IDs
+        payload.courses = formData.courses; // Array of Course names
       }
-      await API.post('https://scoolynk-app.onrender.com/api/auth/register', payload);
-      setMessage('Registration successful! Redirecting to login...');
-      setTimeout(() => {
-        navigate('/login');
-      }, 1500);
+
+      const response = await API.post('/api/auth/register', payload);
+      
+      // Check if teacher needs onboarding
+      if (response.data.needsOnboarding) {
+        // Store teacher ID and token for onboarding
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('teacherId', response.data._id);
+        setMessage('Registration successful! Redirecting to onboarding...');
+        setTimeout(() => {
+          navigate('/teacher/onboarding');
+        }, 1500);
+      } else {
+        setMessage('Registration successful! Redirecting to login...');
+        setTimeout(() => {
+          navigate('/login');
+        }, 1500);
+      }
+      
       setFormData({
         name: '',
         email: '',
@@ -70,15 +120,14 @@ const RegisterForm = () => {
         schoolName: '',
         schoolCode: '',
         role: '',
-        classes: '',
-        courses: '',
+        classes: [],
+        courses: [],
       });
     } catch (error) {
       setMessage(error.response?.data?.message || 'Something went wrong.');
     }
   };
 
-  // If admin exists for this school, block registration and show message
   if (formData.role === 'admin' && adminExists) {
     return (
       <div className="container mt-5">
@@ -97,6 +146,7 @@ const RegisterForm = () => {
       </div>
     );
   }
+
   return (
     <div className="container mt-5">
       <div className="row justify-content-center">
@@ -183,42 +233,63 @@ const RegisterForm = () => {
                 )}
                 {formData.role === 'teacher' && (
                   <>
-                  <div className="mb-3">
-                    <label className="form-label">School Code</label>
-                    <input
-                      type="text"
-                      className="form-control rounded-3"
-                      name="schoolCode"
-                      value={formData.schoolCode}
-                      onChange={handleChange}
-                      required
-                      minLength={16}
-                      maxLength={16}
-                      placeholder="Enter 16-digit school code"
-                    />
-                  </div>
                     <div className="mb-3">
-                      <label className="form-label">Classes (comma separated)</label>
+                      <label className="form-label">School Code</label>
                       <input
                         type="text"
                         className="form-control rounded-3"
-                        name="classes"
-                        value={formData.classes}
+                        name="schoolCode"
+                        value={formData.schoolCode}
                         onChange={handleChange}
-                        placeholder="e.g. JSS1A, JSS2B"
+                        required
+                        minLength={16}
+                        maxLength={16}
+                        placeholder="Enter 16-digit school code"
                       />
+                      {loadingOptions && <small className="text-muted">Loading classes and courses...</small>}
                     </div>
-                    <div className="mb-3">
-                      <label className="form-label">Courses (comma separated)</label>
-                      <input
-                        type="text"
-                        className="form-control rounded-3"
-                        name="courses"
-                        value={formData.courses}
-                        onChange={handleChange}
-                        placeholder="e.g. Math, English"
-                      />
-                    </div>
+                    
+                    {availableClasses.length > 0 && (
+                      <div className="mb-3">
+                        <label className="form-label">Select Classes You Teach (Hold Ctrl/Cmd for multiple)</label>
+                        <select
+                          multiple
+                          className="form-select rounded-3"
+                          size="5"
+                          value={formData.classes}
+                          onChange={(e) => handleMultiSelect(e, 'classes')}
+                          required
+                        >
+                          {availableClasses.map((cls) => (
+                            <option key={cls._id} value={cls._id}>
+                              {cls.name}
+                            </option>
+                          ))}
+                        </select>
+                        <small className="text-muted">Selected: {formData.classes.length} class(es)</small>
+                      </div>
+                    )}
+                    
+                    {availableCourses.length > 0 && (
+                      <div className="mb-3">
+                        <label className="form-label">Select Courses You Teach (Hold Ctrl/Cmd for multiple)</label>
+                        <select
+                          multiple
+                          className="form-select rounded-3"
+                          size="5"
+                          value={formData.courses}
+                          onChange={(e) => handleMultiSelect(e, 'courses')}
+                          required
+                        >
+                          {availableCourses.map((course) => (
+                            <option key={course._id} value={course.name}>
+                              {course.name}
+                            </option>
+                          ))}
+                        </select>
+                        <small className="text-muted">Selected: {formData.courses.length} course(s)</small>
+                      </div>
+                    )}
                   </>
                 )}
                 <div className="d-grid gap-2">
