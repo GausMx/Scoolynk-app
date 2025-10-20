@@ -1,22 +1,35 @@
-import { getTeacherClasses, getClassStudents, submitGrades, getTeacherDashboard } from '../controllers/teacherController.js';
-const router = express.Router();
-// GET /teacher/classes - all classes/courses taught by teacher
-router.get('/classes', protect, requireRole('teacher'), getTeacherClasses);
+// server/routes/teacherRoutes.js
 
-// GET /teacher/students?classId=... - all students in a class
-router.get('/students', protect, requireRole('teacher'), getClassStudents);
-
-// POST /teacher/grades - submit grades for a class
-router.post('/grades', protect, requireRole('teacher'), submitGrades);
 import express from 'express';
 import protect from '../middleware/authMiddleware.js';
 import requireRole from '../middleware/roleMiddleware.js';
+import {
+  getTeacherDashboard,
+  getClassesAndCourses,
+  saveClassTeacherInfo,
+  bulkAddStudents,
+  updateTeacherProfile,
+  getMyClassStudents
+} from '../controllers/teacherController.js';
 
+const router = express.Router();
 
-
-// Example: Only teacher of the same school can access
+// Teacher Dashboard
 router.get('/dashboard', protect, requireRole('teacher'), getTeacherDashboard);
 
-// Add more teacher routes here, always use protect and requireRole('teacher')
+// Get Classes and Courses for Registration (Public - needs schoolCode)
+router.get('/classes-courses', getClassesAndCourses);
+
+// Save Class Teacher Info (Onboarding step)
+router.post('/onboarding/class-teacher', protect, requireRole('teacher'), saveClassTeacherInfo);
+
+// Bulk Add Students
+router.post('/students/bulk', protect, requireRole('teacher'), bulkAddStudents);
+
+// Update Teacher Profile (Edit classes/courses)
+router.put('/profile', protect, requireRole('teacher'), updateTeacherProfile);
+
+// Get Students in Teacher's Class
+router.get('/my-class/students', protect, requireRole('teacher'), getMyClassStudents);
 
 export default router;
