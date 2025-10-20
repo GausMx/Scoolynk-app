@@ -101,7 +101,6 @@ const RegisterForm = () => {
         // Store teacher ID and token for onboarding
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('teacherId', response.data._id);
-        localStorage.setItem('user', JSON.stringify(response.data)); // Store full user data
         setMessage('Registration successful! Redirecting to onboarding...');
         setTimeout(() => {
           navigate('/teacher/onboarding');
