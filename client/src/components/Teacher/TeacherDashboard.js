@@ -5,9 +5,9 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../common/Layout';
 import TeacherHome from './TeacherHome';
-import MyClass from './MyClass';
-import ClassView from './ClassView';
-import EditProfile from './EditProfile';
+// import MyClass from './MyClass';
+// import ClassView from './ClassView';
+// import EditProfile from './EditProfile';
 
 const { REACT_APP_API_URL } = process.env;
 
@@ -65,9 +65,9 @@ const TeacherDashboard = () => {
     <Layout user={{ name: teacherData.teacher.name }} role="teacher">
       <Routes>
         <Route path="/" element={<TeacherHome teacherData={teacherData} refreshData={fetchDashboardData} />} />
-        <Route path="/my-class" element={<MyClass />} />
+        {/* <Route path="/my-class" element={<MyClass />} />
         <Route path="/class/:classId" element={<ClassView />} />
-        <Route path="/edit-profile" element={<EditProfile teacherData={teacherData} refreshData={fetchDashboardData} />} />
+        <Route path="/edit-profile" element={<EditProfile teacherData={teacherData} refreshData={fetchDashboardData} />} /> */}
       </Routes>
     </Layout>
   );
