@@ -9,7 +9,7 @@ import mongoose from 'mongoose';
 // Helper function to generate a JWT token
 const generateToken = (id, schoolId, role) => {
   return jwt.sign({ id, schoolId, role }, process.env.JWT_SECRET, {
-    expiresIn: '1h',
+    expiresIn: '24h', // Increased for testing - change back to '1h' in production
   });
 };
 
@@ -27,8 +27,11 @@ const generateSchoolCode = () => {
 // @route   POST /api/auth/register
 // @access  Public
 const register = async (req, res) => {
+  console.log('[Register] Request received:', { role: req.body.role, email: req.body.email });
+  
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.error('[Register] Validation errors:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
 
@@ -39,6 +42,7 @@ const register = async (req, res) => {
     // Check for duplicate email or phone
     const userExists = await User.findOne({ $or: [{ email: normalizedEmail }, { phone }] });
     if (userExists) {
+      console.log('[Register] User already exists:', normalizedEmail);
       return res.status(400).json({ message: 'Email or phone number already registered.' });
     }
 
@@ -50,6 +54,7 @@ const register = async (req, res) => {
         return res.status(400).json({ message: 'Admin registration requires a school name.' });
       }
       
+      console.log('[Register] Creating admin for school:', schoolName);
       const passwordHash = await User.hashPassword(password);
       
       const tempUser = await User.create({
@@ -81,23 +86,29 @@ const register = async (req, res) => {
       tempUser.schoolId = school._id;
       await tempUser.save();
       schoolId = school._id;
+      console.log('[Register] Admin created successfully');
       
     } else if (role === 'teacher') {
       if (!schoolCode || schoolCode.length !== 16) {
         return res.status(400).json({ message: 'A valid 16-digit school code is required.' });
       }
       
+      console.log('[Register] Finding school with code:', schoolCode);
       school = await School.findOne({ schoolCode });
       if (!school) {
+        console.log('[Register] School not found for code:', schoolCode);
         return res.status(400).json({ message: 'Invalid school code.' });
       }
       
       schoolId = school._id;
+      console.log('[Register] School found:', school.name);
       
       if (!name || !email || !phone || !password) {
         return res.status(400).json({ message: 'All fields are required.' });
       }
 
+      console.log('[Register] Creating teacher with classes:', classes?.length, 'courses:', courses?.length);
+      
       // MODIFIED: Store classes and courses as ObjectIds/Strings (already validated from frontend)
       const passwordHash = await User.hashPassword(password);
       await User.create({
@@ -111,11 +122,14 @@ const register = async (req, res) => {
         courses: courses || []  // Array of course names (strings)
       });
       
+      console.log('[Register] Teacher created successfully');
+      
     } else {
       return res.status(400).json({ message: 'Invalid role.' });
     }
 
     const user = await User.findOne({ email: normalizedEmail }).select('-passwordHash');
+    console.log('[Register] Returning user data with needsOnboarding:', role === 'teacher');
 
     res.status(201).json({
       _id: user._id,
@@ -130,7 +144,8 @@ const register = async (req, res) => {
 
   } catch (error) {
     console.error('[Registration Error]', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('[Registration Error Stack]', error.stack);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
