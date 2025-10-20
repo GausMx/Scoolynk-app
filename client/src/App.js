@@ -6,7 +6,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import TeacherDashboard from './components/Teacher/TeacherDashboard';
 import TeacherOnboarding from './components/Teacher/TeacherOnboarding';
 import AdminDashboard from './components/pages/AdminDashboard';
-import TeacherDashboard from './components/pages/TeacherDashboard';
 import LoginForm from './components/Auth/LoginForm';
 import RegisterForm from './components/Auth/RegisterForm';
 import PasswordResetForm from './components/Auth/PasswordResetForm';
