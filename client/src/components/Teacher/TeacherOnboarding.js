@@ -30,13 +30,13 @@ const TeacherOnboarding = () => {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const res = await axios.get(`${REACT_APP_API_URL}/api/admin/classes`, {
+        const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/school-classes`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setAvailableClasses(res.data.classes || []);
       } catch (err) {
         console.error('Failed to fetch classes:', err);
-        setMessage('Failed to load classes.');
+        setMessage('Failed to load classes. Please try again.');
       }
     };
     
