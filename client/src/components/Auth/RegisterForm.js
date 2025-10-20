@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import API from '../utils/api';
+import API from '../../utils/api';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
@@ -101,6 +101,7 @@ const RegisterForm = () => {
         // Store teacher ID and token for onboarding
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('teacherId', response.data._id);
+        localStorage.setItem('user', JSON.stringify(response.data)); // Store full user data
         setMessage('Registration successful! Redirecting to onboarding...');
         setTimeout(() => {
           navigate('/teacher/onboarding');

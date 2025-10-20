@@ -22,7 +22,20 @@ const TeacherOnboarding = () => {
 
   useEffect(() => {
     if (!token || !teacherId) {
-      navigate('/login');
+      console.error('Missing token or teacherId:', { token: !!token, teacherId: !!teacherId });
+      setMessage('Session expired. Please register again.');
+      setTimeout(() => {
+        navigate('/register');
+      }, 2000);
+      return;
+    }
+    
+    // Verify token is valid by checking format
+    if (token && token.split('.').length !== 3) {
+      console.error('Invalid token format');
+      localStorage.removeItem('token');
+      localStorage.removeItem('teacherId');
+      navigate('/register');
     }
   }, [token, teacherId, navigate]);
 
