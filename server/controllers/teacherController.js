@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import Class from '../models/Class.js';
 import Course from '../models/Course.js';
 import Student from '../models/Student.js';
+import School from '../models/School.js';
 import mongoose from 'mongoose';
 
 // -------------------------
