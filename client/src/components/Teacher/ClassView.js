@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { BookOpen, Users, Award } from 'lucide-react';
+import { BookOpen, Users, Award, Download } from 'lucide-react';
 
 const { REACT_APP_API_URL } = process.env;
 
@@ -14,6 +14,7 @@ const ClassView = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const token = localStorage.getItem('token');
 
@@ -25,28 +26,36 @@ const ClassView = () => {
     try {
       setLoading(true);
       
-      // Fetch class details
-      const classRes = await axios.get(`${REACT_APP_API_URL}/api/admin/classes`, {
+      // Fetch all classes to find current one
+      const classRes = await axios.get(`${REACT_APP_API_URL}/api/teacher/school-classes`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       const currentClass = classRes.data.classes.find(c => c._id === classId);
+      if (!currentClass) {
+        setMessage('Class not found or you do not have access to this class.');
+        setLoading(false);
+        return;
+      }
       setClassData(currentClass);
 
-      // Fetch students in this class
-      const studentsRes = await axios.get(`${REACT_APP_API_URL}/api/teacher/my-class/students`, {
+      // Fetch students in this specific class
+      const studentsRes = await axios.get(`${REACT_APP_API_URL}/api/teacher/class/${classId}/students`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      const classStudents = studentsRes.data.students.filter(s => s.classId._id === classId);
-      setStudents(classStudents);
+      setStudents(studentsRes.data.students || []);
 
       // Fetch courses for this class
-      const coursesRes = await axios.get(`${REACT_APP_API_URL}/api/admin/classes/${classId}/courses`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setCourses(coursesRes.data.courses || []);
+      try {
+        const coursesRes = await axios.get(`${REACT_APP_API_URL}/api/admin/classes/${classId}/courses`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setCourses(coursesRes.data.courses || []);
+      } catch (err) {
+        console.log('Could not fetch courses (admin endpoint)');
+        setCourses([]);
+      }
       
     } catch (err) {
       console.error('Failed to fetch class data:', err);
@@ -54,6 +63,27 @@ const ClassView = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const filteredStudents = students.filter(
+    (s) =>
+      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.regNo.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const exportToCSV = () => {
+    const csvContent = [
+      ['#', 'Name', 'Registration Number'],
+      ...students.map((s, i) => [i + 1, s.name, s.regNo])
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${classData?.name || 'class'}_students.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   if (loading) {
@@ -68,8 +98,8 @@ const ClassView = () => {
 
   if (!classData) {
     return (
-      <div className="alert alert-danger rounded-3">
-        Class not found or you don't have access to this class.
+      <div className="alert alert-danger rounded-3 m-4">
+        {message || 'Class not found or you don\'t have access to this class.'}
       </div>
     );
   }
@@ -79,11 +109,26 @@ const ClassView = () => {
       {/* Header */}
       <div className="row mb-4">
         <div className="col-12">
-          <h2 className="mb-2">
-            <BookOpen className="me-2" size={32} />
-            {classData.name}
-          </h2>
-          <p className="text-muted">Class Fee: ₦{classData.fee.toLocaleString()}</p>
+          <div className="d-flex justify-content-between align-items-center">
+            <div>
+              <h2 className="mb-2">
+                <BookOpen className="me-2" size={32} />
+                {classData.name}
+              </h2>
+              {classData.fee && (
+                <p className="text-muted mb-0">Class Fee: ₦{classData.fee.toLocaleString()}</p>
+              )}
+            </div>
+            {students.length > 0 && (
+              <button 
+                className="btn btn-outline-primary rounded-3"
+                onClick={exportToCSV}
+              >
+                <Download size={18} className="me-2" />
+                Export Students
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -121,19 +166,21 @@ const ClassView = () => {
           </div>
         </div>
 
-        <div className="col-md-4">
-          <div className="card bg-info text-white shadow-sm rounded-4">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 className="mb-1">Class Fee</h6>
-                  <h3 className="mb-0">₦{classData.fee.toLocaleString()}</h3>
+        {classData.fee && (
+          <div className="col-md-4">
+            <div className="card bg-info text-white shadow-sm rounded-4">
+              <div className="card-body">
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 className="mb-1">Class Fee</h6>
+                    <h3 className="mb-0">₦{classData.fee.toLocaleString()}</h3>
+                  </div>
+                  <BookOpen size={40} />
                 </div>
-                <BookOpen size={40} />
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Courses Section */}
@@ -150,13 +197,15 @@ const ClassView = () => {
                   <table className="table table-hover">
                     <thead className="table-light">
                       <tr>
+                        <th>#</th>
                         <th>Course Name</th>
                         <th>Teacher</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {courses.map((course) => (
+                      {courses.map((course, index) => (
                         <tr key={course._id}>
+                          <td>{index + 1}</td>
                           <td className="fw-semibold">{course.name}</td>
                           <td>{course.teacher?.name || 'Not Assigned'}</td>
                         </tr>
@@ -165,7 +214,7 @@ const ClassView = () => {
                   </table>
                 </div>
               ) : (
-                <p className="text-muted">No courses assigned to this class yet.</p>
+                <p className="text-muted mb-0">No courses assigned to this class yet.</p>
               )}
             </div>
           </div>
@@ -177,10 +226,24 @@ const ClassView = () => {
         <div className="col-12">
           <div className="card shadow-sm rounded-4">
             <div className="card-body">
-              <h4 className="card-title mb-3">
-                <Users className="me-2" size={24} />
-                Students in {classData.name}
-              </h4>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h4 className="card-title mb-0">
+                  <Users className="me-2" size={24} />
+                  Students in {classData.name}
+                </h4>
+                <div className="input-group" style={{ maxWidth: '300px' }}>
+                  <span className="input-group-text bg-light border-0">
+                    <Users size={18} />
+                  </span>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search students..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
               {students.length > 0 ? (
                 <div className="table-responsive">
                   <table className="table table-hover">
@@ -192,7 +255,7 @@ const ClassView = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {students.map((student, index) => (
+                      {filteredStudents.map((student, index) => (
                         <tr key={student._id}>
                           <td>{index + 1}</td>
                           <td className="fw-semibold">{student.name}</td>
@@ -201,9 +264,16 @@ const ClassView = () => {
                       ))}
                     </tbody>
                   </table>
+                  {filteredStudents.length === 0 && searchTerm && (
+                    <div className="text-center text-muted py-3">
+                      No students found matching "{searchTerm}"
+                    </div>
+                  )}
                 </div>
               ) : (
-                <p className="text-muted">No students enrolled in this class yet.</p>
+                <div className="alert alert-warning mb-0">
+                  <p className="mb-0">No students enrolled in this class yet.</p>
+                </div>
               )}
             </div>
           </div>
@@ -213,4 +283,4 @@ const ClassView = () => {
   );
 };
 
-export default ClassView;
+export default ClassView; 

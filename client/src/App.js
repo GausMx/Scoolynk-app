@@ -52,8 +52,21 @@ const App = () => {
         />
 
         {/* Teacher routes */}
-<Route path="/teacher/onboarding" element={<TeacherOnboarding />} />
-<Route path="/teacher/*" element={<TeacherDashboard />} />
+        <Route 
+          path="/teacher/onboarding" 
+          element={<TeacherOnboarding />} 
+        />
+        <Route 
+          path="/teacher/*" 
+          element={
+            <ProtectedRoute roles={['teacher']}>
+              <TeacherDashboard />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Catch-all redirect */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
   );
