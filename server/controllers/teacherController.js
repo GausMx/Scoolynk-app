@@ -270,3 +270,36 @@ export const getMyClassStudents = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch students.' });
   }
 };
+
+// -------------------------
+// Get Students in a Specific Class
+// -------------------------
+export const getClassStudents = async (req, res) => {
+  try {
+    const { classId } = req.params;
+    const teacherSchoolId = req.user.schoolId;
+    
+    // Verify class belongs to teacher's school
+    const classExists = await Class.findOne({ 
+      _id: classId,
+      schoolId: teacherSchoolId 
+    });
+    
+    if (!classExists) {
+      return res.status(404).json({ message: 'Class not found or access denied.' });
+    }
+    
+    // Fetch students in this class
+    const students = await Student.find({ 
+      classId: classId,
+      schoolId: teacherSchoolId 
+    })
+    .populate('classId', 'name')
+    .sort({ name: 1 });
+    
+    res.json({ students, className: classExists.name });
+  } catch (err) {
+    console.error('[GetClassStudents]', err);
+    res.status(500).json({ message: 'Failed to fetch students.' });
+  }
+};

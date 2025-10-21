@@ -10,6 +10,7 @@ import {
   saveClassTeacherInfo,
   bulkAddStudents,
   updateTeacherProfile,
+  getMyClassStudents,
   getMyClassStudents
 } from '../controllers/teacherController.js';
 
