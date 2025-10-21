@@ -4,6 +4,83 @@ import School from '../models/School.js';
 import Result from '../models/Result.js';
 import Class from '../models/Class.js';
 import Course from '../models/Course.js';
+
+// -------------------------
+// Get all teachers in admin's school
+// -------------------------
+export const getTeachers = async (req, res) => {
+  try {
+    const teachers = await User.find({ 
+      role: 'teacher', 
+      schoolId: req.user.schoolId 
+    })
+    .populate('classes', 'name')
+    .populate('classTeacherFor', 'name')
+    .select('-passwordHash')
+    .sort({ createdAt: -1 });
+
+    res.json({ teachers });
+  } catch (err) {
+    console.error('[AdminGetTeachers]', err);
+    res.status(500).json({ message: 'Failed to fetch teachers.' });
+  }
+};
+
+// -------------------------
+// Update teacher information
+// -------------------------
+export const updateTeacher = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { classes, courses, classTeacherFor } = req.body;
+
+    const teacher = await User.findOneAndUpdate(
+      { _id: id, schoolId: req.user.schoolId, role: 'teacher' },
+      { 
+        classes: classes || [],
+        courses: courses || [],
+        classTeacherFor: classTeacherFor || []
+      },
+      { new: true }
+    )
+    .populate('classes', 'name')
+    .populate('classTeacherFor', 'name')
+    .select('-passwordHash');
+
+    if (!teacher) {
+      return res.status(404).json({ message: 'Teacher not found.' });
+    }
+
+    res.json({ message: 'Teacher updated successfully.', teacher });
+  } catch (err) {
+    console.error('[AdminUpdateTeacher]', err);
+    res.status(500).json({ message: 'Failed to update teacher.' });
+  }
+};
+
+// -------------------------
+// Delete teacher
+// -------------------------
+export const deleteTeacher = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const teacher = await User.findOneAndDelete({ 
+      _id: id, 
+      schoolId: req.user.schoolId, 
+      role: 'teacher' 
+    });
+
+    if (!teacher) {
+      return res.status(404).json({ message: 'Teacher not found.' });
+    }
+
+    res.json({ message: 'Teacher deleted successfully.' });
+  } catch (err) {
+    console.error('[AdminDeleteTeacher]', err);
+    res.status(500).json({ message: 'Failed to delete teacher.' });
+  }
+};
 // -------------------------
 // Get all you need for admin's school
 // -------------------------
