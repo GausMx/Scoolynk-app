@@ -11,7 +11,6 @@ import {
   bulkAddStudents,
   updateTeacherProfile,
   getMyClassStudents,
-  getMyClassStudents
 } from '../controllers/teacherController.js';
 
 const router = express.Router();
