@@ -7,8 +7,6 @@ import Layout from '../common/Layout';
 import TeacherHome from './TeacherHome';
 import MyClass from './MyClass';
 import ClassView from './ClassView';
-import EditProfile from './EditProfile';
-
 const { REACT_APP_API_URL } = process.env;
 
 const TeacherDashboard = () => {
