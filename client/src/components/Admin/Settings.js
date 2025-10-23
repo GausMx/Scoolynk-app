@@ -1,354 +1,573 @@
-import React, { useState, useEffect, useCallback } from 'react';
+// src/components/Admin/Settings.js
+
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Settings as SettingsIcon, User, Lock, CreditCard, BarChart2 } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart as RePieChart, Pie, Cell } from 'recharts';
+import { Settings as SettingsIcon, User, Lock, CreditCard, Eye, EyeOff, Copy, Check } from 'lucide-react';
 
-// --- MOCK DATA (Nigeria) ---
-const INITIAL_MOCK_DATA = {
-  profile: {
-    schoolName: 'Lagos International Academy',
-    schoolEmail: 'admin@lagosacademy.edu.ng',
-    phone: '+234 701 234 5678',
-    address: '12 Victoria Island, Lagos, Nigeria',
-    motto: 'Shaping minds for a brighter Nigeria.',
-  },
-  fees: {
-    defaultFee: '120000.00',
-    lateFee: '5000.00',
-  },
-};
+const { REACT_APP_API_URL } = process.env;
 
-let currentMockData = JSON.parse(JSON.stringify(INITIAL_MOCK_DATA));
-
-const mockFetchSettings = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 800));
-  return currentMockData;
-};
-
-const mockSaveSettings = async (section, payload) => {
-  await new Promise((resolve) => setTimeout(resolve, 1200));
-  if (section !== 'security') currentMockData[section] = payload;
-  if (section === 'security' && payload.newPassword !== payload.confirmPassword) {
-    throw new Error('New password and confirm password do not match.');
-  }
-  return {
-    message:
-      section === 'security'
-        ? 'Password changed successfully!'
-        : `${section.charAt(0).toUpperCase() + section.slice(1)} settings updated successfully!`,
-    status: 200,
-  };
-};
-
-// --- STATUS MESSAGE COMPONENT ---
-const StatusMessage = ({ status, message }) => {
-  if (!message) return null;
-  let alertClass = 'alert-info';
-  if (status === 'success') alertClass = 'alert-success';
-  else if (status === 'error') alertClass = 'alert-danger';
-  return (
-    <div className={`alert ${alertClass} rounded-3 d-flex align-items-center mb-4`} role="alert">
-      {message}
-    </div>
-  );
-};
-
-// --- SCHOOL CODE COMPONENT ---
-const AdminSchoolCode = () => {
-  const [schoolCode, setSchoolCode] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const fetchCode = async () => {
-      try {
-        const res = await axios.get('https://scoolynk-app.onrender.com/api/admin/school/code', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        });
-        setSchoolCode(res.data.schoolCode || '');
-      } catch (err) {
-        console.error('Error fetching school code:', err);
-        setError('Failed to load school code. Please check your connection or login again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCode();
-  }, []);
-
-  return (
-    <div className="card p-4 shadow-sm border-0 rounded-4 mt-4">
-      <h5 className="text-primary fw-bold mb-3">
-        <Lock className="me-2" size={18} /> School Code
-      </h5>
-      {loading ? (
-        <p className="text-muted">Loading school code...</p>
-      ) : error ? (
-        <p className="text-danger">{error}</p>
-      ) : (
-        <p className="fs-5 fw-bold text-success">{schoolCode}</p>
-      )}
-      <small className="text-muted">
-        Share this code with teachers and parents in your school. It’s required during registration.
-      </small>
-    </div>
-  );
-};
-
-// --- MOCK STATS DATA ---
-const statsMockData = {
-  classesDistribution: [
-    { name: 'JSS1', students: 120 },
-    { name: 'JSS2', students: 100 },
-    { name: 'JSS3', students: 90 },
-    { name: 'SSS1', students: 110 },
-    { name: 'SSS2', students: 95 },
-    { name: 'SSS3', students: 85 },
-  ],
-  feeCollection: [
-    { name: 'Collected', value: 4000000 },
-    { name: 'Pending', value: 1200000 },
-  ],
-};
-
-// --- MAIN SETTINGS COMPONENT ---
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile');
-  const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState({ type: null, message: '' });
-  const [profile, setProfile] = useState({});
-  const [originalProfile, setOriginalProfile] = useState({});
-  const [security, setSecurity] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-  const [fees, setFees] = useState({});
+  const [message, setMessage] = useState({ type: '', text: '' });
+  
+  // Profile state
+  const [profile, setProfile] = useState({
+    schoolName: '',
+    name: '',
+    email: '',
+    phone: '',
+    motto: ''
+  });
 
-  const fetchSettings = useCallback(async () => {
-    try {
-      setLoading(true);
-      setStatus({ type: 'info', message: 'Loading settings...' });
-      const data = await mockFetchSettings();
-      setProfile(data.profile || {});
-      setOriginalProfile(data.profile || {});
-      setFees(data.fees || {});
-      setStatus({ type: 'success', message: 'Settings loaded successfully!' });
-    } catch (err) {
-      setStatus({ type: 'error', message: err.message || 'Failed to load settings.' });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Security state
+  const [security, setSecurity] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
 
+  // Fees state
+  const [fees, setFees] = useState({
+    defaultFee: 0
+  });
+
+  // School code state
+  const [schoolCode, setSchoolCode] = useState('');
+  const [showCode, setShowCode] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const token = localStorage.getItem('token');
+
+  // Fetch settings
   useEffect(() => {
     fetchSettings();
-  }, [fetchSettings]);
+    fetchSchoolCode();
+  }, []);
 
-  useEffect(() => {
-    if (status.type === 'success' || status.type === 'error') {
-      const timer = setTimeout(() => setStatus({ type: null, message: '' }), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [status]);
-
-  const handleChange = (e, stateSetter) => {
-    const { name, value } = e.target;
-    stateSetter((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSave = async (section) => {
+  const fetchSettings = async () => {
     try {
       setLoading(true);
-      setStatus({ type: 'info', message: 'Saving changes...' });
-      let payload;
-      switch (section) {
-        case 'profile':
-          payload = profile;
-          break;
-        case 'security':
-          payload = security;
-          break;
-        case 'fees':
-          payload = fees;
-          break;
-        default:
-          payload = {};
-      }
-      const res = await mockSaveSettings(section, payload);
-      setStatus({ type: 'success', message: res.message || 'Settings updated successfully!' });
-      if (section !== 'security') await fetchSettings();
-      if (section === 'security') setSecurity({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      setEditMode(false);
+      const res = await axios.get(`${REACT_APP_API_URL}/api/admin/settings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const { admin, school } = res.data;
+      
+      setProfile({
+        schoolName: school.name || '',
+        name: admin.name || '',
+        email: admin.email || '',
+        phone: school.phone || '',
+        motto: school.motto || ''
+      });
+
+      setFees({
+        defaultFee: school.defaultFee || 0,
+        lateFee: school.lateFee || 0
+      });
     } catch (err) {
-      setStatus({ type: 'error', message: err.message || 'Failed to update settings.' });
+      console.error('Failed to fetch settings:', err);
+      showMessage('error', 'Failed to load settings');
     } finally {
       setLoading(false);
     }
   };
 
-  const formatFieldName = (field) => field.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
-  const handleCancelEdit = () => {
-    if (activeTab === 'profile') setProfile(originalProfile);
-    setEditMode(false);
+  const fetchSchoolCode = async () => {
+    try {
+      const res = await axios.get(`${REACT_APP_API_URL}/api/admin/school/code`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSchoolCode(res.data.schoolCode || '');
+    } catch (err) {
+      console.error('Failed to fetch school code:', err);
+    }
   };
 
-  const renderField = (field, value, stateSetter, type = 'text', readOnly = false) => {
-    const isEditable = editMode && !readOnly;
-    return (
-      <div className="row mb-3" key={field}>
-        <label className="col-12 col-md-4 col-form-label text-muted fw-bold mb-2 mb-md-0">
-          {formatFieldName(field)}:
-        </label>
-        <div className="col-12 col-md-8">
-          {isEditable ? (
-            <input
-              type={type}
-              className="form-control rounded-3"
-              name={field}
-              value={value}
-              onChange={(e) => handleChange(e, stateSetter)}
-              readOnly={readOnly}
-              disabled={readOnly}
-              required
-              placeholder={formatFieldName(field)}
-            />
-          ) : (
-            <p className={`form-control-plaintext fw-bold ${readOnly ? 'text-secondary' : ''}`}>
-              {type === 'number' && value ? `₦${value}` : value || 'N/A'}
-            </p>
-          )}
+  const showMessage = (type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+  };
+
+  // Handle profile update
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      await axios.put(
+        `${REACT_APP_API_URL}/api/admin/settings`,
+        {
+          section: 'profile',
+          data: {
+            schoolName: profile.schoolName,
+            phone: profile.phone,
+            motto: profile.motto
+          }
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      showMessage('success', 'Profile updated successfully!');
+      await fetchSettings();
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+      showMessage('error', err.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle security update
+  const handleSecurityUpdate = async (e) => {
+    e.preventDefault();
+    
+    // Validation
+    if (security.newPassword !== security.confirmPassword) {
+      showMessage('error', 'New passwords do not match');
+      return;
+    }
+
+    if (security.newPassword.length < 6) {
+      showMessage('error', 'New password must be at least 6 characters');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await axios.put(
+        `${REACT_APP_API_URL}/api/admin/settings`,
+        {
+          section: 'security',
+          data: security
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      showMessage('success', 'Password changed successfully!');
+      setSecurity({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      console.error('Failed to update password:', err);
+      showMessage('error', err.response?.data?.message || 'Failed to update password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle fees update
+  const handleFeesUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      await axios.put(
+        `${REACT_APP_API_URL}/api/admin/settings`,
+        {
+          section: 'fees',
+          data: fees
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      showMessage('success', 'Fee settings updated successfully!');
+      await fetchSettings();
+    } catch (err) {
+      console.error('Failed to update fees:', err);
+      showMessage('error', err.response?.data?.message || 'Failed to update fees');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Copy school code
+  const copySchoolCode = () => {
+    navigator.clipboard.writeText(schoolCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Profile Section
+  const renderProfileSection = () => (
+    <form onSubmit={handleProfileUpdate}>
+      <div className="row g-4">
+        {/* School Info Card */}
+        <div className="col-12">
+          <div className="card border-0 shadow-sm rounded-4 p-4">
+            <h5 className="text-primary mb-4">
+              <User size={20} className="me-2" />
+              School Information
+            </h5>
+            
+            <div className="row g-3">
+              <div className="col-md-6">
+                <label className="form-label fw-semibold">School Name *</label>
+                <input
+                  type="text"
+                  className="form-control rounded-3"
+                  value={profile.schoolName}
+                  onChange={(e) => setProfile({ ...profile, schoolName: e.target.value })}
+                  required
+                />
+              </div>
+              
+              <div className="col-md-6">
+                <label className="form-label fw-semibold">Phone Number *</label>
+                <input
+                  type="tel"
+                  className="form-control rounded-3"
+                  value={profile.phone}
+                  onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="col-12">
+                <label className="form-label fw-semibold">School Motto</label>
+                <textarea
+                  className="form-control rounded-3"
+                  rows="2"
+                  value={profile.motto}
+                  onChange={(e) => setProfile({ ...profile, motto: e.target.value })}
+                  placeholder="Enter your school motto..."
+                />
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    );
-  };
 
-  const renderActionButtons = (section) => {
-    if (section === 'security') return null;
-    return (
-      <div className="mt-4 pt-3 border-top d-flex flex-column flex-md-row justify-content-end gap-2">
-        {!editMode ? (
-          <button type="button" className="btn btn-outline-primary rounded-3 px-4" onClick={() => setEditMode(true)}>
-            <SettingsIcon className="me-2" size={16} /> Edit {formatFieldName(section)}
-          </button>
-        ) : (
-          <>
-            <button type="submit" className="btn btn-primary rounded-3 px-4" disabled={loading}>
+        {/* Admin Info Card (Read-only) */}
+        <div className="col-12">
+          <div className="card border-0 shadow-sm rounded-4 p-4 bg-light">
+            <h5 className="text-secondary mb-4">
+              <User size={20} className="me-2" />
+              Administrator Details (Read-only)
+            </h5>
+            
+            <div className="row g-3">
+              <div className="col-md-6">
+                <label className="form-label fw-semibold text-muted">Admin Name</label>
+                <input
+                  type="text"
+                  className="form-control rounded-3 bg-white"
+                  value={profile.name}
+                  disabled
+                />
+              </div>
+              
+              <div className="col-md-6">
+                <label className="form-label fw-semibold text-muted">Admin Email</label>
+                <input
+                  type="email"
+                  className="form-control rounded-3 bg-white"
+                  value={profile.email}
+                  disabled
+                />
+              </div>
+            </div>
+            <small className="text-muted mt-2">
+              <Lock size={14} className="me-1" />
+              Admin credentials cannot be changed from settings
+            </small>
+          </div>
+        </div>
+
+        {/* School Code Card */}
+        <div className="col-12">
+          <div className="card border-0 shadow-sm rounded-4 p-4 border-start border-primary border-5">
+            <h5 className="text-primary mb-3">
+              <Lock size={20} className="me-2" />
+              School Registration Code
+            </h5>
+            
+            <div className="d-flex align-items-center gap-2 mb-3">
+              <input
+                type={showCode ? 'text' : 'password'}
+                className="form-control rounded-3 bg-light"
+                value={schoolCode}
+                readOnly
+                style={{ fontFamily: 'monospace', fontSize: '1.1rem', letterSpacing: '2px' }}
+              />
+              <button
+                type="button"
+                className="btn btn-outline-secondary rounded-3"
+                onClick={() => setShowCode(!showCode)}
+                title={showCode ? 'Hide code' : 'Show code'}
+              >
+                {showCode ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary rounded-3"
+                onClick={copySchoolCode}
+                title="Copy code"
+              >
+                {copied ? <Check size={18} /> : <Copy size={18} />}
+              </button>
+            </div>
+            
+            <div className="alert alert-info rounded-3 mb-0">
+              <small>
+                <strong>Note:</strong> Share this code with teachers and staff to register in your school. 
+                Keep it secure and don't share publicly.
+              </small>
+            </div>
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <div className="col-12">
+          <div className="d-flex justify-content-end">
+            <button
+              type="submit"
+              className="btn btn-primary rounded-3 px-4"
+              disabled={loading}
+            >
               {loading ? (
-                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Saving...
+                </>
               ) : (
                 'Save Changes'
               )}
             </button>
-            <button type="button" className="btn btn-secondary rounded-3 px-4" onClick={handleCancelEdit} disabled={loading}>
-              Cancel
-            </button>
-          </>
-        )}
-      </div>
-    );
-  };
-
-  // --- STATS WIDGET ---
-  const renderStatsWidgets = () => (
-    <div className="row g-3 mb-4">
-      <div className="col-md-6 col-lg-3">
-        <div className="card shadow-sm rounded-4 p-3 border-0">
-          <div className="d-flex align-items-center mb-2">
-            <CreditCard className="text-success me-2" /> Default Fee
           </div>
-          <h4 className="fw-bold">₦{fees.defaultFee || 0}</h4>
         </div>
       </div>
-      <div className="col-md-6 col-lg-3">
-        <div className="card shadow-sm rounded-4 p-3 border-0">
-          <div className="d-flex align-items-center mb-2">
-            <BarChart2 className="text-warning me-2" /> Total Students
-          </div>
-          <h4 className="fw-bold">{statsMockData.classesDistribution.reduce((a, c) => a + c.students, 0)}</h4>
-        </div>
-      </div>
-    </div>
-  );
-
-  // --- SECTION RENDERERS ---
-  const renderProfileSection = () => (
-    <form onSubmit={(e) => { e.preventDefault(); handleSave('profile'); }}>
-      {renderStatsWidgets()}
-      <div className="mb-4">
-        {renderField('schoolName', profile.schoolName, setProfile)}
-        {renderField('schoolEmail', profile.schoolEmail, setProfile, 'email', true)}
-        {renderField('phone', profile.phone, setProfile)}
-        {renderField('address', profile.address, setProfile)}
-        {renderField('motto', profile.motto, setProfile)}
-      </div>
-      <AdminSchoolCode />
-      {renderActionButtons('profile')}
     </form>
   );
 
+  // Security Section
   const renderSecuritySection = () => (
-    <form onSubmit={(e) => { e.preventDefault(); handleSave('security'); }}>
-      <h5 className="mb-4 text-primary text-center text-md-start">Change Administrator Password</h5>
+    <form onSubmit={handleSecurityUpdate}>
       <div className="row justify-content-center">
-        <div className="col-12 col-md-8 col-lg-6">
-          {renderField('currentPassword', security.currentPassword, setSecurity, 'password')}
-          {renderField('newPassword', security.newPassword, setSecurity, 'password')}
-          {renderField('confirmPassword', security.confirmPassword, setSecurity, 'password')}
+        <div className="col-lg-8">
+          <div className="card border-0 shadow-sm rounded-4 p-4">
+            <h5 className="text-primary mb-4">
+              <Lock size={20} className="me-2" />
+              Change Password
+            </h5>
+
+            <div className="alert alert-warning rounded-3 mb-4">
+              <small>
+                <strong>Password Requirements:</strong>
+                <ul className="mb-0 mt-2">
+                  <li>At least 6 characters long</li>
+                  <li>Mix of letters and numbers recommended</li>
+                  <li>Avoid using easily guessable passwords</li>
+                </ul>
+              </small>
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label fw-semibold">Current Password *</label>
+              <input
+                type="password"
+                className="form-control rounded-3"
+                value={security.currentPassword}
+                onChange={(e) => setSecurity({ ...security, currentPassword: e.target.value })}
+                placeholder="Enter your current password"
+                required
+              />
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label fw-semibold">New Password *</label>
+              <input
+                type="password"
+                className="form-control rounded-3"
+                value={security.newPassword}
+                onChange={(e) => setSecurity({ ...security, newPassword: e.target.value })}
+                placeholder="Enter new password"
+                minLength={6}
+                required
+              />
+              {security.newPassword && security.newPassword.length < 6 && (
+                <small className="text-danger">Password must be at least 6 characters</small>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <label className="form-label fw-semibold">Confirm New Password *</label>
+              <input
+                type="password"
+                className="form-control rounded-3"
+                value={security.confirmPassword}
+                onChange={(e) => setSecurity({ ...security, confirmPassword: e.target.value })}
+                placeholder="Confirm new password"
+                minLength={6}
+                required
+              />
+              {security.confirmPassword && security.newPassword !== security.confirmPassword && (
+                <small className="text-danger">Passwords do not match</small>
+              )}
+            </div>
+
+            <div className="d-flex justify-content-end gap-2">
+              <button
+                type="button"
+                className="btn btn-outline-secondary rounded-3"
+                onClick={() => setSecurity({ currentPassword: '', newPassword: '', confirmPassword: '' })}
+              >
+                Clear
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary rounded-3 px-4"
+                disabled={loading || security.newPassword !== security.confirmPassword || security.newPassword.length < 6}
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Updating...
+                  </>
+                ) : (
+                  'Change Password'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-      <div className="d-grid gap-2 col-12 col-md-6 mx-auto mt-4">
-        <button type="submit" className="btn btn-primary rounded-3 btn-lg" disabled={loading}>
-          {loading ? (
-            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-          ) : (
-            'Change Password'
-          )}
-        </button>
       </div>
     </form>
   );
 
+  // Fees Section
   const renderFeesSection = () => (
-    <form onSubmit={(e) => { e.preventDefault(); handleSave('fees'); }}>
-      <h5 className="mb-4 text-primary text-center text-md-start">Fee Structure</h5>
+    <form onSubmit={handleFeesUpdate}>
       <div className="row justify-content-center">
-        <div className="col-12 col-md-8 col-lg-6">
-          {renderField('defaultFee', fees.defaultFee, setFees, 'number')}
-          {renderField('lateFee', fees.lateFee, setFees, 'number')}
+        <div className="col-lg-8">
+          <div className="card border-0 shadow-sm rounded-4 p-4">
+            <h5 className="text-primary mb-4">
+              <CreditCard size={20} className="me-2" />
+              Fee Structure
+            </h5>
+
+            <div className="alert alert-info rounded-3 mb-4">
+              <small>
+                These are the default fees applied to all classes. Individual class fees can be customized in the Manage Classes section.
+              </small>
+            </div>
+
+            <div className="row g-3">
+              <div className="col-md-6">
+                <label className="form-label fw-semibold">Default Class Fee (₦) *</label>
+                <input
+                  type="number"
+                  className="form-control rounded-3"
+                  value={fees.defaultFee}
+                  onChange={(e) => setFees({ ...fees, defaultFee: parseFloat(e.target.value) || 0 })}
+                  min="0"
+                  step="1000"
+                  placeholder="0"
+                  required
+                />
+                <small className="text-muted">Standard fee for all classes</small>
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label fw-semibold">Late Payment Fee (₦) *</label>
+                <input
+                  type="number"
+                  className="form-control rounded-3"
+                  value={fees.lateFee}
+                  onChange={(e) => setFees({ ...fees, lateFee: parseFloat(e.target.value) || 0 })}
+                  min="0"
+                  step="100"
+                  placeholder="0"
+                  required
+                />
+                <small className="text-muted">Additional charge for late payments</small>
+              </div>
+            </div>
+
+            <div className="card bg-light border-0 mt-4 p-3">
+              <h6 className="mb-3">Fee Summary</h6>
+              <div className="row">
+                <div className="col-6">
+                  <p className="mb-1 text-muted">Default Fee:</p>
+                  <p className="fs-5 fw-bold text-primary">₦{fees.defaultFee.toLocaleString()}</p>
+                </div>
+                <div className="col-6">
+                  <p className="mb-1 text-muted">Late Fee:</p>
+                  <p className="fs-5 fw-bold text-warning">₦{fees.lateFee.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="d-flex justify-content-end mt-4">
+              <button
+                type="submit"
+                className="btn btn-primary rounded-3 px-4"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Saving...
+                  </>
+                ) : (
+                  'Save Fee Settings'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-      {renderActionButtons('fees')}
     </form>
   );
 
   return (
-    <div className="container py-5">
-      <header className="mb-5 border-bottom pb-3 text-center text-md-start">
-        <h1 className="text-primary fw-bolder">
-          <SettingsIcon className="me-2" size={24} /> School Settings Management
-        </h1>
-        <p className="text-muted">Configure core school information and fees.</p>
-      </header>
+    <div className="container-fluid py-4">
+      {/* Header */}
+      <div className="mb-4">
+        <h2 className="fw-bold text-primary d-flex align-items-center">
+          <SettingsIcon size={32} className="me-2" />
+          Settings
+        </h2>
+        <p className="text-muted">Manage your school configuration and preferences</p>
+      </div>
 
-      <StatusMessage status={status.type} message={status.message} />
+      {/* Status Message */}
+      {message.text && (
+        <div className={`alert alert-${message.type === 'success' ? 'success' : 'danger'} rounded-3 alert-dismissible fade show`} role="alert">
+          {message.text}
+          <button type="button" className="btn-close" onClick={() => setMessage({ type: '', text: '' })}></button>
+        </div>
+      )}
 
-      <ul className="nav nav-tabs flex-wrap mb-4 justify-content-center justify-content-md-start">
-        {['profile', 'security', 'fees'].map((id) => (
-          <li className="nav-item" key={id}>
-            <button
-              className={`nav-link ${activeTab === id ? 'active' : ''}`}
-              onClick={() => { setActiveTab(id); setEditMode(false); }}
-            >
-              {id.charAt(0).toUpperCase() + id.slice(1)}
-            </button>
-          </li>
-        ))}
+      {/* Tabs */}
+      <ul className="nav nav-pills mb-4 gap-2">
+        <li className="nav-item">
+          <button
+            className={`nav-link rounded-3 ${activeTab === 'profile' ? 'active' : ''}`}
+            onClick={() => setActiveTab('profile')}
+          >
+            <User size={18} className="me-2" />
+            Profile
+          </button>
+        </li>
+        <li className="nav-item">
+          <button
+            className={`nav-link rounded-3 ${activeTab === 'security' ? 'active' : ''}`}
+            onClick={() => setActiveTab('security')}
+          >
+            <Lock size={18} className="me-2" />
+            Security
+          </button>
+        </li>
+        <li className="nav-item">
+          <button
+            className={`nav-link rounded-3 ${activeTab === 'fees' ? 'active' : ''}`}
+            onClick={() => setActiveTab('fees')}
+          >
+            <CreditCard size={18} className="me-2" />
+            Fees
+          </button>
+        </li>
       </ul>
 
-      <div className="card shadow-lg border-0 rounded-4">
-        <div className="card-body p-3 p-md-5">
-          {activeTab === 'profile' && renderProfileSection()}
-          {activeTab === 'security' && renderSecuritySection()}
-          {activeTab === 'fees' && renderFeesSection()}
-        </div>
+      {/* Tab Content */}
+      <div className="tab-content">
+        {activeTab === 'profile' && renderProfileSection()}
+        {activeTab === 'security' && renderSecuritySection()}
+        {activeTab === 'fees' && renderFeesSection()}
       </div>
     </div>
   );
