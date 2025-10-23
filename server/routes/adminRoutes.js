@@ -22,7 +22,11 @@ import {
   getClassCourses,
   getTeachers,
   updateTeacher,
-  deleteTeacher
+  deleteTeacher,
+  getStudents,
+  createStudent,
+  updateStudent,
+  deleteStudent
 } from '../controllers/adminController.js';
 
 const router = express.Router();
@@ -59,4 +63,10 @@ router.get('/teachers', protect, requireRole('admin'), getTeachers);
 router.put('/teachers/:id', protect, requireRole('admin'), updateTeacher);
 router.delete('/teachers/:id', protect, requireRole('admin'), deleteTeacher);
 
-export default router;  
+// Student management routes
+router.get('/students', protect, requireRole('admin'), getStudents);
+router.post('/students', protect, requireRole('admin'), createStudent);
+router.put('/students/:id', protect, requireRole('admin'), updateStudent);
+router.delete('/students/:id', protect, requireRole('admin'), deleteStudent);
+
+export default router;

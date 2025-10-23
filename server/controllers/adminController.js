@@ -4,7 +4,163 @@ import School from '../models/School.js';
 import Result from '../models/Result.js';
 import Class from '../models/Class.js';
 import Course from '../models/Course.js';
+import Student from '../models/Student.js';
 
+// -------------------------
+// Get all students in admin's school
+// -------------------------
+
+export const getStudents = async (req, res) => {
+  try {
+    const students = await Student.find({ schoolId: req.user.schoolId })
+      .populate('classId', 'name')
+      .sort({ classId: 1, name: 1 }); // Sort by class, then by name
+
+    res.json({ students });
+  } catch (err) {
+    console.error('[AdminGetStudents]', err);
+    res.status(500).json({ message: 'Failed to fetch students.' });
+  }
+};
+
+// -------------------------
+// Create new student
+// -------------------------
+export const createStudent = async (req, res) => {
+  try {
+    const { name, regNo, classId } = req.body;
+
+    if (!name || !regNo || !classId) {
+      return res.status(400).json({ message: 'Name, registration number, and class are required.' });
+    }
+
+    // Check if regNo already exists
+    const existingStudent = await Student.findOne({ regNo, schoolId: req.user.schoolId });
+    if (existingStudent) {
+      return res.status(400).json({ message: 'Registration number already exists.' });
+    }
+
+    // Verify class exists and belongs to admin's school
+    const classExists = await Class.findOne({ _id: classId, schoolId: req.user.schoolId });
+    if (!classExists) {
+      return res.status(404).json({ message: 'Class not found.' });
+    }
+
+    const student = new Student({
+      name,
+      regNo,
+      classId,
+      schoolId: req.user.schoolId
+    });
+
+    await student.save();
+
+    // Add student to class
+    await Class.findByIdAndUpdate(classId, {
+      $push: { students: student._id }
+    });
+
+    const populatedStudent = await Student.findById(student._id).populate('classId', 'name');
+
+    res.status(201).json({ 
+      message: 'Student created successfully.', 
+      student: populatedStudent 
+    });
+  } catch (err) {
+    console.error('[AdminCreateStudent]', err);
+    res.status(500).json({ message: 'Failed to create student.' });
+  }
+};
+
+// -------------------------
+// Update student
+// -------------------------
+export const updateStudent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, regNo, classId } = req.body;
+
+    // Find student
+    const student = await Student.findOne({ _id: id, schoolId: req.user.schoolId });
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found.' });
+    }
+
+    // Check if regNo is being changed and if it already exists
+    if (regNo && regNo !== student.regNo) {
+      const existingStudent = await Student.findOne({ 
+        regNo, 
+        schoolId: req.user.schoolId,
+        _id: { $ne: id } // Exclude current student
+      });
+      if (existingStudent) {
+        return res.status(400).json({ message: 'Registration number already exists.' });
+      }
+    }
+
+    // If class is being changed
+    if (classId && classId !== student.classId.toString()) {
+      // Verify new class exists
+      const classExists = await Class.findOne({ _id: classId, schoolId: req.user.schoolId });
+      if (!classExists) {
+        return res.status(404).json({ message: 'Class not found.' });
+      }
+
+      // Remove from old class
+      await Class.findByIdAndUpdate(student.classId, {
+        $pull: { students: student._id }
+      });
+
+      // Add to new class
+      await Class.findByIdAndUpdate(classId, {
+        $push: { students: student._id }
+      });
+    }
+
+    // Update student
+    student.name = name || student.name;
+    student.regNo = regNo || student.regNo;
+    student.classId = classId || student.classId;
+    await student.save();
+
+    const updatedStudent = await Student.findById(id).populate('classId', 'name');
+
+    res.json({ 
+      message: 'Student updated successfully.', 
+      student: updatedStudent 
+    });
+  } catch (err) {
+    console.error('[AdminUpdateStudent]', err);
+    res.status(500).json({ message: 'Failed to update student.' });
+  }
+};
+
+// -------------------------
+// Delete student
+// -------------------------
+export const deleteStudent = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const student = await Student.findOne({ _id: id, schoolId: req.user.schoolId });
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found.' });
+    }
+
+    // Remove student from class
+    await Class.findByIdAndUpdate(student.classId, {
+      $pull: { students: student._id }
+    });
+
+    // Delete student
+    await Student.findByIdAndDelete(id);
+
+    res.json({ message: 'Student deleted successfully.' });
+  } catch (err) {
+    console.error('[AdminDeleteStudent]', err);
+    res.status(500).json({ message: 'Failed to delete student.' });
+  }
+};
 // -------------------------
 // Get all teachers in admin's school
 // -------------------------
