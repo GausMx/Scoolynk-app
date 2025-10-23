@@ -20,7 +20,6 @@ const schoolSchema = new mongoose.Schema({
 
   // Fee Settings
   defaultFee: { type: Number },
-  lateFee: { type: Number },
 });
 
 // Pre-validation hook to generate a unique schoolCode if one is not provided

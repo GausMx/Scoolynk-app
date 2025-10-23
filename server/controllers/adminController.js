@@ -475,7 +475,6 @@ export const getAdminSettings = async (req, res) => {
         motto: school.motto,
         schoolCode: school.schoolCode,
         defaultFee: school.defaultFee,
-        lateFee: school.lateFee,
         classes: school.classes,
         subjects: school.subjects,
         gradingSystem: school.gradingSystem,
@@ -546,7 +545,6 @@ export const updateAdminSettings = async (req, res) => {
         const { defaultFee, lateFee } = data;
         await School.findByIdAndUpdate(schoolId, {
           defaultFee: defaultFee,
-          lateFee: lateFee,
         }, { new: true });
         return res.json({ message: 'Fee settings updated successfully.' });
       }
