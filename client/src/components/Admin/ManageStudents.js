@@ -1,23 +1,10 @@
-import React, { useState } from 'react';
-import { Users, Edit, Trash2, PlusCircle, Search, AlertTriangle } from 'lucide-react';
+// src/components/Admin/ManageStudents.js
 
-// Mock Data
-const MOCK_STUDENTS = [
-  { id: 's001', name: 'Ngozi Okoro', regNo: 'SCH001', class: 'JSS 1', parentName: 'Mr. David Okoro' },
-  { id: 's002', name: 'Chinedu Eze', regNo: 'SCH002', class: 'SSS 3', parentName: 'Mrs. Chioma Eze' },
-  { id: 's003', name: 'Fatima Bello', regNo: 'SCH003', class: 'JSS 2', parentName: 'Alhaji Abdul Bello' },
-  { id: 's004', name: 'Kunle Adebayo', regNo: 'SCH004', class: 'SSS 1', parentName: 'Ms. Tola Adebayo' },
-];
+import React, { useState, useEffect } from 'react';
+import { Users, Edit, Trash2, PlusCircle, Search, AlertTriangle, Download, Upload } from 'lucide-react';
+import axios from 'axios';
 
-// Options
-const MOCK_CLASS_OPTIONS = ['JSS 1', 'JSS 2', 'SSS 1', 'SSS 2', 'SSS 3'];
-const MOCK_PARENTS = [
-  { id: 'p101', name: 'Mr. David Okoro' },
-  { id: 'p102', name: 'Mrs. Chioma Eze' },
-  { id: 'p103', name: 'Alhaji Abdul Bello' },
-  { id: 'p104', name: 'Ms. Tola Adebayo' },
-  { id: 'p105', name: 'New Parent (Not yet linked)' },
-];
+const { REACT_APP_API_URL } = process.env;
 
 // Confirmation Modal
 const ConfirmationModal = ({ isOpen, title, body, onConfirm, onCancel, isSaving }) => {
@@ -27,13 +14,19 @@ const ConfirmationModal = ({ isOpen, title, body, onConfirm, onCancel, isSaving 
       <div className="modal-dialog modal-dialog-centered modal-sm">
         <div className="modal-content rounded-4 shadow-lg">
           <div className="modal-header bg-danger text-white">
-            <h5 className="modal-title d-flex align-items-center"><AlertTriangle size={20} className="me-2" />{title}</h5>
+            <h5 className="modal-title d-flex align-items-center">
+              <AlertTriangle size={20} className="me-2" />{title}
+            </h5>
             <button type="button" className="btn-close btn-close-white" onClick={onCancel}></button>
           </div>
           <div className="modal-body"><p>{body}</p></div>
           <div className="modal-footer">
-            <button type="button" className="btn btn-outline-secondary rounded-3" onClick={onCancel} disabled={isSaving}>Cancel</button>
-            <button type="button" className="btn btn-danger rounded-3" onClick={onConfirm} disabled={isSaving}>{isSaving ? 'Deleting...' : 'Confirm Delete'}</button>
+            <button type="button" className="btn btn-outline-secondary rounded-3" onClick={onCancel} disabled={isSaving}>
+              Cancel
+            </button>
+            <button type="button" className="btn btn-danger rounded-3" onClick={onConfirm} disabled={isSaving}>
+              {isSaving ? 'Deleting...' : 'Confirm Delete'}
+            </button>
           </div>
         </div>
       </div>
@@ -47,55 +40,132 @@ const StudentCard = ({ student, onEdit, onDelete, loading }) => (
     <div className="card-body">
       <h6 className="fw-bold mb-1">{student.name}</h6>
       <p className="mb-1 text-muted">Reg No: {student.regNo}</p>
-      <p className="mb-1"><span className="badge bg-info text-dark">{student.class}</span></p>
-      <p className="mb-2">Parent: {student.parentName}</p>
+      <p className="mb-2">
+        <span className="badge bg-info text-dark">{student.classId?.name || 'No Class'}</span>
+      </p>
       <div className="d-flex justify-content-end">
-        <button className="btn btn-sm btn-outline-secondary me-2" onClick={() => onEdit(student)} disabled={loading}><Edit size={16} /></button>
-        <button className="btn btn-sm btn-outline-danger" onClick={() => onDelete(student.id, student.name)} disabled={loading}><Trash2 size={16} /></button>
+        <button 
+          className="btn btn-sm btn-outline-secondary me-2" 
+          onClick={() => onEdit(student)} 
+          disabled={loading}
+        >
+          <Edit size={16} />
+        </button>
+        <button 
+          className="btn btn-sm btn-outline-danger" 
+          onClick={() => onDelete(student._id, student.name)} 
+          disabled={loading}
+        >
+          <Trash2 size={16} />
+        </button>
       </div>
     </div>
   </div>
 );
 
 const ManageStudents = () => {
-  const [students, setStudents] = useState(MOCK_STUDENTS);
+  const [students, setStudents] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-
   const [modalState, setModalState] = useState({ isOpen: false, mode: 'add', currentStudent: null });
   const [confirmState, setConfirmState] = useState({ isOpen: false, id: null, name: '', action: () => {} });
+
+  const token = localStorage.getItem('token');
+
+  useEffect(() => {
+    fetchStudents();
+    fetchClasses();
+  }, []);
+
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`${REACT_APP_API_URL}/api/admin/students`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setStudents(res.data.students || []);
+    } catch (err) {
+      console.error('Failed to fetch students:', err);
+      setMessage('Failed to load students.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchClasses = async () => {
+    try {
+      const res = await axios.get(`${REACT_APP_API_URL}/api/admin/classes`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setClasses(res.data.classes || []);
+    } catch (err) {
+      console.error('Failed to fetch classes:', err);
+    }
+  };
 
   // Filter students based on search
   const filteredStudents = students.filter(s =>
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.regNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.class.toLowerCase().includes(searchTerm.toLowerCase())
+    s.classId?.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Sort students by class name (JSS1, JSS2, SSS1, etc.) then by name
+  const sortedStudents = [...filteredStudents].sort((a, b) => {
+    const classA = a.classId?.name || '';
+    const classB = b.classId?.name || '';
+    
+    // Compare classes first
+    if (classA < classB) return -1;
+    if (classA > classB) return 1;
+    
+    // If classes are the same, compare names
+    return a.name.localeCompare(b.name);
+  });
+
   // Group students by class
-  const studentsByClass = filteredStudents.reduce((acc, student) => {
-    acc[student.class] = acc[student.class] || [];
-    acc[student.class].push(student);
+  const studentsByClass = sortedStudents.reduce((acc, student) => {
+    const className = student.classId?.name || 'Unassigned';
+    acc[className] = acc[className] || [];
+    acc[className].push(student);
     return acc;
   }, {});
 
+  // Get sorted class names (JSS1, JSS2, JSS3, SSS1, SSS2, SSS3)
+  const sortedClassNames = Object.keys(studentsByClass).sort();
+
   // CRUD handlers
-  const handleAddOrEdit = (formData) => {
-    setLoading(true);
-    setMessage('');
-    setTimeout(() => {
+  const handleAddOrEdit = async (formData) => {
+    try {
+      setLoading(true);
+      setMessage('');
+
       if (modalState.mode === 'add') {
-        const newStudent = { ...formData, id: 's' + Date.now() };
-        setStudents(prev => [...prev, newStudent]);
-        setMessage(`Student '${newStudent.name}' added successfully.`);
+        await axios.post(
+          `${REACT_APP_API_URL}/api/admin/students`,
+          formData,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setMessage(`Student '${formData.name}' added successfully.`);
       } else {
-        setStudents(prev => prev.map(s => s.id === formData.id ? { ...s, ...formData } : s));
+        await axios.put(
+          `${REACT_APP_API_URL}/api/admin/students/${formData._id}`,
+          formData,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
         setMessage(`Student '${formData.name}' updated successfully.`);
       }
-      setLoading(false);
+
+      await fetchStudents();
       setModalState({ isOpen: false, mode: 'add', currentStudent: null });
-    }, 800);
+    } catch (err) {
+      console.error('Failed to save student:', err);
+      setMessage(err.response?.data?.message || 'Failed to save student.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = (id, name) => {
@@ -103,60 +173,127 @@ const ManageStudents = () => {
       isOpen: true,
       id,
       name,
-      action: () => {
-        setLoading(true);
-        setMessage('');
-        setTimeout(() => {
-          setStudents(prev => prev.filter(s => s.id !== id));
+      action: async () => {
+        try {
+          setLoading(true);
+          setMessage('');
+          
+          await axios.delete(`${REACT_APP_API_URL}/api/admin/students/${id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
           setMessage(`Student '${name}' deleted successfully.`);
-          setLoading(false);
+          await fetchStudents();
           setConfirmState({ isOpen: false, id: null, name: '', action: () => {} });
-        }, 800);
+        } catch (err) {
+          console.error('Failed to delete student:', err);
+          setMessage(err.response?.data?.message || 'Failed to delete student.');
+        } finally {
+          setLoading(false);
+        }
       }
     });
   };
 
-  const handleCancelDelete = () => setConfirmState({ isOpen: false, id: null, name: '', action: () => {} });
+  const handleCancelDelete = () => {
+    setConfirmState({ isOpen: false, id: null, name: '', action: () => {} });
+  };
+
+  const exportToCSV = () => {
+    const csvContent = [
+      ['Class', 'Name', 'Registration Number'],
+      ...sortedStudents.map(s => [
+        s.classId?.name || 'Unassigned',
+        s.name,
+        s.regNo
+      ])
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `students_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
 
   // Student Form Component
   const StudentForm = ({ initialData, onSubmit, onCancel, isSaving }) => {
     const [formData, setFormData] = useState({
+      _id: initialData?._id || '',
       name: initialData?.name || '',
       regNo: initialData?.regNo || '',
-      class: initialData?.class || MOCK_CLASS_OPTIONS[0],
-      parentName: initialData?.parentName || MOCK_PARENTS[0].name,
+      classId: initialData?.classId?._id || '',
     });
 
-    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-    const handleSubmit = (e) => { e.preventDefault(); onSubmit({ ...initialData, ...formData }); };
+    const handleChange = (e) => {
+      setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      onSubmit(formData);
+    };
 
     return (
       <form onSubmit={handleSubmit}>
         <div className="mb-3">
-          <label className="form-label fw-semibold">Full Name</label>
-          <input type="text" className="form-control rounded-3" name="name" value={formData.name} onChange={handleChange} required />
+          <label className="form-label fw-semibold">Full Name *</label>
+          <input
+            type="text"
+            className="form-control rounded-3"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            required
+          />
         </div>
         <div className="mb-3">
-          <label className="form-label fw-semibold">Registration Number</label>
-          <input type="text" className="form-control rounded-3" name="regNo" value={formData.regNo} onChange={handleChange} required />
+          <label className="form-label fw-semibold">Registration Number *</label>
+          <input
+            type="text"
+            className="form-control rounded-3"
+            name="regNo"
+            value={formData.regNo}
+            onChange={handleChange}
+            required
+          />
+          <small className="text-muted">Must be unique</small>
         </div>
-        <div className="row">
-          <div className="col-md-6 mb-3">
-            <label className="form-label fw-semibold">Class</label>
-            <select className="form-select rounded-3" name="class" value={formData.class} onChange={handleChange}>
-              {MOCK_CLASS_OPTIONS.map(cls => <option key={cls} value={cls}>{cls}</option>)}
-            </select>
-          </div>
-          <div className="col-md-6 mb-4">
-            <label className="form-label fw-semibold">Parent</label>
-            <select className="form-select rounded-3" name="parentName" value={formData.parentName} onChange={handleChange}>
-              {MOCK_PARENTS.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-            </select>
-          </div>
+        <div className="mb-4">
+          <label className="form-label fw-semibold">Class *</label>
+          <select
+            className="form-select rounded-3"
+            name="classId"
+            value={formData.classId}
+            onChange={handleChange}
+            required
+          >
+            <option value="">-- Select Class --</option>
+            {classes.map(cls => (
+              <option key={cls._id} value={cls._id}>
+                {cls.name}
+              </option>
+            ))}
+          </select>
         </div>
-        <div className="d-flex justify-content-end">
-          <button type="button" className="btn btn-secondary me-2 rounded-3" onClick={onCancel} disabled={isSaving}>Cancel</button>
-          <button type="submit" className="btn btn-primary rounded-3" disabled={isSaving}>{isSaving ? 'Saving...' : (initialData ? 'Update Student' : 'Add Student')}</button>
+        <div className="d-flex justify-content-end gap-2">
+          <button
+            type="button"
+            className="btn btn-secondary rounded-3"
+            onClick={onCancel}
+            disabled={isSaving}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="btn btn-primary rounded-3"
+            disabled={isSaving}
+          >
+            {isSaving ? 'Saving...' : (initialData ? 'Update Student' : 'Add Student')}
+          </button>
         </div>
       </form>
     );
@@ -165,69 +302,139 @@ const ManageStudents = () => {
   return (
     <div className="container-fluid py-4">
       <div className="card shadow-lg rounded-4 p-4">
-
         {/* Header & Add Button */}
         <div className="d-block d-md-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-          <h4 className="d-flex align-items-center text-primary mb-3 mb-md-0"><Users size={24} className="me-2" /> Manage Students</h4>
-          <button className="btn btn-primary rounded-3 d-flex align-items-center w-100 w-md-auto" onClick={() => setModalState({ isOpen: true, mode: 'add', currentStudent: null })}><PlusCircle size={20} className="me-2" /> Add New Student</button>
+          <div>
+            <h4 className="d-flex align-items-center text-primary mb-2">
+              <Users size={28} className="me-2" /> Manage Students
+            </h4>
+            <p className="text-muted mb-0">Total: {students.length} students</p>
+          </div>
+          <div className="d-flex gap-2 mt-3 mt-md-0">
+            <button
+              className="btn btn-outline-success rounded-3 d-flex align-items-center"
+              onClick={exportToCSV}
+              disabled={students.length === 0}
+            >
+              <Download size={18} className="me-2" /> Export CSV
+            </button>
+            <button
+              className="btn btn-primary rounded-3 d-flex align-items-center"
+              onClick={() => setModalState({ isOpen: true, mode: 'add', currentStudent: null })}
+            >
+              <PlusCircle size={20} className="me-2" /> Add Student
+            </button>
+          </div>
         </div>
 
         {/* Message */}
-        {message && <div className="alert alert-success rounded-3">{message}</div>}
+        {message && (
+          <div className={`alert ${message.includes('successfully') ? 'alert-success' : 'alert-danger'} rounded-3`}>
+            {message}
+          </div>
+        )}
 
         {/* Search */}
         <div className="row mb-4">
           <div className="col-12 col-md-6 col-lg-4">
             <div className="input-group">
-              <span className="input-group-text bg-light rounded-start-3"><Search size={18} /></span>
-              <input type="text" className="form-control rounded-end-3" placeholder="Search by name, regNo or class" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+              <span className="input-group-text bg-light rounded-start-3">
+                <Search size={18} />
+              </span>
+              <input
+                type="text"
+                className="form-control rounded-end-3"
+                placeholder="Search by name, regNo or class"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
             </div>
           </div>
         </div>
 
-        {/* Desktop Table grouped by class */}
-        <div className="d-none d-md-block table-responsive">
-          {Object.keys(studentsByClass).map(cls => (
-            <div key={cls} className="mb-4">
-              <h6 className="fw-bold">{cls}</h6>
-              <table className="table table-hover align-middle">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Reg No</th>
-                    <th>Parent</th>
-                    <th className="text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {studentsByClass[cls].map(student => (
-                    <tr key={student.id}>
-                      <td>{student.name}</td>
-                      <td>{student.regNo}</td>
-                      <td>{student.parentName}</td>
-                      <td className="text-center">
-                        <button className="btn btn-sm btn-outline-secondary me-2" onClick={() => setModalState({ isOpen: true, mode: 'edit', currentStudent: student })}><Edit size={16} /></button>
-                        <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(student.id, student.name)}><Trash2 size={16} /></button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {loading && students.length === 0 ? (
+          <div className="text-center py-5">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
             </div>
-          ))}
-        </div>
-
-        {/* Mobile Cards grouped by class */}
-        <div className="d-md-none">
-          {Object.keys(studentsByClass).map(cls => (
-            <div key={cls} className="mb-3">
-              <h6 className="fw-bold mb-2">{cls}</h6>
-              {studentsByClass[cls].map(student => (
-                <StudentCard key={student.id} student={student} onEdit={s => setModalState({ isOpen: true, mode: 'edit', currentStudent: s })} onDelete={handleDelete} loading={loading} />
+          </div>
+        ) : students.length === 0 ? (
+          <div className="alert alert-info rounded-3">
+            <p className="mb-0">No students registered yet. Click "Add Student" to get started.</p>
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table grouped by class */}
+            <div className="d-none d-md-block">
+              {sortedClassNames.map(className => (
+                <div key={className} className="mb-4">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <h5 className="fw-bold text-primary mb-0">{className}</h5>
+                    <span className="badge bg-primary">{studentsByClass[className].length} students</span>
+                  </div>
+                  <div className="table-responsive">
+                    <table className="table table-hover align-middle">
+                      <thead className="table-light">
+                        <tr>
+                          <th>#</th>
+                          <th>Name</th>
+                          <th>Registration Number</th>
+                          <th className="text-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {studentsByClass[className].map((student, index) => (
+                          <tr key={student._id}>
+                            <td>{index + 1}</td>
+                            <td className="fw-semibold">{student.name}</td>
+                            <td>{student.regNo}</td>
+                            <td className="text-center">
+                              <button
+                                className="btn btn-sm btn-outline-primary me-2 rounded-3"
+                                onClick={() => setModalState({ isOpen: true, mode: 'edit', currentStudent: student })}
+                                disabled={loading}
+                              >
+                                <Edit size={16} />
+                              </button>
+                              <button
+                                className="btn btn-sm btn-outline-danger rounded-3"
+                                onClick={() => handleDelete(student._id, student.name)}
+                                disabled={loading}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               ))}
             </div>
-          ))}
-        </div>
+
+            {/* Mobile Cards grouped by class */}
+            <div className="d-md-none">
+              {sortedClassNames.map(className => (
+                <div key={className} className="mb-4">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <h6 className="fw-bold mb-0">{className}</h6>
+                    <span className="badge bg-primary">{studentsByClass[className].length}</span>
+                  </div>
+                  {studentsByClass[className].map(student => (
+                    <StudentCard
+                      key={student._id}
+                      student={student}
+                      onEdit={s => setModalState({ isOpen: true, mode: 'edit', currentStudent: s })}
+                      onDelete={handleDelete}
+                      loading={loading}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Add/Edit Modal */}
         {modalState.isOpen && (
@@ -235,19 +442,38 @@ const ManageStudents = () => {
             <div className="modal-dialog modal-dialog-centered">
               <div className="modal-content rounded-4 shadow-lg">
                 <div className="modal-header">
-                  <h5 className="modal-title">{modalState.mode === 'add' ? 'Add New Student' : 'Edit Student'}</h5>
-                  <button type="button" className="btn-close" onClick={() => setModalState({ isOpen: false, mode: 'add', currentStudent: null })} disabled={loading}></button>
+                  <h5 className="modal-title">
+                    {modalState.mode === 'add' ? 'Add New Student' : 'Edit Student'}
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setModalState({ isOpen: false, mode: 'add', currentStudent: null })}
+                    disabled={loading}
+                  ></button>
                 </div>
                 <div className="modal-body">
-                  <StudentForm initialData={modalState.currentStudent} onSubmit={handleAddOrEdit} onCancel={() => setModalState({ isOpen: false, mode: 'add', currentStudent: null })} isSaving={loading} />
+                  <StudentForm
+                    initialData={modalState.currentStudent}
+                    onSubmit={handleAddOrEdit}
+                    onCancel={() => setModalState({ isOpen: false, mode: 'add', currentStudent: null })}
+                    isSaving={loading}
+                  />
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Delete Conf irmation Modal */}
-        <ConfirmationModal isOpen={confirmState.isOpen} title="Confirm Deletion" body={`Are you sure you want to delete student: ${confirmState.name}?`} onConfirm={confirmState.action} onCancel={handleCancelDelete} isSaving={loading} />
+        {/* Delete Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={confirmState.isOpen}
+          title="Confirm Deletion"
+          body={`Are you sure you want to delete student: ${confirmState.name}?`}
+          onConfirm={confirmState.action}
+          onCancel={handleCancelDelete}
+          isSaving={loading}
+        />
       </div>
     </div>
   );
