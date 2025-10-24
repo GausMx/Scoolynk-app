@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Settings as SettingsIcon, User, Lock, CreditCard, Eye, EyeOff, Copy, Check } from 'lucide-react';
+import { Settings as SettingsIcon, User, Lock, CreditCard, Eye, EyeOff, Copy, Check, Send, Users, DollarSign } from 'lucide-react';
 
 const { REACT_APP_API_URL } = process.env;
 
@@ -20,17 +20,30 @@ const Settings = () => {
     motto: ''
   });
 
-  // Security state
+  // Security state with visibility toggles
   const [security, setSecurity] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
   });
 
   // Fees state
   const [fees, setFees] = useState({
     defaultFee: 0
   });
+
+  // Payment tracking state
+  const [payments, setPayments] = useState({
+    paid: [],
+    partial: [],
+    unpaid: []
+  });
+  const [sendingMessages, setSendingMessages] = useState(false);
 
   // School code state
   const [schoolCode, setSchoolCode] = useState('');
@@ -43,7 +56,10 @@ const Settings = () => {
   useEffect(() => {
     fetchSettings();
     fetchSchoolCode();
-  }, []);
+    if (activeTab === 'payments') {
+      fetchPaymentData();
+    }
+  }, [activeTab]);
 
   const fetchSettings = async () => {
     try {
@@ -63,8 +79,7 @@ const Settings = () => {
       });
 
       setFees({
-        defaultFee: school.defaultFee || 0,
-        lateFee: school.lateFee || 0
+        defaultFee: school.defaultFee || 0
       });
     } catch (err) {
       console.error('Failed to fetch settings:', err);
@@ -82,6 +97,21 @@ const Settings = () => {
       setSchoolCode(res.data.schoolCode || '');
     } catch (err) {
       console.error('Failed to fetch school code:', err);
+    }
+  };
+
+  const fetchPaymentData = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`${REACT_APP_API_URL}/api/admin/payments/status`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPayments(res.data);
+    } catch (err) {
+      console.error('Failed to fetch payment data:', err);
+      showMessage('error', 'Failed to load payment data');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -175,11 +205,34 @@ const Settings = () => {
     }
   };
 
+  // Send WhatsApp payment reminders
+  const sendPaymentReminders = async (category) => {
+    try {
+      setSendingMessages(true);
+      await axios.post(
+        `${REACT_APP_API_URL}/api/admin/payments/send-reminders`,
+        { category },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      showMessage('success', `Payment reminders sent to ${category} parents!`);
+    } catch (err) {
+      console.error('Failed to send reminders:', err);
+      showMessage('error', err.response?.data?.message || 'Failed to send reminders');
+    } finally {
+      setSendingMessages(false);
+    }
+  };
+
   // Copy school code
   const copySchoolCode = () => {
     navigator.clipboard.writeText(schoolCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Toggle password visibility
+  const togglePasswordVisibility = (field) => {
+    setShowPasswords({ ...showPasswords, [field]: !showPasswords[field] });
   };
 
   // Profile Section
@@ -333,7 +386,7 @@ const Settings = () => {
     </form>
   );
 
-  // Security Section
+  // Security Section with password toggles
   const renderSecuritySection = () => (
     <form onSubmit={handleSecurityUpdate}>
       <div className="row justify-content-center">
@@ -357,27 +410,45 @@ const Settings = () => {
 
             <div className="mb-3">
               <label className="form-label fw-semibold">Current Password *</label>
-              <input
-                type="password"
-                className="form-control rounded-3"
-                value={security.currentPassword}
-                onChange={(e) => setSecurity({ ...security, currentPassword: e.target.value })}
-                placeholder="Enter your current password"
-                required
-              />
+              <div className="input-group">
+                <input
+                  type={showPasswords.current ? 'text' : 'password'}
+                  className="form-control rounded-start-3"
+                  value={security.currentPassword}
+                  onChange={(e) => setSecurity({ ...security, currentPassword: e.target.value })}
+                  placeholder="Enter your current password"
+                  required
+                />
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary rounded-end-3"
+                  onClick={() => togglePasswordVisibility('current')}
+                >
+                  {showPasswords.current ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             <div className="mb-3">
               <label className="form-label fw-semibold">New Password *</label>
-              <input
-                type="password"
-                className="form-control rounded-3"
-                value={security.newPassword}
-                onChange={(e) => setSecurity({ ...security, newPassword: e.target.value })}
-                placeholder="Enter new password"
-                minLength={6}
-                required
-              />
+              <div className="input-group">
+                <input
+                  type={showPasswords.new ? 'text' : 'password'}
+                  className="form-control rounded-start-3"
+                  value={security.newPassword}
+                  onChange={(e) => setSecurity({ ...security, newPassword: e.target.value })}
+                  placeholder="Enter new password"
+                  minLength={6}
+                  required
+                />
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary rounded-end-3"
+                  onClick={() => togglePasswordVisibility('new')}
+                >
+                  {showPasswords.new ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               {security.newPassword && security.newPassword.length < 6 && (
                 <small className="text-danger">Password must be at least 6 characters</small>
               )}
@@ -385,15 +456,24 @@ const Settings = () => {
 
             <div className="mb-4">
               <label className="form-label fw-semibold">Confirm New Password *</label>
-              <input
-                type="password"
-                className="form-control rounded-3"
-                value={security.confirmPassword}
-                onChange={(e) => setSecurity({ ...security, confirmPassword: e.target.value })}
-                placeholder="Confirm new password"
-                minLength={6}
-                required
-              />
+              <div className="input-group">
+                <input
+                  type={showPasswords.confirm ? 'text' : 'password'}
+                  className="form-control rounded-start-3"
+                  value={security.confirmPassword}
+                  onChange={(e) => setSecurity({ ...security, confirmPassword: e.target.value })}
+                  placeholder="Confirm new password"
+                  minLength={6}
+                  required
+                />
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary rounded-end-3"
+                  onClick={() => togglePasswordVisibility('confirm')}
+                >
+                  {showPasswords.confirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               {security.confirmPassword && security.newPassword !== security.confirmPassword && (
                 <small className="text-danger">Passwords do not match</small>
               )}
@@ -403,7 +483,10 @@ const Settings = () => {
               <button
                 type="button"
                 className="btn btn-outline-secondary rounded-3"
-                onClick={() => setSecurity({ currentPassword: '', newPassword: '', confirmPassword: '' })}
+                onClick={() => {
+                  setSecurity({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                  setShowPasswords({ current: false, new: false, confirm: false });
+                }}
               >
                 Clear
               </button>
@@ -436,58 +519,34 @@ const Settings = () => {
           <div className="card border-0 shadow-sm rounded-4 p-4">
             <h5 className="text-primary mb-4">
               <CreditCard size={20} className="me-2" />
-              Fee Structure
+              Default Fee Structure
             </h5>
 
             <div className="alert alert-info rounded-3 mb-4">
               <small>
-                These are the default fees applied to all classes. Individual class fees can be customized in the Manage Classes section.
+                This is the default fee applied to all classes. Individual class fees can be customized in the Manage Classes section.
               </small>
             </div>
 
-            <div className="row g-3">
-              <div className="col-md-6">
-                <label className="form-label fw-semibold">Default Class Fee (₦) *</label>
-                <input
-                  type="number"
-                  className="form-control rounded-3"
-                  value={fees.defaultFee}
-                  onChange={(e) => setFees({ ...fees, defaultFee: parseFloat(e.target.value) || 0 })}
-                  min="0"
-                  step="1000"
-                  placeholder="0"
-                  required
-                />
-                <small className="text-muted">Standard fee for all classes</small>
-              </div>
-
-              <div className="col-md-6">
-                <label className="form-label fw-semibold">Late Payment Fee (₦) *</label>
-                <input
-                  type="number"
-                  className="form-control rounded-3"
-                  value={fees.lateFee}
-                  onChange={(e) => setFees({ ...fees, lateFee: parseFloat(e.target.value) || 0 })}
-                  min="0"
-                  step="100"
-                  placeholder="0"
-                  required
-                />
-                <small className="text-muted">Additional charge for late payments</small>
-              </div>
+            <div className="mb-4">
+              <label className="form-label fw-semibold">Default Class Fee (₦) *</label>
+              <input
+                type="number"
+                className="form-control rounded-3 form-control-lg"
+                value={fees.defaultFee}
+                onChange={(e) => setFees({ defaultFee: parseFloat(e.target.value) || 0 })}
+                min="0"
+                step="1000"
+                placeholder="Enter default fee"
+                required
+              />
+              <small className="text-muted">Standard fee amount for all classes</small>
             </div>
 
-            <div className="card bg-light border-0 mt-4 p-3">
-              <h6 className="mb-3">Fee Summary</h6>
-              <div className="row">
-                <div className="col-6">
-                  <p className="mb-1 text-muted">Default Fee:</p>
-                  <p className="fs-5 fw-bold text-primary">₦{fees.defaultFee.toLocaleString()}</p>
-                </div>
-                <div className="col-6">
-                  <p className="mb-1 text-muted">Late Fee:</p>
-                  <p className="fs-5 fw-bold text-warning">₦{fees.lateFee.toLocaleString()}</p>
-                </div>
+            <div className="card bg-light border-0 p-4">
+              <div className="text-center">
+                <p className="mb-2 text-muted">Current Default Fee</p>
+                <h2 className="fw-bold text-primary mb-0">₦{fees.defaultFee.toLocaleString()}</h2>
               </div>
             </div>
 
@@ -512,6 +571,109 @@ const Settings = () => {
       </div>
     </form>
   );
+
+  // Payments Section
+  const renderPaymentsSection = () => {
+    const renderStudentList = (students, title, badgeClass, category) => (
+      <div className="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h5 className="mb-0">
+            <span className={`badge ${badgeClass} me-2`}>{students.length}</span>
+            {title}
+          </h5>
+          {students.length > 0 && (
+            <button
+              className="btn btn-sm btn-success rounded-3"
+              onClick={() => sendPaymentReminders(category)}
+              disabled={sendingMessages}
+            >
+              <Send size={16} className="me-1" />
+              {sendingMessages ? 'Sending...' : 'Send Reminders'}
+            </button>
+          )}
+        </div>
+
+        {students.length > 0 ? (
+          <div className="table-responsive">
+            <table className="table table-hover align-middle">
+              <thead className="table-light">
+                <tr>
+                  <th>Student Name</th>
+                  <th>Class</th>
+                  <th>Parent WhatsApp</th>
+                  <th>Fee</th>
+                  <th>Amount Paid</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.map((student) => (
+                  <tr key={student._id}>
+                    <td className="fw-semibold">{student.name}</td>
+                    <td>
+                      <span className="badge bg-info text-dark">{student.classId?.name}</span>
+                    </td>
+                    <td>{student.parentWhatsApp || 'Not provided'}</td>
+                    <td>₦{student.classFee?.toLocaleString()}</td>
+                    <td>₦{student.amountPaid?.toLocaleString() || 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="alert alert-info mb-0">
+            No students in this category.
+          </div>
+        )}
+      </div>
+    );
+
+    return (
+      <div>
+        {/* Stats Cards */}
+        <div className="row g-3 mb-4">
+          <div className="col-md-4">
+            <div className="card bg-success text-white shadow-sm rounded-4 p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 className="mb-1">Paid in Full</h6>
+                  <h3 className="mb-0">{payments.paid.length}</h3>
+                </div>
+                <Check size={40} />
+              </div>
+            </div>
+          </div>
+          <div className="col-md-4">
+            <div className="card bg-warning text-white shadow-sm rounded-4 p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 className="mb-1">Partial Payment</h6>
+                  <h3 className="mb-0">{payments.partial.length}</h3>
+                </div>
+                <DollarSign size={40} />
+              </div>
+            </div>
+          </div>
+          <div className="col-md-4">
+            <div className="card bg-danger text-white shadow-sm rounded-4 p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 className="mb-1">Not Paid</h6>
+                  <h3 className="mb-0">{payments.unpaid.length}</h3>
+                </div>
+                <Users size={40} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Student Lists */}
+        {renderStudentList(payments.paid, 'Paid in Full', 'bg-success', 'paid')}
+        {renderStudentList(payments.partial, 'Partial Payment', 'bg-warning', 'partial')}
+        {renderStudentList(payments.unpaid, 'Not Paid', 'bg-danger', 'unpaid')}
+      </div>
+    );
+  };
 
   return (
     <div className="container-fluid py-4">
@@ -561,6 +723,15 @@ const Settings = () => {
             Fees
           </button>
         </li>
+        <li className="nav-item">
+          <button
+            className={`nav-link rounded-3 ${activeTab === 'payments' ? 'active' : ''}`}
+            onClick={() => setActiveTab('payments')}
+          >
+            <DollarSign size={18} className="me-2" />
+            Payments
+          </button>
+        </li>
       </ul>
 
       {/* Tab Content */}
@@ -568,6 +739,7 @@ const Settings = () => {
         {activeTab === 'profile' && renderProfileSection()}
         {activeTab === 'security' && renderSecuritySection()}
         {activeTab === 'fees' && renderFeesSection()}
+        {activeTab === 'payments' && renderPaymentsSection()}
       </div>
     </div>
   );
