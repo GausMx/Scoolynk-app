@@ -1,3 +1,5 @@
+// server/controllers/adminController.js - COMPLETE FILE
+
 import bcrypt from 'bcrypt';
 import User from '../models/User.js';
 import School from '../models/School.js';
@@ -9,12 +11,11 @@ import Student from '../models/Student.js';
 // -------------------------
 // Get all students in admin's school
 // -------------------------
-
 export const getStudents = async (req, res) => {
   try {
     const students = await Student.find({ schoolId: req.user.schoolId })
-      .populate('classId', 'name')
-      .sort({ classId: 1, name: 1 }); // Sort by class, then by name
+      .populate('classId', 'name fee')
+      .sort({ classId: 1, name: 1 });
 
     res.json({ students });
   } catch (err) {
@@ -28,7 +29,7 @@ export const getStudents = async (req, res) => {
 // -------------------------
 export const createStudent = async (req, res) => {
   try {
-    const { name, regNo, classId } = req.body;
+    const { name, regNo, classId, parentWhatsApp, parentName, parentEmail, amountPaid } = req.body;
 
     if (!name || !regNo || !classId) {
       return res.status(400).json({ message: 'Name, registration number, and class are required.' });
@@ -50,7 +51,11 @@ export const createStudent = async (req, res) => {
       name,
       regNo,
       classId,
-      schoolId: req.user.schoolId
+      schoolId: req.user.schoolId,
+      parentWhatsApp: parentWhatsApp || '',
+      parentName: parentName || '',
+      parentEmail: parentEmail || '',
+      amountPaid: amountPaid || 0
     });
 
     await student.save();
@@ -60,7 +65,7 @@ export const createStudent = async (req, res) => {
       $push: { students: student._id }
     });
 
-    const populatedStudent = await Student.findById(student._id).populate('classId', 'name');
+    const populatedStudent = await Student.findById(student._id).populate('classId', 'name fee');
 
     res.status(201).json({ 
       message: 'Student created successfully.', 
@@ -78,7 +83,7 @@ export const createStudent = async (req, res) => {
 export const updateStudent = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, regNo, classId } = req.body;
+    const { name, regNo, classId, parentWhatsApp, parentName, parentEmail, amountPaid } = req.body;
 
     // Find student
     const student = await Student.findOne({ _id: id, schoolId: req.user.schoolId });
@@ -91,7 +96,7 @@ export const updateStudent = async (req, res) => {
       const existingStudent = await Student.findOne({ 
         regNo, 
         schoolId: req.user.schoolId,
-        _id: { $ne: id } // Exclude current student
+        _id: { $ne: id }
       });
       if (existingStudent) {
         return res.status(400).json({ message: 'Registration number already exists.' });
@@ -100,7 +105,6 @@ export const updateStudent = async (req, res) => {
 
     // If class is being changed
     if (classId && classId !== student.classId.toString()) {
-      // Verify new class exists
       const classExists = await Class.findOne({ _id: classId, schoolId: req.user.schoolId });
       if (!classExists) {
         return res.status(404).json({ message: 'Class not found.' });
@@ -117,13 +121,18 @@ export const updateStudent = async (req, res) => {
       });
     }
 
-    // Update student
+    // Update student fields
     student.name = name || student.name;
     student.regNo = regNo || student.regNo;
     student.classId = classId || student.classId;
+    student.parentWhatsApp = parentWhatsApp !== undefined ? parentWhatsApp : student.parentWhatsApp;
+    student.parentName = parentName !== undefined ? parentName : student.parentName;
+    student.parentEmail = parentEmail !== undefined ? parentEmail : student.parentEmail;
+    student.amountPaid = amountPaid !== undefined ? amountPaid : student.amountPaid;
+    
     await student.save();
 
-    const updatedStudent = await Student.findById(id).populate('classId', 'name');
+    const updatedStudent = await Student.findById(id).populate('classId', 'name fee');
 
     res.json({ 
       message: 'Student updated successfully.', 
@@ -161,6 +170,7 @@ export const deleteStudent = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete student.' });
   }
 };
+
 // -------------------------
 // Get all teachers in admin's school
 // -------------------------
@@ -237,11 +247,12 @@ export const deleteTeacher = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete teacher.' });
   }
 };
+
 // -------------------------
-// Get all you need for admin's school
+// Get courses for a specific class
 // -------------------------
 export const getClassCourses = async (req, res) => {
-    try {
+  try {
     const courses = await Course.find({ classes: req.params.id, schoolId: req.user.schoolId })
       .populate('teacher', 'name email');
     res.json({ courses });
@@ -249,12 +260,16 @@ export const getClassCourses = async (req, res) => {
     console.error('[GetClassCourses]', err);
     res.status(500).json({ message: 'Failed to fetch courses for class.' });
   }
-}
+};
+
+// -------------------------
+// Get all courses
+// -------------------------
 export const getCourses = async (req, res) => {
   try {
     const courses = await Course.find({ schoolId: req.user.schoolId })
-      .populate('teacher', 'name email') // populate teacher name & email
-      .populate('classes', 'name')       // populate class names
+      .populate('teacher', 'name email')
+      .populate('classes', 'name')
       .sort({ createdAt: -1 });
 
     res.json({ courses });
@@ -264,8 +279,9 @@ export const getCourses = async (req, res) => {
   }
 };
 
-  //Create courses
-
+// -------------------------
+// Create course
+// -------------------------
 export const createCourse = async (req, res) => {
   try {
     const { name, teacher, classes } = req.body;
@@ -282,7 +298,10 @@ export const createCourse = async (req, res) => {
     res.status(500).json({ message: 'Failed to create course.' });
   }
 };
+
+// -------------------------
 // Update course
+// -------------------------
 export const updateCourse = async (req, res) => {
   try {
     const course = await Course.findByIdAndUpdate(
@@ -297,7 +316,10 @@ export const updateCourse = async (req, res) => {
     res.status(500).json({ message: 'Failed to update course.' });
   }
 };
-//delete course
+
+// -------------------------
+// Delete course
+// -------------------------
 export const deleteCourse = async (req, res) => {
   try {
     const course = await Course.findByIdAndDelete(req.params.id);
@@ -308,24 +330,30 @@ export const deleteCourse = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete course.' });
   }
 };
-// GET /api/classes - Get all classes
+
+// -------------------------
+// Get all classes
+// -------------------------
 export const getClasses = async (req, res) => {
   try {
-    const classes = await Class.find({ schoolId: req.user.schoolId }).sort({createdAt: -1 });
+    const classes = await Class.find({ schoolId: req.user.schoolId }).sort({ createdAt: -1 });
     res.json({ classes });
-  }
-  catch (err) {
+  } catch (err) {
     console.error('[AdminGetClasses]', err);
     res.status(500).json({ message: 'Failed to fetch classes.' });
-  } 
+  }
 };
 
-// POST /api/classes - Create new class (no teacher dependency)
+// -------------------------
+// Create new class
+// -------------------------
 export const createClass = async (req, res) => {
   try {
-    const { name, fee} = req.body;  
+    const { name, fee } = req.body;
     if (!name) return res.status(400).json({ message: 'Class name is required.' });
-    if (fee == null || isNaN(fee) || fee < 0) return res.status(400).json({ message: 'Valid class fee is required.' });
+    if (fee == null || isNaN(fee) || fee < 0) {
+      return res.status(400).json({ message: 'Valid class fee is required.' });
+    }
     const newClass = new Class({ name, fee, schoolId: req.user.schoolId });
     await newClass.save();
     res.status(201).json({ message: 'Class created successfully.', class: newClass });
@@ -335,29 +363,32 @@ export const createClass = async (req, res) => {
   }
 };
 
+// -------------------------
+// Update class
+// -------------------------
 export const updateClass = async (req, res) => {
   try {
-    const {id} = req.params;
-    const {name, fee} = req.body;
+    const { id } = req.params;
+    const { name, fee } = req.body;
     const cls = await Class.findOneAndUpdate(
-      { _id: id, schoolId: req.user.schoolId},
-      {name, fee},
-      {new: true}
+      { _id: id, schoolId: req.user.schoolId },
+      { name, fee },
+      { new: true }
     );
     if (!cls) return res.status(404).json({ message: 'Class not found.' });
-    if (name) cls.name = name;
-    if (fee != null && !isNaN(fee) && fee >= 0) cls.fee = fee;
-    await cls.save();
     res.json({ message: 'Class updated successfully.', class: cls });
-  } catch (err) { 
+  } catch (err) {
     console.error('[UpdateClass]', err);
     res.status(500).json({ message: 'Failed to update class.' });
   }
 };
 
+// -------------------------
+// Delete class
+// -------------------------
 export const deleteClass = async (req, res) => {
   try {
-    const {id} = req.params;
+    const { id } = req.params;
     const cls = await Class.findOneAndDelete({ _id: id, schoolId: req.user.schoolId });
     if (!cls) return res.status(404).json({ message: 'Class not found.' });
     res.json({ message: 'Class deleted successfully.' });
@@ -367,6 +398,9 @@ export const deleteClass = async (req, res) => {
   }
 };
 
+// -------------------------
+// Get submitted results
+// -------------------------
 export const getSubmittedResults = async (req, res) => {
   try {
     const schoolId = req.user.schoolId;
@@ -386,7 +420,7 @@ export const getSubmittedResults = async (req, res) => {
 };
 
 // -------------------------
-// Verify or reject a result
+// Review result
 // -------------------------
 export const reviewResult = async (req, res) => {
   try {
@@ -414,8 +448,9 @@ export const getAdminDashboard = (req, res) => {
   });
 };
 
-// GET /api/school/code
-// Returns the school code for the currently logged-in admin
+// -------------------------
+// Get school code
+// -------------------------
 export const getSchoolCode = async (req, res) => {
   try {
     const school = await School.findById(req.user.schoolId);
@@ -428,7 +463,7 @@ export const getSchoolCode = async (req, res) => {
 };
 
 // -------------------------
-// Get Admin Settings (Fetches all pre-registered data + other settings)
+// Get Admin Settings
 // -------------------------
 export const getAdminSettings = async (req, res) => {
   try {
@@ -436,27 +471,13 @@ export const getAdminSettings = async (req, res) => {
     console.log('[GetAdminSettings] Admin ID:', adminId);
     console.log('[GetAdminSettings] School ID:', req.user.schoolId);
     
-    // Fetch Admin details
     const admin = await User.findById(adminId).select('-password');
     console.log('[GetAdminSettings] Admin found:', !!admin);
-    if (admin) {
-      console.log('[GetAdminSettings] Admin data:', { name: admin.name, email: admin.email });
-    }
     
-    // Fetch School details
     const school = await School.findById(req.user.schoolId).select(
       'name address phone motto classes subjects gradingSystem termStart termEnd defaultFee lateFee schoolCode'
     );
     console.log('[GetAdminSettings] School found:', !!school);
-    if (school) {
-      console.log('[GetAdminSettings] School data:', {
-        name: school.name,
-        address: school.address,
-        phone: school.phone,
-        motto: school.motto,
-        schoolCode: school.schoolCode
-      });
-    }
 
     if (!admin || !school) {
       console.error('[GetAdminSettings] Missing data - admin:', !!admin, 'school:', !!school);
@@ -483,25 +504,25 @@ export const getAdminSettings = async (req, res) => {
       },
     };
     
-    console.log('[GetAdminSettings] Sending response:', JSON.stringify(responseData, null, 2));
+    console.log('[GetAdminSettings] Sending response');
     res.json(responseData);
   } catch (err) {
     console.error('[GetAdminSettings] Error:', err);
     res.status(500).json({ message: 'Failed to load settings.' });
   }
-};  
+};
+
 // -------------------------
-// Update Admin Settings (handles updates for profile, security, fees, academic)
+// Update Admin Settings
 // -------------------------
 export const updateAdminSettings = async (req, res) => {
   try {
-    // Frontend sends { section: 'profile', data: { schoolName: '...', ... } }
     const { section, data } = req.body;
     const adminId = req.user._id;
     const schoolId = req.user.schoolId;
 
     if (!section || !data) {
-        return res.status(400).json({ message: 'Missing section or data in request body.' });
+      return res.status(400).json({ message: 'Missing section or data in request body.' });
     }
 
     switch (section) {
@@ -519,22 +540,20 @@ export const updateAdminSettings = async (req, res) => {
       case 'security': {
         const { currentPassword, newPassword, confirmPassword } = data;
         if (!currentPassword || !newPassword || !confirmPassword) {
-             return res.status(400).json({ message: 'All password fields are required.' });
+          return res.status(400).json({ message: 'All password fields are required.' });
         }
         if (newPassword !== confirmPassword) {
           return res.status(400).json({ message: 'New passwords do not match.' });
         }
 
-        const admin = await User.findById(adminId).select('+password'); // Select password field
+        const admin = await User.findById(adminId).select('+password');
         if (!admin) return res.status(404).json({ message: 'Admin user not found.' });
 
-        // Verify current password
         const isMatch = await bcrypt.compare(currentPassword, admin.password);
         if (!isMatch) {
           return res.status(401).json({ message: 'Current password is incorrect.' });
         }
         
-        // Hash and update new password
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         await User.findByIdAndUpdate(adminId, { password: hashedPassword });
 
@@ -542,7 +561,7 @@ export const updateAdminSettings = async (req, res) => {
       }
 
       case 'fees': {
-        const { defaultFee, lateFee } = data;
+        const { defaultFee } = data;
         await School.findByIdAndUpdate(schoolId, {
           defaultFee: defaultFee,
         }, { new: true });
@@ -550,12 +569,9 @@ export const updateAdminSettings = async (req, res) => {
       }
         
       case 'academic': {
-        // NOTE: This currently only handles simple fields. 
-        // We need to update this logic later to handle the classes/subjects arrays.
         const { gradingSystem, termStart, termEnd } = data;
         await School.findByIdAndUpdate(schoolId, {
           gradingSystem: gradingSystem,
-          // Convert string dates back to Date objects
           termStart: termStart ? new Date(termStart) : null,
           termEnd: termEnd ? new Date(termEnd) : null,
         }, { new: true });
@@ -565,9 +581,210 @@ export const updateAdminSettings = async (req, res) => {
       default:
         return res.status(400).json({ message: 'Invalid settings section provided.' });
     }
-
   } catch (err) {
     console.error('[UpdateAdminSettings]', err);
     res.status(500).json({ message: 'Failed to update settings.' });
+  }
+};
+
+// -------------------------
+// NEW: Get Payment Status (Categorized by payment status)
+// -------------------------
+export const getPaymentStatus = async (req, res) => {
+  try {
+    const schoolId = req.user.schoolId;
+
+    const students = await Student.find({ schoolId })
+      .populate('classId', 'name fee')
+      .sort({ classId: 1, name: 1 });
+
+    const paid = [];
+    const partial = [];
+    const unpaid = [];
+
+    students.forEach(student => {
+      const classFee = student.classId?.fee || 0;
+      const amountPaid = student.amountPaid || 0;
+
+      const studentData = {
+        ...student.toObject(),
+        classFee
+      };
+
+      if (amountPaid >= classFee && classFee > 0) {
+        paid.push(studentData);
+      } else if (amountPaid > 0 && amountPaid < classFee) {
+        partial.push(studentData);
+      } else {
+        unpaid.push(studentData);
+      }
+    });
+
+    res.json({ paid, partial, unpaid });
+  } catch (err) {
+    console.error('[GetPaymentStatus]', err);
+    res.status(500).json({ message: 'Failed to fetch payment status.' });
+  }
+};
+
+// -------------------------
+// NEW: Send WhatsApp Payment Reminders
+// -------------------------
+export const sendPaymentReminders = async (req, res) => {
+  try {
+    const { category } = req.body;
+    const schoolId = req.user.schoolId;
+
+    if (!['paid', 'partial', 'unpaid'].includes(category)) {
+      return res.status(400).json({ message: 'Invalid category.' });
+    }
+
+    const school = await School.findById(schoolId).select('name phone');
+    if (!school) {
+      return res.status(404).json({ message: 'School not found.' });
+    }
+
+    const students = await Student.find({ schoolId })
+      .populate('classId', 'name fee');
+
+    const targetStudents = [];
+
+    students.forEach(student => {
+      const classFee = student.classId?.fee || 0;
+      const amountPaid = student.amountPaid || 0;
+
+      let shouldInclude = false;
+
+      if (category === 'paid' && amountPaid >= classFee && classFee > 0) {
+        shouldInclude = true;
+      } else if (category === 'partial' && amountPaid > 0 && amountPaid < classFee) {
+        shouldInclude = true;
+      } else if (category === 'unpaid' && amountPaid === 0) {
+        shouldInclude = true;
+      }
+
+      if (shouldInclude && student.parentWhatsApp) {
+        targetStudents.push({
+          name: student.name,
+          parentWhatsApp: student.parentWhatsApp,
+          classFee,
+          amountPaid,
+          balance: classFee - amountPaid,
+          className: student.classId?.name || 'Unknown'
+        });
+      }
+    });
+
+    if (targetStudents.length === 0) {
+      return res.status(400).json({ 
+        message: 'No students with WhatsApp numbers found in this category.' 
+      });
+    }
+
+    const messages = targetStudents.map(student => {
+      let messageText = '';
+      const formattedFee = `₦${student.classFee.toLocaleString()}`;
+      const formattedPaid = `₦${student.amountPaid.toLocaleString()}`;
+      const formattedBalance = `₦${student.balance.toLocaleString()}`;
+
+      if (category === 'paid') {
+        messageText = `Dear Parent/Guardian of ${student.name},\n\n` +
+          `Thank you for completing the payment of ${formattedFee} for ${student.className}.\n\n` +
+          `We appreciate your prompt payment.\n\n` +
+          `Best regards,\n${school.name}\n${school.phone}`;
+      } else if (category === 'partial') {
+        messageText = `Dear Parent/Guardian of ${student.name},\n\n` +
+          `This is a reminder regarding school fees for ${student.className}.\n\n` +
+          `Total Fee: ${formattedFee}\n` +
+          `Amount Paid: ${formattedPaid}\n` +
+          `Balance: ${formattedBalance}\n\n` +
+          `Please complete the payment at your earliest convenience.\n\n` +
+          `Best regards,\n${school.name}\n${school.phone}`;
+      } else {
+        messageText = `Dear Parent/Guardian of ${student.name},\n\n` +
+          `This is a reminder that school fees for ${student.className} have not been paid.\n\n` +
+          `Amount Due: ${formattedFee}\n\n` +
+          `Please make payment as soon as possible to avoid any inconvenience.\n\n` +
+          `Best regards,\n${school.name}\n${school.phone}`;
+      }
+
+      return {
+        to: student.parentWhatsApp,
+        message: messageText
+      };
+    });
+
+    // LOG MESSAGES (Replace with actual WhatsApp API integration)
+    console.log(`[SendPaymentReminders] Sending ${messages.length} messages to ${category} category`);
+    
+    // UNCOMMENT AND CONFIGURE FOR TWILIO:
+    /*
+    const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
+    const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+    const twilioWhatsAppNumber = process.env.TWILIO_WHATSAPP_NUMBER;
+
+    const twilio = require('twilio');
+    const client = twilio(twilioAccountSid, twilioAuthToken);
+
+    const sendPromises = messages.map(msg => 
+      client.messages.create({
+        from: `whatsapp:${twilioWhatsAppNumber}`,
+        to: `whatsapp:${msg.to}`,
+        body: msg.message
+      })
+    );
+
+    await Promise.all(sendPromises);
+    */
+
+    res.json({ 
+      message: `Payment reminders sent to ${targetStudents.length} parents.`,
+      sentCount: targetStudents.length
+    });
+
+  } catch (err) {
+    console.error('[SendPaymentReminders]', err);
+    res.status(500).json({ message: 'Failed to send payment reminders.' });
+  }
+};
+
+// -------------------------
+// NEW: Update Student Payment
+// -------------------------
+export const updateStudentPayment = async (req, res) => {
+  try {
+    const { studentId, amountPaid, parentWhatsApp } = req.body;
+
+    if (!studentId || amountPaid == null) {
+      return res.status(400).json({ message: 'Student ID and amount paid are required.' });
+    }
+
+    const student = await Student.findOne({ 
+      _id: studentId, 
+      schoolId: req.user.schoolId 
+    });
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found.' });
+    }
+
+    student.amountPaid = amountPaid;
+    if (parentWhatsApp) {
+      student.parentWhatsApp = parentWhatsApp;
+    }
+
+    await student.save();
+
+    const updatedStudent = await Student.findById(studentId)
+      .populate('classId', 'name fee');
+
+    res.json({ 
+      message: 'Payment information updated successfully.',
+      student: updatedStudent
+    });
+
+  } catch (err) {
+    console.error('[UpdateStudentPayment]', err);
+    res.status(500).json({ message: 'Failed to update payment information.' });
   }
 };

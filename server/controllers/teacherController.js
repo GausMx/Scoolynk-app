@@ -1,4 +1,4 @@
-// server/controllers/teacherController.js
+// server/controllers/teacherController.js - COMPLETE FILE
 
 import User from '../models/User.js';
 import Class from '../models/Class.js';
@@ -21,13 +21,11 @@ export const getTeacherDashboard = async (req, res) => {
       return res.status(404).json({ message: 'Teacher not found.' });
     }
 
-    // Get courses teacher teaches
     const courses = await Course.find({ 
       teacher: teacherId, 
       schoolId: req.user.schoolId 
     }).populate('classes', 'name');
 
-    // Get students if class teacher
     let students = [];
     if (teacher.classTeacherFor && teacher.classTeacherFor.length > 0) {
       students = await Student.find({ 
@@ -121,7 +119,6 @@ export const saveClassTeacherInfo = async (req, res) => {
       return res.status(400).json({ message: 'Teacher ID and class info required.' });
     }
 
-    // Validate class IDs
     const validClasses = await Class.find({ 
       _id: { $in: classTeacherFor },
       schoolId: req.user.schoolId 
@@ -131,7 +128,6 @@ export const saveClassTeacherInfo = async (req, res) => {
       return res.status(400).json({ message: 'Invalid class IDs provided.' });
     }
 
-    // Update teacher with classTeacherFor field
     const teacher = await User.findByIdAndUpdate(
       teacherId,
       { classTeacherFor: classTeacherFor },
@@ -153,7 +149,7 @@ export const saveClassTeacherInfo = async (req, res) => {
 };
 
 // -------------------------
-// Bulk Add Students (Manual or OCR)
+// Bulk Add Students (Manual or OCR) - UPDATED WITH PAYMENT FIELDS
 // -------------------------
 export const bulkAddStudents = async (req, res) => {
   try {
@@ -167,7 +163,6 @@ export const bulkAddStudents = async (req, res) => {
       return res.status(400).json({ message: 'Class ID is required.' });
     }
 
-    // Verify class exists and belongs to teacher's school
     const classExists = await Class.findOne({ 
       _id: classId, 
       schoolId: req.user.schoolId 
@@ -177,36 +172,87 @@ export const bulkAddStudents = async (req, res) => {
       return res.status(404).json({ message: 'Class not found.' });
     }
 
-    // Generate unique registration numbers if not provided
-    const studentsToInsert = students.map((student, index) => ({
-      name: student.name,
-      regNo: student.regNo || `REG-${Date.now()}-${index}`,
-      classId: classId,
-      schoolId: req.user.schoolId
-    }));
+    const studentsToInsert = [];
+    const duplicates = [];
+    const errors = [];
 
-    // Check for duplicate regNo
-    const regNos = studentsToInsert.map(s => s.regNo);
-    const existingStudents = await Student.find({ regNo: { $in: regNos } });
-    
-    if (existingStudents.length > 0) {
-      return res.status(400).json({ 
-        message: 'Some registration numbers already exist.',
-        duplicates: existingStudents.map(s => s.regNo)
+    for (let i = 0; i < students.length; i++) {
+      const student = students[i];
+      
+      if (!student.name || student.name.trim() === '') {
+        errors.push(`Row ${i + 1}: Student name is required`);
+        continue;
+      }
+
+      let regNo = student.regNo?.trim() || '';
+      if (!regNo) {
+        regNo = `${classExists.name.substring(0, 3).toUpperCase()}-${Date.now()}-${i}`;
+      }
+
+      const existingStudent = await Student.findOne({ 
+        regNo, 
+        schoolId: req.user.schoolId 
+      });
+
+      if (existingStudent) {
+        duplicates.push({ name: student.name, regNo });
+        continue;
+      }
+
+      const duplicateInBatch = studentsToInsert.find(s => s.regNo === regNo);
+      if (duplicateInBatch) {
+        duplicates.push({ name: student.name, regNo });
+        continue;
+      }
+
+      studentsToInsert.push({
+        name: student.name.trim(),
+        regNo: regNo,
+        classId: classId,
+        schoolId: req.user.schoolId,
+        parentWhatsApp: student.parentWhatsApp?.trim() || '',
+        parentName: student.parentName?.trim() || '',
+        parentEmail: student.parentEmail?.trim() || '',
+        amountPaid: student.amountPaid || 0
       });
     }
 
-    // Insert students
+    if (errors.length > 0) {
+      return res.status(400).json({ 
+        message: 'Validation errors found.',
+        errors 
+      });
+    }
+
+    if (duplicates.length > 0) {
+      return res.status(400).json({ 
+        message: 'Some registration numbers already exist.',
+        duplicates,
+        processed: studentsToInsert.length
+      });
+    }
+
+    if (studentsToInsert.length === 0) {
+      return res.status(400).json({ 
+        message: 'No valid students to add.' 
+      });
+    }
+
     const insertedStudents = await Student.insertMany(studentsToInsert);
 
-    // Update class with student IDs
     await Class.findByIdAndUpdate(classId, {
       $push: { students: { $each: insertedStudents.map(s => s._id) } }
     });
 
     res.status(201).json({ 
-      message: `${insertedStudents.length} students added successfully.`,
-      students: insertedStudents 
+      message: `${insertedStudents.length} student(s) added successfully.`,
+      students: insertedStudents,
+      stats: {
+        total: students.length,
+        added: insertedStudents.length,
+        duplicates: duplicates.length,
+        errors: errors.length
+      }
     });
   } catch (err) {
     console.error('[BulkAddStudents]', err);
@@ -272,14 +318,13 @@ export const getMyClassStudents = async (req, res) => {
 };
 
 // -------------------------
-// Get Students in a Specific Class
+// Get Students in a Specific Class - UPDATED WITH PAYMENT INFO
 // -------------------------
 export const getClassStudents = async (req, res) => {
   try {
     const { classId } = req.params;
     const teacherSchoolId = req.user.schoolId;
     
-    // Verify class belongs to teacher's school
     const classExists = await Class.findOne({ 
       _id: classId,
       schoolId: teacherSchoolId 
@@ -289,15 +334,37 @@ export const getClassStudents = async (req, res) => {
       return res.status(404).json({ message: 'Class not found or access denied.' });
     }
     
-    // Fetch students in this class
     const students = await Student.find({ 
       classId: classId,
       schoolId: teacherSchoolId 
     })
-    .populate('classId', 'name')
+    .populate('classId', 'name fee')
     .sort({ name: 1 });
+
+    const studentsWithStatus = students.map(student => {
+      const classFee = classExists.fee || 0;
+      const amountPaid = student.amountPaid || 0;
+      
+      let paymentStatus = 'unpaid';
+      if (amountPaid >= classFee && classFee > 0) {
+        paymentStatus = 'paid';
+      } else if (amountPaid > 0) {
+        paymentStatus = 'partial';
+      }
+
+      return {
+        ...student.toObject(),
+        classFee,
+        paymentStatus,
+        balance: classFee - amountPaid
+      };
+    });
     
-    res.json({ students, className: classExists.name });
+    res.json({ 
+      students: studentsWithStatus, 
+      className: classExists.name,
+      classFee: classExists.fee || 0
+    });
   } catch (err) {
     console.error('[GetClassStudents]', err);
     res.status(500).json({ message: 'Failed to fetch students.' });

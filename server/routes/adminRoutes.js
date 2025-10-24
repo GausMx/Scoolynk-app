@@ -26,7 +26,10 @@ import {
   getStudents,
   createStudent,
   updateStudent,
-  deleteStudent
+  deleteStudent,
+  getPaymentStatus,
+  sendPaymentReminders,
+  updateStudentPayment
 } from '../controllers/adminController.js';
 
 const router = express.Router();
@@ -69,4 +72,8 @@ router.post('/students', protect, requireRole('admin'), createStudent);
 router.put('/students/:id', protect, requireRole('admin'), updateStudent);
 router.delete('/students/:id', protect, requireRole('admin'), deleteStudent);
 
+// Payment status and reminders
+router.get('/payments/status', protect, requireRole('admin'), getPaymentStatus);
+router.post('/payments/reminders', protect, requireRole('admin'), sendPaymentReminders);
+router.put('/students/:id/payment', protect, requireRole('admin'), updateStudentPayment);
 export default router;
