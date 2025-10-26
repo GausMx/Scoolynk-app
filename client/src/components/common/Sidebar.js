@@ -43,6 +43,7 @@ const Sidebar = ({ user, role }) => {
     { path: "/admin/manage-students", label: "Manage Students" },
     { path: "/admin/manage-classes", label: "Manage Classes" },
     { path: "/admin/manage-courses", label: "Manage Courses" },
+    { path: "/admin/payment-setup", label: "Payment Setup" },
   ];
 
   // Dynamic teacher links based on their classes

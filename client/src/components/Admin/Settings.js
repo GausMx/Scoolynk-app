@@ -205,7 +205,7 @@ const Settings = () => {
     }
   };
 
-  // Send WhatsApp payment reminders
+  // Send payment reminders
   const sendPaymentReminders = async (category) => {
     try {
       setSendingMessages(true);
