@@ -7,6 +7,7 @@ import teacherRoutes from './routes/teacherRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import connectDB from './config/db.js';
+import subaccountRoutes from './routes/subaccountRoutes.js';
 import protect from './middleware/authMiddleware.js';
 import subscriptionGuard from './middleware/subscriptionMiddleware.js';
 import requireRole from './middleware/roleMiddleware.js';
@@ -87,6 +88,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/teacher', teacherRoutes);
+app.use('/api/subaccount', subaccountRoutes);
 // Test route
 app.post('/test', (req, res) => {
   res.json({ message: 'Test route working!' });

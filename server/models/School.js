@@ -1,6 +1,33 @@
 import mongoose from 'mongoose';
 
-const schoolSchema = new mongoose.Schema({
+const schoolSchema = new mongoose.Schema({  
+  // Payment Configuration
+  paystackSubaccountId: {
+    type: String,
+    default: null,
+    index: true
+  },
+  paystackSubaccountCode: {
+    type: String,
+    default: null
+  },
+  bankDetails: {
+    accountNumber: { type: String, default: '' },
+    accountName: { type: String, default: '' },
+    bankCode: { type: String, default: '' },
+    bankName: { type: String, default: '' }
+  },
+  paymentSettings: {
+    isActive: { type: Boolean, default: false },
+    verificationStatus: { 
+      type: String, 
+      enum: ['pending', 'verified', 'rejected'], 
+      default: 'pending' 
+    },
+    platformFeePercentage: { type: Number, default: 5 } // Your commission
+  },
+  
+  // ... rest of existing fields
   // School Profile Details
   name: { type: String, required: true },
   address: { type: String },

@@ -25,6 +25,7 @@
     "nodemailer": "^7.0.6",
     "nodemon": "^3.1.10",
     "sib-api-v3-sdk": "^8.5.0",
+    "twilio": "^5.10.3",
     "xlsx": "^0.18.5"
   }
 }

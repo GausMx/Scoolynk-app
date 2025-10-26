@@ -21,7 +21,7 @@ const migrateStudents = async () => {
       {
         $set: {
           amountPaid: 0,
-          parentPhone: '',
+          parentWhatsApp: '',
           parentName: '',
           parentEmail: ''
         }

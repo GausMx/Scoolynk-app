@@ -30,7 +30,7 @@ const studentSchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
-  parentWhatsApp: {
+  parentPhone: {
     type: String,
     trim: true,
     default: ''
