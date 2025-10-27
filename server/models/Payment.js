@@ -1,4 +1,4 @@
-// server/models/Payment.js - UPDATED WITH PHONE FIELDS
+// server/models/Payment.js - UPDATED WITH NO EXPIRY SUPPORT
 
 import mongoose from 'mongoose';
 
@@ -38,7 +38,7 @@ const paymentSchema = new mongoose.Schema({
     type: String,
     enum: ['pending', 'completed', 'failed', 'cancelled'],
     default: 'pending'
-  },    
+  },
   parentName: {
     type: String,
     trim: true
@@ -48,7 +48,7 @@ const paymentSchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
-  // UPDATED: Changed from parentWhatsApp to parentPhone
+  // UPDATED: Use parentPhone consistently
   parentPhone: {
     type: String,
     trim: true
@@ -60,17 +60,20 @@ const paymentSchema = new mongoose.Schema({
   paidAt: {
     type: Date
   },
+  // UPDATED: Allow null for no expiry
   expiresAt: {
     type: Date,
-    default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+    default: null  // CHANGED: null = no expiry (valid until paid)
   }
 }, {
   timestamps: true
 });
 
+// Indexes for performance
 paymentSchema.index({ schoolId: 1, status: 1 });
 paymentSchema.index({ studentId: 1, createdAt: -1 });
 paymentSchema.index({ paymentToken: 1 });
+paymentSchema.index({ paystackReference: 1 });
 
 const Payment = mongoose.model('Payment', paymentSchema);
 
