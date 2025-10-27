@@ -38,7 +38,7 @@ const paymentSchema = new mongoose.Schema({
     type: String,
     enum: ['pending', 'completed', 'failed', 'cancelled'],
     default: 'pending'
-  },
+  },    
   parentName: {
     type: String,
     trim: true

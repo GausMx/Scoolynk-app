@@ -81,7 +81,7 @@ export const createSubaccount = async (req, res) => {
     school.bankDetails = {
       accountNumber,
       accountName: verification.data.account_name,
-      bankCode,
+      bankCode, 
       bankName
     };
     school.paymentSettings.isActive = true;

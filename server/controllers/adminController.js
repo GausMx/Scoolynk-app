@@ -7,6 +7,7 @@ import Result from '../models/Result.js';
 import Class from '../models/Class.js';
 import Course from '../models/Course.js';
 import Student from '../models/Student.js';
+import SMSService from '../services/smsService.js';
 
 // -------------------------
 // Get all students in admin's school
@@ -566,7 +567,7 @@ export const updateAdminSettings = async (req, res) => {
           defaultFee: defaultFee,
         }, { new: true });
         return res.json({ message: 'Fee settings updated successfully.' });
-      }
+      } 
         
       case 'academic': {
         const { gradingSystem, termStart, termEnd } = data;
@@ -663,10 +664,10 @@ export const sendPaymentReminders = async (req, res) => {
         shouldInclude = true;
       }
 
-      if (shouldInclude && student.parentWhatsApp) {
+      if (shouldInclude && student.parentPhone) {
         targetStudents.push({
           name: student.name,
-          parentWhatsApp: student.parentWhatsApp,
+          parentWhatsApp: student.parentPhone,
           classFee,
           amountPaid,
           balance: classFee - amountPaid,
@@ -677,7 +678,7 @@ export const sendPaymentReminders = async (req, res) => {
 
     if (targetStudents.length === 0) {
       return res.status(400).json({ 
-        message: 'No students with WhatsApp numbers found in this category.' 
+        message: 'No students with Phone numbers found in this category.' 
       });
     }
 
@@ -709,33 +710,27 @@ export const sendPaymentReminders = async (req, res) => {
       }
 
       return {
-        to: student.parentWhatsApp,
+        to: student.parentPhone,
         message: messageText
       };
     });
-
-    // LOG MESSAGES (Replace with actual WhatsApp API integration)
-    console.log(`[SendPaymentReminders] Sending ${messages.length} messages to ${category} category`);
-    
-    // UNCOMMENT AND CONFIGURE FOR TWILIO:
-    /*
-    const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
-    const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
-    const twilioWhatsAppNumber = process.env.TWILIO_WHATSAPP_NUMBER;
-
-    const twilio = require('twilio');
-    const client = twilio(twilioAccountSid, twilioAuthToken);
-
-    const sendPromises = messages.map(msg => 
-      client.messages.create({
-        from: `whatsapp:${twilioWhatsAppNumber}`,
-        to: `whatsapp:${msg.to}`,
-        body: msg.message
-      })
-    );
-
-    await Promise.all(sendPromises);
-    */
+//sms service
+try {
+  const results = await SMSService.sendBulkMessages(messages);
+  
+  const successCount = results.filter(r => r.success).length;
+  const failCount = results.filter(r => !r.success).length;
+  
+  res.json({ 
+    message: `Sent ${successCount}/${messages.length} messages successfully.`,
+    sentCount: successCount,
+    failedCount: failCount,
+    details: results
+  });
+} catch (error) {
+  console.error('[SendPaymentReminders Error]', error);
+  res.status(500).json({ message: 'Failed to send reminders.' });
+}
 
     res.json({ 
       message: `Payment reminders sent to ${targetStudents.length} parents.`,
