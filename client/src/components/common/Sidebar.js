@@ -38,12 +38,13 @@ const Sidebar = ({ user, role }) => {
   const adminLinks = [
     { path: "/admin", label: "Home" },
     { path: "/admin/review-results", label: "Review Results" },
-    { path: "/admin/settings", label: "Settings" },
     { path: "/admin/manage-teachers", label: "Manage Teachers" },
     { path: "/admin/manage-students", label: "Manage Students" },
     { path: "/admin/manage-classes", label: "Manage Classes" },
     { path: "/admin/manage-courses", label: "Manage Courses" },
     { path: "/admin/payment-setup", label: "Payment Setup" },
+    { path: "/admin/payment-history", label: "Payment History" },
+    { path: "/admin/settings", label: "Settings" },
   ];
 
   // Dynamic teacher links based on their classes
