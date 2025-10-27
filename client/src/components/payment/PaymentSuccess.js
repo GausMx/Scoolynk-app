@@ -7,7 +7,7 @@ const { REACT_APP_API_URL } = process.env;
 
 const PaymentSuccess = () => {
   const { token } = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams] = useSearchParams()      ;
   const navigate = useNavigate();
   const [verifying, setVerifying] = useState(true);
   const [verified, setVerified] = useState(false);

@@ -1,8 +1,11 @@
-// src/components/Admin/Settings.js
+// src/components/Admin/Settings.js - UPDATED WITH PAYMENT LINK MODAL
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Settings as SettingsIcon, User, Lock, CreditCard, Eye, EyeOff, Copy, Check, Send, Users, DollarSign } from 'lucide-react';
+
+// NEW: Import the payment link modal
+import SendPaymentLinkModal from './SendPaymentLinkModal';
 
 const { REACT_APP_API_URL } = process.env;
 
@@ -44,6 +47,9 @@ const Settings = () => {
     unpaid: []
   });
   const [sendingMessages, setSendingMessages] = useState(false);
+
+  // NEW: State for payment link modal
+  const [selectedStudentForPayment, setSelectedStudentForPayment] = useState(null);
 
   // School code state
   const [schoolCode, setSchoolCode] = useState('');
@@ -223,6 +229,22 @@ const Settings = () => {
     }
   };
 
+  // NEW: Handle sending payment link to individual student
+  const handleSendPaymentLink = (student) => {
+    setSelectedStudentForPayment(student);
+  };
+
+  // NEW: Handle payment link modal close
+  const handlePaymentModalClose = () => {
+    setSelectedStudentForPayment(null);
+  };
+
+  // NEW: Handle payment link success
+  const handlePaymentLinkSuccess = () => {
+    fetchPaymentData(); // Refresh payment data
+    setSelectedStudentForPayment(null);
+  };
+
   // Copy school code
   const copySchoolCode = () => {
     navigator.clipboard.writeText(schoolCode);
@@ -235,7 +257,7 @@ const Settings = () => {
     setShowPasswords({ ...showPasswords, [field]: !showPasswords[field] });
   };
 
-  // Profile Section
+  // Profile Section (unchanged)
   const renderProfileSection = () => (
     <form onSubmit={handleProfileUpdate}>
       <div className="row g-4">
@@ -386,7 +408,7 @@ const Settings = () => {
     </form>
   );
 
-  // Security Section with password toggles
+  // Security Section (unchanged)
   const renderSecuritySection = () => (
     <form onSubmit={handleSecurityUpdate}>
       <div className="row justify-content-center">
@@ -511,7 +533,7 @@ const Settings = () => {
     </form>
   );
 
-  // Fees Section
+  // Fees Section (unchanged)
   const renderFeesSection = () => (
     <form onSubmit={handleFeesUpdate}>
       <div className="row justify-content-center">
@@ -572,7 +594,7 @@ const Settings = () => {
     </form>
   );
 
-  // Payments Section
+  // Payments Section - UPDATED WITH PAYMENT LINK BUTTON
   const renderPaymentsSection = () => {
     const renderStudentList = (students, title, badgeClass, category) => (
       <div className="card border-0 shadow-sm rounded-4 p-4 mb-4">
@@ -588,7 +610,7 @@ const Settings = () => {
               disabled={sendingMessages}
             >
               <Send size={16} className="me-1" />
-              {sendingMessages ? 'Sending...' : 'Send Reminders'}
+              {sendingMessages ? 'Sending...' : 'Send Bulk Reminders'}
             </button>
           )}
         </div>
@@ -600,23 +622,48 @@ const Settings = () => {
                 <tr>
                   <th>Student Name</th>
                   <th>Class</th>
-                  <th>Parent WhatsApp</th>
+                  <th>Parent Phone</th> {/* CHANGED: WhatsApp to Phone */}
                   <th>Fee</th>
                   <th>Amount Paid</th>
+                  <th className="text-center">Actions</th> {/* NEW: Actions column */}
                 </tr>
               </thead>
               <tbody>
-                {students.map((student) => (
-                  <tr key={student._id}>
-                    <td className="fw-semibold">{student.name}</td>
-                    <td>
-                      <span className="badge bg-info text-dark">{student.classId?.name}</span>
-                    </td>
-                    <td>{student.parentWhatsApp || 'Not provided'}</td>
-                    <td>₦{student.classFee?.toLocaleString()}</td>
-                    <td>₦{student.amountPaid?.toLocaleString() || 0}</td>
-                  </tr>
-                ))}
+                {students.map((student) => {
+                  const balance = (student.classFee || 0) - (student.amountPaid || 0);
+                  
+                  return (
+                    <tr key={student._id}>
+                      <td className="fw-semibold">{student.name}</td>
+                      <td>
+                        <span className="badge bg-info text-dark">{student.classId?.name}</span>
+                      </td>
+                      <td>
+                        <small className="text-muted">
+                          {student.parentPhone || 'Not provided'} {/* CHANGED */}
+                        </small>
+                      </td>
+                      <td>₦{student.classFee?.toLocaleString()}</td>
+                      <td>
+                        <span className={student.amountPaid > 0 ? 'text-success' : 'text-muted'}>
+                          ₦{student.amountPaid?.toLocaleString() || 0}
+                        </span>
+                      </td>
+                      <td className="text-center">
+                        {/* NEW: Send Payment Link Button */}
+                        <button
+                          className="btn btn-sm btn-primary rounded-3"
+                          onClick={() => handleSendPaymentLink(student)}
+                          disabled={balance <= 0}
+                          title={balance > 0 ? 'Send payment link' : 'No outstanding balance'}
+                        >
+                          <Send size={14} className="me-1" />
+                          Send Link
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -741,6 +788,15 @@ const Settings = () => {
         {activeTab === 'fees' && renderFeesSection()}
         {activeTab === 'payments' && renderPaymentsSection()}
       </div>
+
+      {/* NEW: Payment Link Modal - Only shows when a student is selected */}
+      {selectedStudentForPayment && (
+        <SendPaymentLinkModal
+          student={selectedStudentForPayment}
+          onClose={handlePaymentModalClose}
+          onSuccess={handlePaymentLinkSuccess}
+        />
+      )}
     </div>
   );
 };
