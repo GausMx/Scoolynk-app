@@ -1,3 +1,5 @@
+// src/components/Admin/SendPaymentLinkModal.js - COMPLETE FILE
+
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Send, X, DollarSign, User, CreditCard, AlertCircle, Check, Loader } from 'lucide-react';
@@ -214,7 +216,7 @@ const SendPaymentLinkModal = ({ student, onClose, onSuccess }) => {
               <small className="text-dark">
                 <strong>Payment Link Details:</strong>
                 <ul className="mb-0 mt-2">
-                  <li>Valid for 7 days</li>
+                  <li>Valid until payment is completed (no expiry)</li>
                   <li>Parent can pay via Card, USSD, or Bank Transfer</li>
                   <li>Payment goes directly to school account</li>
                   <li>Student record updates automatically</li>
@@ -238,7 +240,7 @@ const SendPaymentLinkModal = ({ student, onClose, onSuccess }) => {
             >
               {loading ? (
                 <>
-                  <Loader size={16} className="me-2 spinner-border spinner-border-sm" />
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                   Processing...
                 </>
               ) : (
@@ -264,85 +266,4 @@ const SendPaymentLinkModal = ({ student, onClose, onSuccess }) => {
   );
 };
 
-// Example usage component showing how to integrate with student list
-const StudentListWithPaymentLink = () => {
-  const [students, setStudents] = useState([
-    // Example data - replace with actual data from your API
-    {
-      _id: '1',
-      name: 'John Doe',
-      regNo: 'STU001',
-      classId: { name: 'JSS 1', fee: 50000 },
-      amountPaid: 20000,
-      parentPhone: '+2348012345678',
-      parentName: 'Mr. Doe'
-    }
-  ]);
-  const [selectedStudent, setSelectedStudent] = useState(null);
-
-  return (
-    <div className="container py-4">
-      <h4 className="mb-4">Students - Payment Links</h4>
-      
-      <div className="table-responsive">
-        <table className="table table-hover align-middle">
-          <thead className="table-light">
-            <tr>
-              <th>Student Name</th>
-              <th>Reg No</th>
-              <th>Class</th>
-              <th>Fee</th>
-              <th>Paid</th>
-              <th>Balance</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map((student) => {
-              const balance = (student.classId?.fee || 0) - (student.amountPaid || 0);
-              return (
-                <tr key={student._id}>
-                  <td className="fw-semibold">{student.name}</td>
-                  <td>{student.regNo}</td>
-                  <td>
-                    <span className="badge bg-info text-dark">{student.classId?.name}</span>
-                  </td>
-                  <td>₦{(student.classId?.fee || 0).toLocaleString()}</td>
-                  <td className="text-success">₦{(student.amountPaid || 0).toLocaleString()}</td>
-                  <td className={balance > 0 ? 'text-danger fw-bold' : 'text-success'}>
-                    ₦{balance.toLocaleString()}
-                  </td>
-                  <td>
-                    <button
-                      className="btn btn-sm btn-primary rounded-3"
-                      onClick={() => setSelectedStudent(student)}
-                      disabled={balance <= 0}
-                    >
-                      <Send size={14} className="me-1" />
-                      Send Link
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Modal */}
-      {selectedStudent && (
-        <SendPaymentLinkModal
-          student={selectedStudent}
-          onClose={() => setSelectedStudent(null)}
-          onSuccess={() => {
-            console.log('Payment link sent successfully');
-            // Refresh student list if needed
-          }}
-        />
-      )}
-    </div>
-  );
-};
-
 export default SendPaymentLinkModal;
-export { StudentListWithPaymentLink };

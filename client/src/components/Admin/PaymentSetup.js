@@ -1,3 +1,5 @@
+// src/components/Admin/PaymentSetup.js - CORRECTED VERSION
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Building, Check, AlertCircle } from 'lucide-react';
@@ -44,13 +46,13 @@ const PaymentSetup = () => {
       setIsConfigured(res.data.isConfigured);
       setConfig(res.data);
       
+      // PROPERLY set ALL form fields if configured
       if (res.data.isConfigured && res.data.bankDetails) {
         setFormData({
-          ...formData,
-          accountNumber: res.data.bankDetails.accountNumber,
-          accountName: res.data.bankDetails.accountName,
-          bankCode: res.data.bankDetails.bankCode,
-          bankName: res.data.bankDetails.bankName
+          accountNumber: res.data.bankDetails.accountNumber || '',
+          accountName: res.data.bankDetails.accountName || '',
+          bankCode: res.data.bankDetails.bankCode || '',
+          bankName: res.data.bankDetails.bankName || ''
         });
       }
     } catch (err) {
@@ -149,60 +151,115 @@ const PaymentSetup = () => {
               </div>
 
               <form onSubmit={handleSubmit}>
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">Select Bank *</label>
-                  <select
-                    className="form-select rounded-3"
-                    value={formData.bankCode}
-                    onChange={(e) => {
-                      const selectedBank = banks.find(b => b.code === e.target.value);
-                      setFormData({
-                        ...formData,
-                        bankCode: e.target.value,
-                        bankName: selectedBank?.name || '',
-                        accountName: '' // Reset verification
-                      });
-                    }}
-                    required
-                  >
-                    <option value="">-- Select Bank --</option>
-                    {banks.map(bank => (
-                      <option key={bank.code} value={bank.code}>{bank.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">Account Number *</label>
-                  <div className="input-group">
+                {/* Bank Code (Display if configured) */}
+                {isConfigured && formData.bankCode && (
+                  <div className="mb-3">
+                    <label className="form-label fw-semibold">Bank Code</label>
                     <input
                       type="text"
-                      className="form-control rounded-start-3"
-                      value={formData.accountNumber}
-                      onChange={(e) => setFormData({ 
-                        ...formData, 
-                        accountNumber: e.target.value.replace(/\D/g, ''),
-                        accountName: '' // Reset verification
-                      })}
-                      maxLength={10}
-                      placeholder="0123456789"
-                      required
+                      className="form-control rounded-3 bg-light"
+                      value={formData.bankCode}
+                      disabled
+                      readOnly
                     />
-                    <button
-                      type="button"
-                      className="btn btn-primary rounded-end-3"
-                      onClick={verifyAccount}
-                      disabled={loading || !formData.bankCode || formData.accountNumber.length !== 10}
-                    >
-                      {loading ? 'Verifying...' : 'Verify'}
-                    </button>
+                    <small className="text-muted">Current configured bank code</small>
                   </div>
+                )}
+
+                {/* Bank Name */}
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">
+                    {isConfigured ? 'Current Bank' : 'Select Bank'} *
+                  </label>
+                  {isConfigured && formData.bankName ? (
+                    <>
+                      <input
+                        type="text"
+                        className="form-control rounded-3 bg-light"
+                        value={formData.bankName}
+                        disabled
+                        readOnly
+                      />
+                      <small className="text-muted">
+                        To change bank, contact support or update below
+                      </small>
+                    </>
+                  ) : (
+                    <select
+                      className="form-select rounded-3"
+                      value={formData.bankCode}
+                      onChange={(e) => {
+                        const selectedBank = banks.find(b => b.code === e.target.value);
+                        setFormData({
+                          ...formData,
+                          bankCode: e.target.value,
+                          bankName: selectedBank?.name || '',
+                          accountName: '' // Reset verification
+                        });
+                      }}
+                      required
+                    >
+                      <option value="">-- Select Bank --</option>
+                      {banks.map(bank => (
+                        <option key={bank.code} value={bank.code}>{bank.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
+                {/* Account Number */}
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">
+                    Account Number *
+                  </label>
+                  {isConfigured && formData.accountNumber ? (
+                    <>
+                      <input
+                        type="text"
+                        className="form-control rounded-3 bg-light"
+                        value={formData.accountNumber}
+                        disabled
+                        readOnly
+                      />
+                      <small className="text-muted">
+                        Current configured account number
+                      </small>
+                    </>
+                  ) : (
+                    <div className="input-group">
+                      <input
+                        type="text"
+                        className="form-control rounded-start-3"
+                        value={formData.accountNumber}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          accountNumber: e.target.value.replace(/\D/g, ''),
+                          accountName: '' // Reset verification
+                        })}
+                        maxLength={10}
+                        placeholder="0123456789"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-primary rounded-end-3"
+                        onClick={verifyAccount}
+                        disabled={loading || !formData.bankCode || formData.accountNumber.length !== 10}
+                      >
+                        {loading ? 'Verifying...' : 'Verify'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Account Name */}
                 {formData.accountName && (
-                  <div className="alert alert-success rounded-3 mb-3">
-                    <Check size={18} className="me-2" />
-                    <strong>Account Name:</strong> {formData.accountName}
+                  <div className="mb-3">
+                    <label className="form-label fw-semibold">Account Name</label>
+                    <div className="alert alert-success rounded-3 mb-0">
+                      <Check size={18} className="me-2" />
+                      <strong>{formData.accountName}</strong>
+                    </div>
                   </div>
                 )}
 
@@ -218,13 +275,26 @@ const PaymentSetup = () => {
                   </small>
                 </div>
 
-                <button
-                  type="submit"
-                  className="btn btn-success w-100 rounded-3"
-                  disabled={loading || !formData.accountName}
-                >
-                  {loading ? 'Processing...' : (isConfigured ? 'Update Account' : 'Configure Account')}
-                </button>
+                {/* Show update button only if not configured or if changing */}
+                {!isConfigured && (
+                  <button
+                    type="submit"
+                    className="btn btn-success w-100 rounded-3"
+                    disabled={loading || !formData.accountName}
+                  >
+                    {loading ? 'Processing...' : 'Configure Account'}
+                  </button>
+                )}
+
+                {isConfigured && (
+                  <div className="alert alert-warning rounded-3">
+                    <AlertCircle size={18} className="me-2" />
+                    <small>
+                      <strong>Account Already Configured.</strong> To update your payment account, 
+                      please contact support for security verification.
+                    </small>
+                  </div>
+                )}
               </form>
             </div>
           </div>
