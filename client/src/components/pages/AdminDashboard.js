@@ -12,6 +12,7 @@ import ManageStudents from '../Admin/ManageStudents';
 import ManageClasses from '../Admin/ManageClasses';
 import ManageCourses from '../Admin/ManageCourses';
 import PaymentSetup from '../Admin/PaymentSetup';
+import PaymentHistory from '../Admin/PaymentHistory';
 const AdminDashboard = ({ user }) => {
   return (
     <Layout user={user} role="admin">
@@ -24,6 +25,7 @@ const AdminDashboard = ({ user }) => {
         <Route path="/manage-classes" element={<ManageClasses />} />
         <Route path="/manage-courses" element={<ManageCourses />} />
         <Route path="/payment-setup" element={<PaymentSetup/>} />
+        <Route path="/payment-history" element={<PaymentHistory/>} />
       </Routes>
     </Layout>
   );
