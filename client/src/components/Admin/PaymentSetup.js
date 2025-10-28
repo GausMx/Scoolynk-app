@@ -1,4 +1,4 @@
-// src/components/Admin/PaymentSetup.js - CORRECTED VERSION
+// src/components/Admin/PaymentSetup.js - COMPLETE ENHANCED VERSION
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -194,7 +194,7 @@ const PaymentSetup = () => {
                           ...formData,
                           bankCode: e.target.value,
                           bankName: selectedBank?.name || '',
-                          accountName: '' // Reset verification
+                          accountName: ''
                         });
                       }}
                       required
@@ -234,7 +234,7 @@ const PaymentSetup = () => {
                         onChange={(e) => setFormData({ 
                           ...formData, 
                           accountNumber: e.target.value.replace(/\D/g, ''),
-                          accountName: '' // Reset verification
+                          accountName: ''
                         })}
                         maxLength={10}
                         placeholder="0123456789"
@@ -271,11 +271,12 @@ const PaymentSetup = () => {
                       <li>Money goes directly to your bank account</li>
                       <li>Platform fee ({config?.paymentSettings?.platformFeePercentage || 5}%) is deducted automatically</li>
                       <li>You receive settlements within 24 hours</li>
+                      <li>Payment links remain valid until payment is completed (no expiry)</li>
                     </ul>
                   </small>
                 </div>
 
-                {/* Show update button only if not configured or if changing */}
+                {/* Show configure button only if not configured */}
                 {!isConfigured && (
                   <button
                     type="submit"
@@ -286,8 +287,9 @@ const PaymentSetup = () => {
                   </button>
                 )}
 
+                {/* Show message if already configured */}
                 {isConfigured && (
-                  <div className="alert alert-warning rounded-3">
+                  <div className="alert alert-warning rounded-3 mb-0">
                     <AlertCircle size={18} className="me-2" />
                     <small>
                       <strong>Account Already Configured.</strong> To update your payment account, 
@@ -298,6 +300,37 @@ const PaymentSetup = () => {
               </form>
             </div>
           </div>
+
+          {/* Display Summary if Configured */}
+          {isConfigured && (
+            <div className="card border-0 shadow-sm rounded-4 mt-4 bg-light">
+              <div className="card-body p-4">
+                <h5 className="text-primary mb-3">Configuration Summary</h5>
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <small className="text-muted d-block mb-1">Bank Code</small>
+                    <strong>{formData.bankCode || 'N/A'}</strong>
+                  </div>
+                  <div className="col-md-6">
+                    <small className="text-muted d-block mb-1">Bank Name</small>
+                    <strong>{formData.bankName || 'N/A'}</strong>
+                  </div>
+                  <div className="col-md-6">
+                    <small className="text-muted d-block mb-1">Account Number</small>
+                    <strong>{formData.accountNumber || 'N/A'}</strong>
+                  </div>
+                  <div className="col-md-6">
+                    <small className="text-muted d-block mb-1">Account Name</small>
+                    <strong>{formData.accountName || 'N/A'}</strong>
+                  </div>
+                  <div className="col-12">
+                    <small className="text-muted d-block mb-1">Platform Fee</small>
+                    <strong>{config?.paymentSettings?.platformFeePercentage || 5}%</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

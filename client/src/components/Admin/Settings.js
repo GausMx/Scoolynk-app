@@ -1,10 +1,10 @@
-// src/components/Admin/Settings.js - UPDATED WITH PAYMENT LINK MODAL
+// src/components/Admin/Settings.js - COMPLETE FINAL VERSION
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Settings as SettingsIcon, User, Lock, CreditCard, Eye, EyeOff, Copy, Check, Send, Users, DollarSign } from 'lucide-react';
 
-// NEW: Import the payment link modal
+// Import the payment link modal
 import SendPaymentLinkModal from './SendPaymentLinkModal';
 
 const { REACT_APP_API_URL } = process.env;
@@ -48,7 +48,7 @@ const Settings = () => {
   });
   const [sendingMessages, setSendingMessages] = useState(false);
 
-  // NEW: State for payment link modal
+  // State for payment link modal
   const [selectedStudentForPayment, setSelectedStudentForPayment] = useState(null);
 
   // School code state
@@ -157,7 +157,6 @@ const Settings = () => {
   const handleSecurityUpdate = async (e) => {
     e.preventDefault();
     
-    // Validation
     if (security.newPassword !== security.confirmPassword) {
       showMessage('error', 'New passwords do not match');
       return;
@@ -229,19 +228,19 @@ const Settings = () => {
     }
   };
 
-  // NEW: Handle sending payment link to individual student
+  // Handle sending payment link to individual student
   const handleSendPaymentLink = (student) => {
     setSelectedStudentForPayment(student);
   };
 
-  // NEW: Handle payment link modal close
+  // Handle payment link modal close
   const handlePaymentModalClose = () => {
     setSelectedStudentForPayment(null);
   };
 
-  // NEW: Handle payment link success
+  // Handle payment link success
   const handlePaymentLinkSuccess = () => {
-    fetchPaymentData(); // Refresh payment data
+    fetchPaymentData();
     setSelectedStudentForPayment(null);
   };
 
@@ -257,11 +256,10 @@ const Settings = () => {
     setShowPasswords({ ...showPasswords, [field]: !showPasswords[field] });
   };
 
-  // Profile Section (unchanged)
+  // Profile Section
   const renderProfileSection = () => (
     <form onSubmit={handleProfileUpdate}>
       <div className="row g-4">
-        {/* School Info Card */}
         <div className="col-12">
           <div className="card border-0 shadow-sm rounded-4 p-4">
             <h5 className="text-primary mb-4">
@@ -306,7 +304,6 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* Admin Info Card (Read-only) */}
         <div className="col-12">
           <div className="card border-0 shadow-sm rounded-4 p-4 bg-light">
             <h5 className="text-secondary mb-4">
@@ -342,7 +339,6 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* School Code Card */}
         <div className="col-12">
           <div className="card border-0 shadow-sm rounded-4 p-4 border-start border-primary border-5">
             <h5 className="text-primary mb-3">
@@ -385,7 +381,6 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* Submit Button */}
         <div className="col-12">
           <div className="d-flex justify-content-end">
             <button
@@ -408,7 +403,7 @@ const Settings = () => {
     </form>
   );
 
-  // Security Section (unchanged)
+  // Security Section
   const renderSecuritySection = () => (
     <form onSubmit={handleSecurityUpdate}>
       <div className="row justify-content-center">
@@ -533,7 +528,7 @@ const Settings = () => {
     </form>
   );
 
-  // Fees Section (unchanged)
+  // Fees Section
   const renderFeesSection = () => (
     <form onSubmit={handleFeesUpdate}>
       <div className="row justify-content-center">
@@ -594,8 +589,32 @@ const Settings = () => {
     </form>
   );
 
-  // Payments Section - UPDATED WITH PAYMENT LINK BUTTON
+  // Payments Section WITH BULK SEND FEATURE
   const renderPaymentsSection = () => {
+    
+    // NEW: Send bulk payment links to ALL students with balance
+    const sendBulkPaymentLinks = async () => {
+      if (!window.confirm('Send payment links to ALL students with outstanding balance? This may take a few minutes.')) {
+        return;
+      }
+
+      try {
+        setSendingMessages(true);
+        const res = await axios.post(
+          `${REACT_APP_API_URL}/api/payments/send-bulk-links`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        showMessage('success', res.data.message);
+        fetchPaymentData();
+      } catch (err) {
+        showMessage('error', err.response?.data?.message || 'Failed to send bulk payment links');
+      } finally {
+        setSendingMessages(false);
+      }
+    };
+
     const renderStudentList = (students, title, badgeClass, category) => (
       <div className="card border-0 shadow-sm rounded-4 p-4 mb-4">
         <div className="d-flex justify-content-between align-items-center mb-3">
@@ -622,10 +641,10 @@ const Settings = () => {
                 <tr>
                   <th>Student Name</th>
                   <th>Class</th>
-                  <th>Parent Phone</th> {/* CHANGED: WhatsApp to Phone */}
+                  <th>Parent Phone</th>
                   <th>Fee</th>
                   <th>Amount Paid</th>
-                  <th className="text-center">Actions</th> {/* NEW: Actions column */}
+                  <th className="text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -640,7 +659,7 @@ const Settings = () => {
                       </td>
                       <td>
                         <small className="text-muted">
-                          {student.parentPhone || 'Not provided'} {/* CHANGED */}
+                          {student.parentPhone || 'Not provided'}
                         </small>
                       </td>
                       <td>₦{student.classFee?.toLocaleString()}</td>
@@ -650,7 +669,6 @@ const Settings = () => {
                         </span>
                       </td>
                       <td className="text-center">
-                        {/* NEW: Send Payment Link Button */}
                         <button
                           className="btn btn-sm btn-primary rounded-3"
                           onClick={() => handleSendPaymentLink(student)}
@@ -677,6 +695,43 @@ const Settings = () => {
 
     return (
       <div>
+        {/* NEW: Bulk Send Payment Links Banner */}
+        <div className="card border-0 shadow-sm rounded-4 mb-4 bg-gradient" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+          <div className="card-body p-4 text-white">
+            <div className="row align-items-center">
+              <div className="col-md-8">
+                <h5 className="mb-2">
+                  <Send size={24} className="me-2" />
+                  Send Payment Links to All Students
+                </h5>
+                <p className="mb-0 opacity-75">
+                  Send payment links via SMS to ALL students with outstanding balance. 
+                  Links remain valid until payment is completed (no expiry).
+                </p>
+              </div>
+              <div className="col-md-4 text-end">
+                <button
+                  className="btn btn-light btn-lg rounded-3 px-4"
+                  onClick={sendBulkPaymentLinks}
+                  disabled={sendingMessages}
+                >
+                  {sendingMessages ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2"></span>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={18} className="me-2" />
+                      Send All Links
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Stats Cards */}
         <div className="row g-3 mb-4">
           <div className="col-md-4">
@@ -724,7 +779,6 @@ const Settings = () => {
 
   return (
     <div className="container-fluid py-4">
-      {/* Header */}
       <div className="mb-4">
         <h2 className="fw-bold text-primary d-flex align-items-center">
           <SettingsIcon size={32} className="me-2" />
@@ -733,7 +787,6 @@ const Settings = () => {
         <p className="text-muted">Manage your school configuration and preferences</p>
       </div>
 
-      {/* Status Message */}
       {message.text && (
         <div className={`alert alert-${message.type === 'success' ? 'success' : 'danger'} rounded-3 alert-dismissible fade show`} role="alert">
           {message.text}
@@ -741,7 +794,6 @@ const Settings = () => {
         </div>
       )}
 
-      {/* Tabs */}
       <ul className="nav nav-pills mb-4 gap-2">
         <li className="nav-item">
           <button
@@ -781,7 +833,6 @@ const Settings = () => {
         </li>
       </ul>
 
-      {/* Tab Content */}
       <div className="tab-content">
         {activeTab === 'profile' && renderProfileSection()}
         {activeTab === 'security' && renderSecuritySection()}
@@ -789,7 +840,6 @@ const Settings = () => {
         {activeTab === 'payments' && renderPaymentsSection()}
       </div>
 
-      {/* NEW: Payment Link Modal - Only shows when a student is selected */}
       {selectedStudentForPayment && (
         <SendPaymentLinkModal
           student={selectedStudentForPayment}
