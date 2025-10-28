@@ -1,4 +1,4 @@
-// server/controllers/adminController.js - COMPLETE FILE
+// server/controllers/adminController.js - COMPLETE CORRECTED FILE
 
 import bcrypt from 'bcrypt';
 import User from '../models/User.js';
@@ -7,7 +7,7 @@ import Result from '../models/Result.js';
 import Class from '../models/Class.js';
 import Course from '../models/Course.js';
 import Student from '../models/Student.js';
-import SMSService from '../services/smsService.js';
+import SMSService from '../services/smsService.js'; // ✅ FIXED
 
 // -------------------------
 // Get all students in admin's school
@@ -30,7 +30,7 @@ export const getStudents = async (req, res) => {
 // -------------------------
 export const createStudent = async (req, res) => {
   try {
-    const { name, regNo, classId, parentWhatsApp, parentName, parentEmail, amountPaid } = req.body;
+    const { name, regNo, classId, parentPhone, parentName, parentEmail, amountPaid } = req.body; // ✅ FIXED
 
     if (!name || !regNo || !classId) {
       return res.status(400).json({ message: 'Name, registration number, and class are required.' });
@@ -53,7 +53,7 @@ export const createStudent = async (req, res) => {
       regNo,
       classId,
       schoolId: req.user.schoolId,
-      parentWhatsApp: parentWhatsApp || '',
+      parentPhone: parentPhone || '', // ✅ FIXED
       parentName: parentName || '',
       parentEmail: parentEmail || '',
       amountPaid: amountPaid || 0
@@ -84,7 +84,7 @@ export const createStudent = async (req, res) => {
 export const updateStudent = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, regNo, classId, parentWhatsApp, parentName, parentEmail, amountPaid } = req.body;
+    const { name, regNo, classId, parentPhone, parentName, parentEmail, amountPaid } = req.body; // ✅ FIXED
 
     // Find student
     const student = await Student.findOne({ _id: id, schoolId: req.user.schoolId });
@@ -126,7 +126,7 @@ export const updateStudent = async (req, res) => {
     student.name = name || student.name;
     student.regNo = regNo || student.regNo;
     student.classId = classId || student.classId;
-    student.parentWhatsApp = parentWhatsApp !== undefined ? parentWhatsApp : student.parentWhatsApp;
+    student.parentPhone = parentPhone !== undefined ? parentPhone : student.parentPhone; // ✅ FIXED
     student.parentName = parentName !== undefined ? parentName : student.parentName;
     student.parentEmail = parentEmail !== undefined ? parentEmail : student.parentEmail;
     student.amountPaid = amountPaid !== undefined ? amountPaid : student.amountPaid;
@@ -589,7 +589,7 @@ export const updateAdminSettings = async (req, res) => {
 };
 
 // -------------------------
-// NEW: Get Payment Status (Categorized by payment status)
+// Get Payment Status (Categorized by payment status)
 // -------------------------
 export const getPaymentStatus = async (req, res) => {
   try {
@@ -629,7 +629,7 @@ export const getPaymentStatus = async (req, res) => {
 };
 
 // -------------------------
-// NEW: Send WhatsApp Payment Reminders
+// Send Payment Reminders - ✅ CORRECTED
 // -------------------------
 export const sendPaymentReminders = async (req, res) => {
   try {
@@ -664,10 +664,12 @@ export const sendPaymentReminders = async (req, res) => {
         shouldInclude = true;
       }
 
+      // ✅ FIXED: Use parentPhone consistently
       if (shouldInclude && student.parentPhone) {
         targetStudents.push({
           name: student.name,
-          parentWhatsApp: student.parentPhone,
+          parentName: student.parentName, // ✅ ADDED
+          parentPhone: student.parentPhone, // ✅ FIXED
           classFee,
           amountPaid,
           balance: classFee - amountPaid,
@@ -678,32 +680,33 @@ export const sendPaymentReminders = async (req, res) => {
 
     if (targetStudents.length === 0) {
       return res.status(400).json({ 
-        message: 'No students with Phone numbers found in this category.' 
+        message: 'No students with phone numbers found in this category.' 
       });
     }
 
     const messages = targetStudents.map(student => {
-      let messageText = '';
       const formattedFee = `₦${student.classFee.toLocaleString()}`;
       const formattedPaid = `₦${student.amountPaid.toLocaleString()}`;
       const formattedBalance = `₦${student.balance.toLocaleString()}`;
 
+      let messageText = '';
+
       if (category === 'paid') {
-        messageText = `Dear Parent/Guardian of ${student.name},\n\n` +
-          `Thank you for completing the payment of ${formattedFee} for ${student.className}.\n\n` +
+        messageText = `Dear ${student.parentName || 'Parent'},\n\n` +
+          `Thank you for completing payment of ${formattedFee} for ${student.name} (${student.className}).\n\n` +
           `We appreciate your prompt payment.\n\n` +
           `Best regards,\n${school.name}\n${school.phone}`;
       } else if (category === 'partial') {
-        messageText = `Dear Parent/Guardian of ${student.name},\n\n` +
-          `This is a reminder regarding school fees for ${student.className}.\n\n` +
+        messageText = `Dear ${student.parentName || 'Parent'},\n\n` +
+          `This is a reminder regarding school fees for ${student.name} (${student.className}).\n\n` +
           `Total Fee: ${formattedFee}\n` +
           `Amount Paid: ${formattedPaid}\n` +
           `Balance: ${formattedBalance}\n\n` +
           `Please complete the payment at your earliest convenience.\n\n` +
           `Best regards,\n${school.name}\n${school.phone}`;
       } else {
-        messageText = `Dear Parent/Guardian of ${student.name},\n\n` +
-          `This is a reminder that school fees for ${student.className} have not been paid.\n\n` +
+        messageText = `Dear ${student.parentName || 'Parent'},\n\n` +
+          `This is a reminder that school fees for ${student.name} (${student.className}) have not been paid.\n\n` +
           `Amount Due: ${formattedFee}\n\n` +
           `Please make payment as soon as possible to avoid any inconvenience.\n\n` +
           `Best regards,\n${school.name}\n${school.phone}`;
@@ -714,28 +717,24 @@ export const sendPaymentReminders = async (req, res) => {
         message: messageText
       };
     });
-//sms service
-try {
-  const results = await SMSService.sendBulkMessages(messages);
-  
-  const successCount = results.filter(r => r.success).length;
-  const failCount = results.filter(r => !r.success).length;
-  
-  res.json({ 
-    message: `Sent ${successCount}/${messages.length} messages successfully.`,
-    sentCount: successCount,
-    failedCount: failCount,
-    details: results
-  });
-} catch (error) {
-  console.error('[SendPaymentReminders Error]', error);
-  res.status(500).json({ message: 'Failed to send reminders.' });
-}
 
-    res.json({ 
-      message: `Payment reminders sent to ${targetStudents.length} parents.`,
-      sentCount: targetStudents.length
-    });
+    // ✅ FIXED: Use SMS service
+    try {
+      const results = await SMSService.sendBulkMessages(messages);
+      
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
+      
+      res.json({ 
+        message: `Sent ${successCount}/${messages.length} messages successfully.`,
+        sentCount: successCount,
+        failedCount: failCount,
+        details: results
+      });
+    } catch (error) {
+      console.error('[SendPaymentReminders Error]', error);
+      res.status(500).json({ message: 'Failed to send reminders.' });
+    }
 
   } catch (err) {
     console.error('[SendPaymentReminders]', err);
@@ -744,11 +743,11 @@ try {
 };
 
 // -------------------------
-// NEW: Update Student Payment
+// Update Student Payment - ✅ CORRECTED
 // -------------------------
 export const updateStudentPayment = async (req, res) => {
   try {
-    const { studentId, amountPaid, parentWhatsApp } = req.body;
+    const { studentId, amountPaid, parentPhone } = req.body; // ✅ FIXED
 
     if (!studentId || amountPaid == null) {
       return res.status(400).json({ message: 'Student ID and amount paid are required.' });
@@ -764,8 +763,8 @@ export const updateStudentPayment = async (req, res) => {
     }
 
     student.amountPaid = amountPaid;
-    if (parentWhatsApp) {
-      student.parentWhatsApp = parentWhatsApp;
+    if (parentPhone) {
+      student.parentPhone = parentPhone; // ✅ FIXED
     }
 
     await student.save();

@@ -1,9 +1,11 @@
+// server/controllers/paymentController.js - CORRECTED VERSION
+
 import crypto from 'crypto';
 import Payment from '../models/Payment.js';
 import Student from '../models/Student.js';
 import School from '../models/School.js';
 import paystackService from '../services/paystackService.js';
-import SMSService from '../services/whatsappService.js';
+import SMSService from '../services/smsService.js'; // ✅ FIXED: Correct import
 
 const generatePaymentToken = () => {
   return crypto.randomBytes(32).toString('hex');
@@ -32,8 +34,9 @@ export const createPaymentLink = async (req, res) => {
       paymentToken,
       parentName: student.parentName,
       parentEmail: student.parentEmail,
-      parentPhone: student.parentPhone,
-      metadata: { studentName: student.name, className: student.classId?.name, regNo: student.regNo }
+      parentPhone: student.parentPhone, // ✅ FIXED: Consistent field name
+      metadata: { studentName: student.name, className: student.classId?.name, regNo: student.regNo },
+      expiresAt: null // ✅ FIXED: No expiry
     });
 
     await payment.save();
@@ -56,7 +59,7 @@ export const sendPaymentLinkToParent = async (req, res) => {
 
     const student = await Student.findOne({ _id: studentId, schoolId }).populate('classId', 'name fee');
     if (!student) return res.status(404).json({ message: 'Student not found.' });
-    if (!student.parentWhatsApp) return res.status(400).json({ message: 'No WhatsApp number.' });
+    if (!student.parentPhone) return res.status(400).json({ message: 'No phone number on record.' }); // ✅ FIXED
 
     const school = await School.findById(schoolId);
     const balance = (student.classId?.fee || 0) - (student.amountPaid || 0);
@@ -71,8 +74,9 @@ export const sendPaymentLinkToParent = async (req, res) => {
       paymentToken,
       parentName: student.parentName,
       parentEmail: student.parentEmail,
-      parentWhatsApp: student.parentWhatsApp,
-      metadata: { studentName: student.name, className: student.classId?.name, regNo: student.regNo }
+      parentPhone: student.parentPhone, // ✅ FIXED
+      metadata: { studentName: student.name, className: student.classId?.name, regNo: student.regNo },
+      expiresAt: null // ✅ FIXED: No expiry
     });
 
     await payment.save();
@@ -80,16 +84,16 @@ export const sendPaymentLinkToParent = async (req, res) => {
     const paymentLink = `${process.env.FRONTEND_URL}/payment/${paymentToken}`;
 
     await SMSService.sendPaymentLink({
-      parentPhone: student.parentPhone,
+      parentPhone: student.parentPhone, // ✅ FIXED
       parentName: student.parentName || 'Parent',
       studentName: student.name,
       amount: balance,
       paymentLink,
       schoolName: school.name,
-      dueDate: payment.expiresAt
+      dueDate: null // ✅ FIXED: No due date since no expiry
     });
 
-    res.json({ message: 'Payment link sent.', sentTo: student.parentPhone });
+    res.json({ message: 'Payment link sent.', sentTo: student.parentPhone }); // ✅ FIXED
   } catch (err) {
     console.error('[SendPaymentLink]', err);
     res.status(500).json({ message: 'Failed to send payment link.' });
@@ -112,7 +116,7 @@ export const sendPaymentLinksToAll = async (req, res) => {
       if (category === 'partial' && amountPaid > 0 && balance > 0) return true;
       if (!category && balance > 0) return true;
       return false;
-    }).filter(s => s.parentWhatsApp);
+    }).filter(s => s.parentPhone); // ✅ FIXED
 
     if (targetStudents.length === 0) {
       return res.status(400).json({ message: 'No eligible students found.' });
@@ -133,8 +137,9 @@ export const sendPaymentLinksToAll = async (req, res) => {
           paymentToken,
           parentName: student.parentName,
           parentEmail: student.parentEmail,
-          parentPhone: student.parentPhone,
-          metadata: { studentName: student.name, className: student.classId?.name, regNo: student.regNo }
+          parentPhone: student.parentPhone, // ✅ FIXED
+          metadata: { studentName: student.name, className: student.classId?.name, regNo: student.regNo },
+          expiresAt: null // ✅ FIXED: No expiry
         });
 
         await payment.save();
@@ -142,16 +147,16 @@ export const sendPaymentLinksToAll = async (req, res) => {
         const paymentLink = `${process.env.FRONTEND_URL}/payment/${paymentToken}`;
 
         await SMSService.sendPaymentLink({
-          parentWhatsApp: student.parentWhatsApp,
+          parentPhone: student.parentPhone, // ✅ FIXED
           parentName: student.parentName || 'Parent',
           studentName: student.name,
           amount: balance,
           paymentLink,
           schoolName: school.name,
-          dueDate: payment.expiresAt
+          dueDate: null // ✅ FIXED: No due date
         });
 
-        results.push({ success: true, studentName: student.name, sentTo: student.parentWhatsApp });
+        results.push({ success: true, studentName: student.name, sentTo: student.parentPhone }); // ✅ FIXED
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
         results.push({ success: false, studentName: student.name, error: error.message });
@@ -180,8 +185,9 @@ export const getPaymentDetails = async (req, res) => {
 
     if (!payment) return res.status(404).json({ message: 'Payment not found.' });
     if (payment.status === 'completed') return res.status(400).json({ message: 'Already completed.' });
-    if (new Date() > payment.expiresAt) return res.status(400).json({ message: 'Link expired.' });
-
+    
+    // ✅ FIXED: No expiry check - links are valid until paid
+    
     res.json({
       payment: {
         amount: payment.amount,
@@ -189,7 +195,7 @@ export const getPaymentDetails = async (req, res) => {
         className: payment.metadata.className,
         regNo: payment.metadata.regNo,
         schoolName: payment.schoolId.name,
-        expiresAt: payment.expiresAt
+        expiresAt: payment.expiresAt // Will be null (no expiry)
       }
     });
   } catch (err) {
@@ -206,10 +212,8 @@ export const initializePayment = async (req, res) => {
     if (!payment) return res.status(404).json({ message: 'Payment not found.' });
     if (payment.status === 'completed') return res.status(400).json({ message: 'Already paid.' });
 
-    // Get school
     const school = payment.schoolId;
     
-    // Check if school has payment configured
     if (!school.paystackSubaccountCode) {
       return res.status(400).json({ 
         message: 'School payment account not configured. Please contact school administrator.' 
@@ -218,14 +222,13 @@ export const initializePayment = async (req, res) => {
 
     const reference = paystackService.generateReference(payment.studentId.toString());
 
-    // Initialize with subaccount - MONEY GOES TO SCHOOL!
     const paystackResponse = await paystackService.initializeTransaction({
       email: email || payment.parentEmail || 'noreply@school.com',
       amount: payment.amount,
       reference,
-      subaccount: school.paystackSubaccountCode, // ✅ KEY LINE!
-      transaction_charge: school.paymentSettings?.platformFeePercentage || 5, // Your fee %
-      bearer: 'account', // School pays transaction fees
+      subaccount: school.paystackSubaccountCode,
+      transaction_charge: school.paymentSettings?.platformFeePercentage || 5,
+      bearer: 'account',
       metadata: {
         paymentId: payment._id.toString(),
         studentName: payment.metadata.studentName,
@@ -249,6 +252,7 @@ export const initializePayment = async (req, res) => {
     res.status(500).json({ message: 'Failed to initialize payment.' });
   }
 };
+
 export const verifyPayment = async (req, res) => {
   try {
     const { reference } = req.params;
