@@ -601,7 +601,7 @@ const Settings = () => {
       try {
         setSendingMessages(true);
         const res = await axios.post(
-          `${REACT_APP_API_URL}/api/payments/send-bulk-links`,
+          `${REACT_APP_API_URL}/api/payments/send-bulk`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
