@@ -100,6 +100,8 @@ export const sendPaymentLinkToParent = async (req, res) => {
   }
 };
 
+// paymentController.js - REPLACE sendPaymentLinksToAll function ONLY
+
 export const sendPaymentLinksToAll = async (req, res) => {
   try {
     const { category } = req.body;
@@ -114,9 +116,9 @@ export const sendPaymentLinksToAll = async (req, res) => {
       
       if (category === 'unpaid' && amountPaid === 0 && balance > 0) return true;
       if (category === 'partial' && amountPaid > 0 && balance > 0) return true;
-      if (!category && balance > 0) return true;
+      if (!category && balance > 0) return true; // ALL with balance if no category
       return false;
-    }).filter(s => s.parentPhone); // ✅ FIXED
+    }).filter(s => s.parentPhone); // ✅ FIXED: Check parentPhone
 
     if (targetStudents.length === 0) {
       return res.status(400).json({ message: 'No eligible students found.' });
@@ -139,25 +141,31 @@ export const sendPaymentLinksToAll = async (req, res) => {
           parentEmail: student.parentEmail,
           parentPhone: student.parentPhone, // ✅ FIXED
           metadata: { studentName: student.name, className: student.classId?.name, regNo: student.regNo },
-          expiresAt: null // ✅ FIXED: No expiry
+          expiresAt: null // ✅ No expiry
         });
 
         await payment.save();
 
         const paymentLink = `${process.env.FRONTEND_URL}/payment/${paymentToken}`;
 
+        // ✅ FIXED: Use parentPhone (not parentWhatsApp)
         await SMSService.sendPaymentLink({
-          parentPhone: student.parentPhone, // ✅ FIXED
+          parentPhone: student.parentPhone, // ✅ CORRECTED!
           parentName: student.parentName || 'Parent',
           studentName: student.name,
           amount: balance,
           paymentLink,
           schoolName: school.name,
-          dueDate: null // ✅ FIXED: No due date
+          dueDate: null // ✅ No due date
         });
 
-        results.push({ success: true, studentName: student.name, sentTo: student.parentPhone }); // ✅ FIXED
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        results.push({ 
+          success: true, 
+          studentName: student.name, 
+          sentTo: student.parentPhone // ✅ FIXED
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Rate limit
       } catch (error) {
         results.push({ success: false, studentName: student.name, error: error.message });
       }
@@ -174,7 +182,6 @@ export const sendPaymentLinksToAll = async (req, res) => {
     res.status(500).json({ message: 'Failed to send bulk links.' });
   }
 };
-
 export const getPaymentDetails = async (req, res) => {
   try {
     const { token } = req.params;
