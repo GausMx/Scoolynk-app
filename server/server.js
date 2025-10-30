@@ -8,6 +8,9 @@ import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import connectDB from './config/db.js';
 import subaccountRoutes from './routes/subaccountRoutes.js';
+import ocrRoutes from './routes/ocrRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
+import messageRoutes from './routes/messageRoutes.js';
 import protect from './middleware/authMiddleware.js';
 import subscriptionGuard from './middleware/subscriptionMiddleware.js';
 import requireRole from './middleware/roleMiddleware.js';
@@ -20,8 +23,9 @@ connectDB();
 const app = express();
 
 // Middleware
-app.use(express.json()); // Body parser
-app.use(express.urlencoded({ extended: false }));
+app.use(cors());
+app.use(express.json({ limit: '10mb' })); // ✅ IMPORTANT: Increase limit for base64 images
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // CORS setup
 const allowedOrigins = process.env.CORS_ORIGIN.split(',').map(o => o.trim().replace(/\/$/, ''));
@@ -88,14 +92,15 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/teacher', teacherRoutes);
-app.use('/api/subaccount', subaccountRoutes);
+app.use('/api/subaccount', subaccountRoutes); 
+app.use('/api/ocr', ocrRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/messages', messageRoutes);
 // Test route
 app.post('/test', (req, res) => {
   res.json({ message: 'Test route working!' });
 });
 
-// No frontend serving needed for Netlify frontend
-// Keep only API routes
 console.log('[Prod Config] Frontend is hosted on Netlify, skipping static serving');
 
 

@@ -11,33 +11,29 @@ import {
   bulkAddStudents,
   updateTeacherProfile,
   getMyClassStudents,
-  getClassStudents
+  getClassStudents,
+  updateStudent
 } from '../controllers/teacherController.js';
 
 const router = express.Router();
 
-// Teacher Dashboard
+// Dashboard
 router.get('/dashboard', protect, requireRole('teacher'), getTeacherDashboard);
 
-// Get Classes and Courses for Registration (Public - needs schoolCode)
+// Classes and courses
 router.get('/classes-courses', getClassesAndCourses);
-
-// Get Classes for Authenticated Teacher (for onboarding)
 router.get('/school-classes', protect, requireRole('teacher'), getTeacherSchoolClasses);
 
-// Save Class Teacher Info (Onboarding step)
+// Onboarding
 router.post('/onboarding/class-teacher', protect, requireRole('teacher'), saveClassTeacherInfo);
 
-// Bulk Add Students (with payment fields support)
+// Student management
 router.post('/students/bulk', protect, requireRole('teacher'), bulkAddStudents);
-
-// Update Teacher Profile (Edit classes/courses)
-router.put('/profile', protect, requireRole('teacher'), updateTeacherProfile);
-
-// Get Students in Teacher's Class (all classes they're class teacher for)
+router.put('/students/:studentId', protect, requireRole('teacher'), updateStudent);
 router.get('/my-class/students', protect, requireRole('teacher'), getMyClassStudents);
-
-// Get Students in a Specific Class (with payment info) - NEW
 router.get('/classes/:classId/students', protect, requireRole('teacher'), getClassStudents);
+
+// Profile
+router.put('/profile', protect, requireRole('teacher'), updateTeacherProfile);
 
 export default router;

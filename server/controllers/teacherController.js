@@ -1,15 +1,12 @@
-// server/controllers/teacherController.js - COMPLETE FILE
+// server/controllers/teacherController.js - CORRECTED VERSION
 
 import User from '../models/User.js';
 import Class from '../models/Class.js';
 import Course from '../models/Course.js';
 import Student from '../models/Student.js';
 import School from '../models/School.js';
-import mongoose from 'mongoose';
 
-// -------------------------
 // Get Teacher Dashboard Info
-// -------------------------
 export const getTeacherDashboard = async (req, res) => {
   try {
     const teacherId = req.user._id;
@@ -31,7 +28,7 @@ export const getTeacherDashboard = async (req, res) => {
       students = await Student.find({ 
         classId: { $in: teacher.classTeacherFor },
         schoolId: req.user.schoolId 
-      }).populate('classId', 'name');
+      }).populate('classId', 'name fee');
     }
 
     res.json({
@@ -52,9 +49,7 @@ export const getTeacherDashboard = async (req, res) => {
   }
 };
 
-// -------------------------
-// Get Classes and Courses for Registration Dropdown (Public)
-// -------------------------
+// Get Classes and Courses (Public - for registration)
 export const getClassesAndCourses = async (req, res) => {
   try {
     const { schoolCode } = req.query;
@@ -78,29 +73,14 @@ export const getClassesAndCourses = async (req, res) => {
   }
 };
 
-// -------------------------
-// Get Classes for Authenticated Teacher (for onboarding)
-// -------------------------
+// Get Classes for Authenticated Teacher
 export const getTeacherSchoolClasses = async (req, res) => {
   try {
-    console.log('[GetTeacherSchoolClasses] Request received');
-    console.log('[GetTeacherSchoolClasses] User:', req.user ? 'Authenticated' : 'Not authenticated');
-    console.log('[GetTeacherSchoolClasses] User role:', req.user?.role);
-    console.log('[GetTeacherSchoolClasses] School ID:', req.user?.schoolId);
-    
-    if (!req.user) {
-      return res.status(401).json({ message: 'User not authenticated.' });
+    if (!req.user?.schoolId) {
+      return res.status(400).json({ message: 'School ID not found.' });
     }
     
-    const teacherSchoolId = req.user.schoolId;
-    
-    if (!teacherSchoolId) {
-      return res.status(400).json({ message: 'School ID not found for teacher.' });
-    }
-    
-    const classes = await Class.find({ schoolId: teacherSchoolId }).select('_id name');
-    console.log('[GetTeacherSchoolClasses] Classes found:', classes.length);
-    
+    const classes = await Class.find({ schoolId: req.user.schoolId }).select('_id name');
     res.json({ classes });
   } catch (err) {
     console.error('[GetTeacherSchoolClasses]', err);
@@ -108,9 +88,7 @@ export const getTeacherSchoolClasses = async (req, res) => {
   }
 };
 
-// -------------------------
-// Save Class Teacher Info (Q&A Step)
-// -------------------------
+// Save Class Teacher Info
 export const saveClassTeacherInfo = async (req, res) => {
   try {
     const { teacherId, classTeacherFor } = req.body;
@@ -148,9 +126,7 @@ export const saveClassTeacherInfo = async (req, res) => {
   }
 };
 
-// -------------------------
-// Bulk Add Students (Manual or OCR) - UPDATED WITH PAYMENT FIELDS
-// -------------------------
+// ✅ FIXED: Bulk Add Students - Use parentPhone
 export const bulkAddStudents = async (req, res) => {
   try {
     const { students, classId } = req.body;
@@ -210,7 +186,7 @@ export const bulkAddStudents = async (req, res) => {
         regNo: regNo,
         classId: classId,
         schoolId: req.user.schoolId,
-        parentWhatsApp: student.parentWhatsApp?.trim() || '',
+        parentPhone: student.parentPhone?.trim() || '', // ✅ FIXED
         parentName: student.parentName?.trim() || '',
         parentEmail: student.parentEmail?.trim() || '',
         amountPaid: student.amountPaid || 0
@@ -260,9 +236,7 @@ export const bulkAddStudents = async (req, res) => {
   }
 };
 
-// -------------------------
-// Update Teacher Profile (Classes/Courses)
-// -------------------------
+// Update Teacher Profile
 export const updateTeacherProfile = async (req, res) => {
   try {
     const teacherId = req.user._id;
@@ -293,9 +267,7 @@ export const updateTeacherProfile = async (req, res) => {
   }
 };
 
-// -------------------------
-// Get Students in Teacher's Class
-// -------------------------
+// Get Students in Teacher's Classes
 export const getMyClassStudents = async (req, res) => {
   try {
     const teacherId = req.user._id;
@@ -308,7 +280,7 @@ export const getMyClassStudents = async (req, res) => {
     const students = await Student.find({ 
       classId: { $in: teacher.classTeacherFor },
       schoolId: req.user.schoolId 
-    }).populate('classId', 'name').sort({ name: 1 });
+    }).populate('classId', 'name fee').sort({ name: 1 });
 
     res.json({ students });
   } catch (err) {
@@ -317,9 +289,7 @@ export const getMyClassStudents = async (req, res) => {
   }
 };
 
-// -------------------------
-// Get Students in a Specific Class - UPDATED WITH PAYMENT INFO
-// -------------------------
+// Get Students in Specific Class (with payment info)
 export const getClassStudents = async (req, res) => {
   try {
     const { classId } = req.params;
@@ -368,5 +338,52 @@ export const getClassStudents = async (req, res) => {
   } catch (err) {
     console.error('[GetClassStudents]', err);
     res.status(500).json({ message: 'Failed to fetch students.' });
+  }
+};
+
+// ✅ NEW: Update Student (for teacher to edit student info including payment)
+export const updateStudent = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { name, regNo, parentPhone, parentName, parentEmail, amountPaid } = req.body;
+
+    const student = await Student.findOne({ 
+      _id: studentId, 
+      schoolId: req.user.schoolId 
+    });
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found.' });
+    }
+
+    // Verify teacher has access (must be class teacher)
+    const teacher = await User.findById(req.user._id);
+    const hasAccess = teacher.classTeacherFor?.some(
+      classId => classId.toString() === student.classId.toString()
+    );
+
+    if (!hasAccess) {
+      return res.status(403).json({ message: 'Access denied. Not class teacher for this student.' });
+    }
+
+    // Update fields
+    if (name) student.name = name;
+    if (regNo) student.regNo = regNo;
+    if (parentPhone !== undefined) student.parentPhone = parentPhone;
+    if (parentName !== undefined) student.parentName = parentName;
+    if (parentEmail !== undefined) student.parentEmail = parentEmail;
+    if (amountPaid !== undefined) student.amountPaid = amountPaid;
+
+    await student.save();
+
+    const updatedStudent = await Student.findById(studentId).populate('classId', 'name fee');
+
+    res.json({ 
+      message: 'Student updated successfully.',
+      student: updatedStudent
+    });
+  } catch (err) {
+    console.error('[UpdateStudent]', err);
+    res.status(500).json({ message: 'Failed to update student.' });
   }
 };
