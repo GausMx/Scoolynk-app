@@ -10,7 +10,6 @@ import connectDB from './config/db.js';
 import subaccountRoutes from './routes/subaccountRoutes.js';
 import ocrRoutes from './routes/ocrRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
-import messageRoutes from './routes/messageRoutes.js';
 import protect from './middleware/authMiddleware.js';
 import subscriptionGuard from './middleware/subscriptionMiddleware.js';
 import requireRole from './middleware/roleMiddleware.js';
