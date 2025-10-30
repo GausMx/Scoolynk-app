@@ -94,7 +94,6 @@ app.use('/api/teacher', teacherRoutes);
 app.use('/api/subaccount', subaccountRoutes); 
 app.use('/api/ocr', ocrRoutes);
 app.use('/api/payments', paymentRoutes);
-app.use('/api/messages', messageRoutes);
 // Test route
 app.post('/test', (req, res) => {
   res.json({ message: 'Test route working!' });
