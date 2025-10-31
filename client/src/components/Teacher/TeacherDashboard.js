@@ -7,6 +7,7 @@ import Layout from '../common/Layout';
 import TeacherHome from './TeacherHome';
 import MyClass from './MyClass';
 import ClassView from './ClassView';
+import TeacherProfile from './TeacherProfile';
 const { REACT_APP_API_URL } = process.env;
 
 const TeacherDashboard = () => {
@@ -65,7 +66,7 @@ const TeacherDashboard = () => {
         <Route path="/" element={<TeacherHome teacherData={teacherData} refreshData={fetchDashboardData} />} />
         <Route path="/my-class" element={<MyClass />} />
         <Route path="/class/:classId" element={<ClassView />} />
-        {/* <Route path="/edit-profile" element={<EditProfile teacherData={teacherData} refreshData={fetchDashboardData} />} /> */}
+        <Route path="/profile" element={<TeacherProfile teacher={teacherData.teacher} refreshData={fetchDashboardData} />} />
       </Routes>
     </Layout>
   );
