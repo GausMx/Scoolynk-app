@@ -1,9 +1,9 @@
-// src/components/Teacher/TeacherOnboarding.js
+// src/components/Teacher/TeacherOnboarding.js - FIXED VERSION
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import StudentInput from './StudentInput';
+import OCRStudentInput from './OCRStudentInput'; // ✅ CHANGED FROM StudentInput
 
 const { REACT_APP_API_URL } = process.env;
 
@@ -13,7 +13,7 @@ const TeacherOnboarding = () => {
   const [isClassTeacher, setIsClassTeacher] = useState(null);
   const [selectedClasses, setSelectedClasses] = useState([]);
   const [availableClasses, setAvailableClasses] = useState([]);
-  const [inputMethod, setInputMethod] = useState(null); // 'manual' or 'camera'
+  const [inputMethod, setInputMethod] = useState(null); // 'manual' or 'ocr'
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -22,15 +22,12 @@ const TeacherOnboarding = () => {
 
   useEffect(() => {
     if (!token || !teacherId) {
-      console.error('Missing token or teacherId:', { token: !!token, teacherId: !!teacherId });
+      console.error('Missing token or teacherId');
       setMessage('Session expired. Please register again.');
-      setTimeout(() => {
-        navigate('/register');
-      }, 2000);
+      setTimeout(() => navigate('/register'), 2000);
       return;
     }
     
-    // Verify token is valid by checking format
     if (token && token.split('.').length !== 3) {
       console.error('Invalid token format');
       localStorage.removeItem('token');
@@ -39,7 +36,6 @@ const TeacherOnboarding = () => {
     }
   }, [token, teacherId, navigate]);
 
-  // Fetch available classes for the dropdown
   useEffect(() => {
     const fetchClasses = async () => {
       try {
@@ -61,9 +57,8 @@ const TeacherOnboarding = () => {
   const handleClassTeacherAnswer = (answer) => {
     setIsClassTeacher(answer);
     if (answer === 'yes') {
-      setStep(2); // Go to class selection
+      setStep(2);
     } else {
-      // Not a class teacher, redirect to login
       setMessage('Registration complete! Please login to access your dashboard.');
       setTimeout(() => {
         localStorage.removeItem('teacherId');
@@ -91,7 +86,7 @@ const TeacherOnboarding = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setMessage('Class teacher info saved!');
-      setStep(3); // Go to input method selection
+      setStep(3);
     } catch (err) {
       console.error('Failed to save class teacher info:', err);
       setMessage(err.response?.data?.message || 'Failed to save class teacher info.');
@@ -102,7 +97,7 @@ const TeacherOnboarding = () => {
 
   const handleInputMethodSelection = (method) => {
     setInputMethod(method);
-    setStep(4); // Go to student input
+    setStep(4);
   };
 
   const handleStudentsAdded = () => {
@@ -120,6 +115,7 @@ const TeacherOnboarding = () => {
       navigate('/login');
     }, 2000);
   };
+
   return (
     <div className="container mt-5">
       <div className="row justify-content-center">
@@ -156,7 +152,7 @@ const TeacherOnboarding = () => {
                 </div>
               )}
 
-              {/* Step 2: Select classes you're class teacher for */}
+              {/* Step 2: Select classes */}
               {step === 2 && (
                 <div>
                   <h4 className="mb-4">Select the class(es) you are a class teacher for:</h4>
@@ -210,7 +206,7 @@ const TeacherOnboarding = () => {
                     </button>
                     <button 
                       className="btn btn-info btn-lg rounded-3 w-75"
-                      onClick={() => handleInputMethodSelection('camera')}
+                      onClick={() => handleInputMethodSelection('ocr')}
                     >
                       <i className="bi bi-camera me-2"></i>
                       Scan with Camera (OCR)
@@ -227,11 +223,11 @@ const TeacherOnboarding = () => {
 
               {/* Step 4: Student Input Component */}
               {step === 4 && (
-                <StudentInput
-                  inputMethod={inputMethod}
-                  selectedClasses={selectedClasses}
+                <OCRStudentInput
+                  classId={selectedClasses[0]}
+                  method={inputMethod}
                   onComplete={handleStudentsAdded}
-                  onBack={() => setStep(3)}
+                  onCancel={() => setStep(3)}
                 />
               )}
             </div>
