@@ -55,7 +55,7 @@ const Sidebar = ({ user, role }) => {
       path: `/teacher/class/${cls._id}`,
       label: cls.name,
     })),
-    { path: "/teacher/edit-profile", label: "Edit Profile" },
+    { path: "/teacher/teacher-profile", label: "My Profile" },
   ];
 
   const links =
