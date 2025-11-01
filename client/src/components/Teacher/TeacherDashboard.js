@@ -66,7 +66,7 @@ const TeacherDashboard = () => {
         <Route path="/" element={<TeacherHome teacherData={teacherData} refreshData={fetchDashboardData} />} />
         <Route path="/my-class" element={<MyClass />} />
         <Route path="/class/:classId" element={<ClassView />} />
-        <Route path="/profile" element={<TeacherProfile teacher={teacherData.teacher} refreshData={fetchDashboardData} />} />
+        <Route path="/teacher-profile" element={<TeacherProfile teacher={teacherData.teacher} refreshData={fetchDashboardData} />} />
       </Routes>
     </Layout>
   );
