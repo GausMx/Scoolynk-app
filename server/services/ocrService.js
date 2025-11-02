@@ -1,26 +1,52 @@
-// server/services/ocrService.js - Google Cloud Vision API
+// server/services/ocrService.js - FINAL FIXED VERSION
 
 import vision from '@google-cloud/vision';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 class OCRService {
   constructor() {
     try {
-      if (!process.env.GOOGLE_VISION_KEY) {
-        throw new Error('GOOGLE_VISION_KEY not set in environment variables');
+      let credentials;
+
+      // ✅ Option 1: Base64 encoded (PRODUCTION - Render)
+      if (process.env.GOOGLE_VISION_KEY_BASE64) {
+        console.log('[OCR] Using GOOGLE_VISION_KEY_BASE64');
+        const base64Key = process.env.GOOGLE_VISION_KEY_BASE64;
+        const jsonKey = Buffer.from(base64Key, 'base64').toString('utf8');
+        credentials = JSON.parse(jsonKey);
+      }
+      // ✅ Option 2: Direct JSON string (Alternative)
+      else if (process.env.GOOGLE_VISION_KEY) {
+        console.log('[OCR] Using GOOGLE_VISION_KEY');
+        credentials = JSON.parse(process.env.GOOGLE_VISION_KEY);
+      }
+      // ✅ Option 3: File path (LOCAL DEVELOPMENT)
+      else {
+        console.log('[OCR] Using local file');
+        const keyPath = path.join(__dirname, '../config/google-vision-key.json');
+        this.client = new vision.ImageAnnotatorClient({ keyFilename: keyPath });
+        this.enabled = true;
+        console.log('[OCR] Google Vision initialized from file');
+        return;
       }
 
-      // Parse only the required fields from env
-      const { type, project_id, private_key, client_email } = JSON.parse(process.env.GOOGLE_VISION_KEY);
+      // Initialize client with credentials from env
+      if (credentials) {
+        this.client = new vision.ImageAnnotatorClient({ credentials });
+        this.enabled = true;
+        console.log('[OCR] Google Vision initialized successfully');
+      } else {
+        throw new Error('No credentials found');
+      }
 
-      this.client = new vision.ImageAnnotatorClient({
-        credentials: { type, project_id, private_key, client_email }
-      });
-
-      this.enabled = true;
-      console.log('[OCR Service] Google Cloud Vision initialized successfully');
     } catch (error) {
       this.enabled = false;
-      console.warn('[OCR Service] Google Vision not configured:', error.message);
+      console.warn('[OCR] Not configured:', error.message);
+      console.warn('[OCR] Add GOOGLE_VISION_KEY_BASE64 or GOOGLE_VISION_KEY to env');
     }
   }
 
@@ -53,7 +79,7 @@ class OCRService {
         students: this.parseStudentData(lines)
       };
     } catch (error) {
-      console.error('[OCR Service] Extraction error:', error);
+      console.error('[OCR] Extraction error:', error);
       return {
         success: false,
         message: error.message || 'Failed to extract text'
@@ -105,7 +131,7 @@ class OCRService {
       const imageBuffer = Buffer.from(base64Data, 'base64');
       return await this.extractText(imageBuffer);
     } catch (error) {
-      console.error('[OCR Service] Base64 extraction error:', error);
+      console.error('[OCR] Base64 extraction error:', error);
       return {
         success: false,
         message: 'Failed to process base64 image'
