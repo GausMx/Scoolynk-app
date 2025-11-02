@@ -1,8 +1,8 @@
-// src/components/Teacher/TeacherProfile.js - COMPLETE
+// src/components/Teacher/TeacherProfile.js - COMPLETE WITH PARENT NAME
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { User, Users, Camera, Edit, Save, X, Plus, DollarSign } from 'lucide-react';
+import { User, Users, Camera, Edit, Save, X, Plus } from 'lucide-react';
 import OCRStudentInput from './OCRStudentInput';
 
 const { REACT_APP_API_URL } = process.env;
@@ -12,7 +12,6 @@ const TeacherProfile = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   
-  // Teacher info
   const [teacher, setTeacher] = useState({
     name: '',
     email: '',
@@ -21,14 +20,11 @@ const TeacherProfile = () => {
     classTeacherFor: []
   });
 
-  // Students
   const [students, setStudents] = useState([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [editingStudent, setEditingStudent] = useState(null);
-  
-  // Add students
   const [showAddStudents, setShowAddStudents] = useState(false);
-  const [addMethod, setAddMethod] = useState(null); // 'manual' | 'ocr'
+  const [addMethod, setAddMethod] = useState(null);
 
   const token = localStorage.getItem('token');
 
@@ -93,64 +89,40 @@ const TeacherProfile = () => {
     setTimeout(() => setMessage({ type: '', text: '' }), 5000);
   };
 
-  // Render Info Tab
   const renderInfoTab = () => (
     <div className="card border-0 shadow-sm rounded-4 p-4">
       <h5 className="text-primary mb-4">
         <User size={20} className="me-2" />
         Teacher Information
       </h5>
-
       <div className="row g-3">
         <div className="col-md-6">
           <label className="form-label fw-semibold">Name</label>
-          <input
-            type="text"
-            className="form-control rounded-3 bg-light"
-            value={teacher.name}
-            disabled
-          />
+          <input type="text" className="form-control rounded-3 bg-light" value={teacher.name} disabled />
         </div>
-
         <div className="col-md-6">
           <label className="form-label fw-semibold">Email</label>
-          <input
-            type="email"
-            className="form-control rounded-3 bg-light"
-            value={teacher.email}
-            disabled
-          />
+          <input type="email" className="form-control rounded-3 bg-light" value={teacher.email} disabled />
         </div>
-
         <div className="col-12">
           <label className="form-label fw-semibold">Classes Teaching</label>
           <div className="d-flex flex-wrap gap-2">
             {teacher.classTeacherFor?.map(cls => (
-              <span key={cls._id} className="badge bg-primary px-3 py-2">
-                {cls.name}
-              </span>
+              <span key={cls._id} className="badge bg-primary px-3 py-2">{cls.name}</span>
             ))}
-            {teacher.classTeacherFor?.length === 0 && (
-              <span className="text-muted">No classes assigned</span>
-            )}
+            {teacher.classTeacherFor?.length === 0 && <span className="text-muted">No classes assigned</span>}
           </div>
         </div>
       </div>
     </div>
   );
 
-  // Render Students Tab
   const renderStudentsTab = () => (
     <div>
-      {/* Class Selector */}
       <div className="card border-0 shadow-sm rounded-4 p-3 mb-3">
         <div className="row align-items-center">
           <div className="col-md-8">
-            <select
-              className="form-select rounded-3"
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-            >
+            <select className="form-select rounded-3" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
               <option value="">Select Class</option>
               {teacher.classTeacherFor?.map(cls => (
                 <option key={cls._id} value={cls._id}>{cls.name}</option>
@@ -158,27 +130,22 @@ const TeacherProfile = () => {
             </select>
           </div>
           <div className="col-md-4 text-end">
-            <button
-              className="btn btn-primary rounded-3"
-              onClick={() => setShowAddStudents(true)}
-              disabled={!selectedClass}
-            >
-              <Plus size={18} className="me-2" />
-              Add Students
+            <button className="btn btn-primary rounded-3" onClick={() => setShowAddStudents(true)} disabled={!selectedClass}>
+              <Plus size={18} className="me-2" />Add Students
             </button>
           </div>
         </div>
       </div>
 
-      {/* Students List */}
       {students.length > 0 ? (
         <div className="card border-0 shadow-sm rounded-4">
           <div className="table-responsive">
             <table className="table table-hover align-middle mb-0">
               <thead className="table-light">
                 <tr>
-                  <th>Name</th>
+                  <th>Student Name</th>
                   <th>Reg No</th>
+                  <th>Parent Name</th>
                   <th>Parent Phone</th>
                   <th>Fee</th>
                   <th>Paid</th>
@@ -189,50 +156,64 @@ const TeacherProfile = () => {
               <tbody>
                 {students.map(student => (
                   <tr key={student._id}>
+                    {/* Student Name */}
                     <td>
                       {editingStudent?._id === student._id ? (
                         <input
                           type="text"
                           className="form-control form-control-sm"
                           value={editingStudent.name}
-                          onChange={(e) => setEditingStudent({
-                            ...editingStudent,
-                            name: e.target.value
-                          })}
+                          onChange={(e) => setEditingStudent({...editingStudent, name: e.target.value})}
                         />
                       ) : (
                         <strong>{student.name}</strong>
                       )}
                     </td>
+
+                    {/* Reg No */}
+                    <td><small className="text-muted">{student.regNo}</small></td>
+
+                    {/* Parent Name - ADDED */}
                     <td>
-                      <small className="text-muted">{student.regNo}</small>
+                      {editingStudent?._id === student._id ? (
+                        <input
+                          type="text"
+                          className="form-control form-control-sm"
+                          value={editingStudent.parentName || ''}
+                          onChange={(e) => setEditingStudent({...editingStudent, parentName: e.target.value})}
+                          placeholder="Parent name"
+                        />
+                      ) : (
+                        <small>{student.parentName || 'N/A'}</small>
+                      )}
                     </td>
+
+                    {/* Parent Phone */}
                     <td>
                       {editingStudent?._id === student._id ? (
                         <input
                           type="text"
                           className="form-control form-control-sm"
                           value={editingStudent.parentPhone || ''}
-                          onChange={(e) => setEditingStudent({
-                            ...editingStudent,
-                            parentPhone: e.target.value
-                          })}
+                          onChange={(e) => setEditingStudent({...editingStudent, parentPhone: e.target.value})}
+                          placeholder="Phone number"
                         />
                       ) : (
                         <small>{student.parentPhone || 'N/A'}</small>
                       )}
                     </td>
+
+                    {/* Fee */}
                     <td>₦{student.classFee?.toLocaleString()}</td>
+
+                    {/* Amount Paid */}
                     <td>
                       {editingStudent?._id === student._id ? (
                         <input
                           type="number"
                           className="form-control form-control-sm"
                           value={editingStudent.amountPaid || 0}
-                          onChange={(e) => setEditingStudent({
-                            ...editingStudent,
-                            amountPaid: parseFloat(e.target.value) || 0
-                          })}
+                          onChange={(e) => setEditingStudent({...editingStudent, amountPaid: parseFloat(e.target.value) || 0})}
                         />
                       ) : (
                         <span className={student.amountPaid > 0 ? 'text-success' : 'text-muted'}>
@@ -240,6 +221,8 @@ const TeacherProfile = () => {
                         </span>
                       )}
                     </td>
+
+                    {/* Payment Status */}
                     <td>
                       <span className={`badge ${
                         student.paymentStatus === 'paid' ? 'bg-success' :
@@ -248,6 +231,8 @@ const TeacherProfile = () => {
                         {student.paymentStatus}
                       </span>
                     </td>
+
+                    {/* Actions */}
                     <td className="text-center">
                       {editingStudent?._id === student._id ? (
                         <div className="btn-group btn-group-sm">
@@ -255,24 +240,19 @@ const TeacherProfile = () => {
                             className="btn btn-success rounded-start-3"
                             onClick={() => handleUpdateStudent(student._id, {
                               name: editingStudent.name,
+                              parentName: editingStudent.parentName,
                               parentPhone: editingStudent.parentPhone,
                               amountPaid: editingStudent.amountPaid
                             })}
                           >
                             <Save size={14} />
                           </button>
-                          <button
-                            className="btn btn-secondary rounded-end-3"
-                            onClick={() => setEditingStudent(null)}
-                          >
+                          <button className="btn btn-secondary rounded-end-3" onClick={() => setEditingStudent(null)}>
                             <X size={14} />
                           </button>
                         </div>
                       ) : (
-                        <button
-                          className="btn btn-sm btn-outline-primary rounded-3"
-                          onClick={() => setEditingStudent({ ...student })}
-                        >
+                        <button className="btn btn-sm btn-outline-primary rounded-3" onClick={() => setEditingStudent({ ...student })}>
                           <Edit size={14} />
                         </button>
                       )}
@@ -291,40 +271,27 @@ const TeacherProfile = () => {
     </div>
   );
 
-  // Add Students Modal
   const renderAddStudentsModal = () => (
     <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
       <div className="modal-dialog modal-dialog-centered modal-lg">
         <div className="modal-content rounded-4 shadow-lg">
           <div className="modal-header border-0 pb-0">
             <h5 className="modal-title text-primary">Add Students</h5>
-            <button
-              type="button"
-              className="btn-close"
-              onClick={() => {
-                setShowAddStudents(false);
-                setAddMethod(null);
-              }}
-            ></button>
+            <button type="button" className="btn-close" onClick={() => {
+              setShowAddStudents(false);
+              setAddMethod(null);
+            }}></button>
           </div>
           <div className="modal-body">
             {!addMethod ? (
               <div className="text-center py-4">
                 <h6 className="mb-4">Choose Method</h6>
                 <div className="d-flex gap-3 justify-content-center">
-                  <button
-                    className="btn btn-primary btn-lg rounded-3"
-                    onClick={() => setAddMethod('ocr')}
-                  >
-                    <Camera size={20} className="me-2" />
-                    Scan (OCR)
+                  <button className="btn btn-primary btn-lg rounded-3" onClick={() => setAddMethod('ocr')}>
+                    <Camera size={20} className="me-2" />Scan (OCR)
                   </button>
-                  <button
-                    className="btn btn-secondary btn-lg rounded-3"
-                    onClick={() => setAddMethod('manual')}
-                  >
-                    <Edit size={20} className="me-2" />
-                    Manual Entry
+                  <button className="btn btn-secondary btn-lg rounded-3" onClick={() => setAddMethod('manual')}>
+                    <Edit size={20} className="me-2" />Manual Entry
                   </button>
                 </div>
               </div>
@@ -354,8 +321,7 @@ const TeacherProfile = () => {
     <div className="container-fluid py-4">
       <div className="mb-4">
         <h2 className="fw-bold text-primary d-flex align-items-center">
-          <User size={32} className="me-2" />
-          My Profile
+          <User size={32} className="me-2" />My Profile
         </h2>
         <p className="text-muted">Manage your profile and students</p>
       </div>
@@ -368,21 +334,13 @@ const TeacherProfile = () => {
 
       <ul className="nav nav-pills mb-4 gap-2">
         <li className="nav-item">
-          <button
-            className={`nav-link rounded-3 ${activeTab === 'info' ? 'active' : ''}`}
-            onClick={() => setActiveTab('info')}
-          >
-            <User size={18} className="me-2" />
-            Information
+          <button className={`nav-link rounded-3 ${activeTab === 'info' ? 'active' : ''}`} onClick={() => setActiveTab('info')}>
+            <User size={18} className="me-2" />Information
           </button>
         </li>
         <li className="nav-item">
-          <button
-            className={`nav-link rounded-3 ${activeTab === 'students' ? 'active' : ''}`}
-            onClick={() => setActiveTab('students')}
-          >
-            <Users size={18} className="me-2" />
-            Manage Students
+          <button className={`nav-link rounded-3 ${activeTab === 'students' ? 'active' : ''}`} onClick={() => setActiveTab('students')}>
+            <Users size={18} className="me-2" />Manage Students
           </button>
         </li>
       </ul>
