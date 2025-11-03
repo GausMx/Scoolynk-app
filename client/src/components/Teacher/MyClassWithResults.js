@@ -29,7 +29,7 @@ const MyClassWithResults = () => {
     } else if (activeTab === 'history') {
       fetchResults();
     }
-  }, [activeTab, selectedTerm, selectedSession, dependencies]);
+  }, [activeTab, selectedTerm, selectedSession]);
 
   const fetchStudents = async () => {
     try {
