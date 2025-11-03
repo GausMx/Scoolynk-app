@@ -5,7 +5,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../common/Layout';
 import TeacherHome from './TeacherHome';
-import MyClass from './MyClass';
+import MyClass from './MyClassWithResults';
 import ClassView from './ClassView';
 import TeacherProfile from './TeacherProfile';
 const { REACT_APP_API_URL } = process.env;
