@@ -1,625 +1,551 @@
-// src/components/Teacher/MyClassWithResults.js - 3 TAB SYSTEM
+// src/components/Teacher/ResultEntryModal.js - COMPLETE RESULT ENTRY WITH OCR
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { 
-  Users, Search, Download, FileText, History, 
-  Plus, Edit, Trash2, Send, Eye, Upload, Scan
-} from 'lucide-react';
+import { Save, Send, Upload, Scan, Plus, Trash2, AlertCircle } from 'lucide-react';
 
 const { REACT_APP_API_URL } = process.env;
 
-const MyClassWithResults = () => {
-  const [activeTab, setActiveTab] = useState('students'); // students, results, history
-  const [students, setStudents] = useState([]);
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTerm, setSelectedTerm] = useState('First Term');
-  const [selectedSession, setSelectedSession] = useState('2024/2025');
-  const [classTeacherFor, setClassTeacherFor] = useState([]);
+const COMMON_SUBJECTS = [
+  'Mathematics',
+  'English Language',
+  'Yoruba Language',
+  'Social Studies',
+  'Basic Science',
+  'Basic Technology',
+  'Computer Science',
+  'History',
+  'Agricultural Science',
+  'Civic Education',
+  'Business Studies'
+];
 
-  const token = localStorage.getItem('token');
-
-  useEffect(() => {
-    if (activeTab === 'students') {
-      fetchStudents();
-    } else if (activeTab === 'results') {
-      fetchResults('draft');
-    } else if (activeTab === 'history') {
-      fetchResults();
-    }
-  }, [activeTab, selectedTerm, selectedSession]);
-
-  const fetchStudents = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/my-class/students`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setStudents(res.data.students || []);
-      const uniqueClasses = [...new Set(res.data.students?.map(s => s.classId))].filter(Boolean);
-      setClassTeacherFor(uniqueClasses);
-    } catch (err) {
-      console.error('Failed to fetch students:', err);
-      setMessage('Failed to load students.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchResults = async (status = null) => {
-    try {
-      setLoading(true);
-      const params = {
-        term: selectedTerm,
-        session: selectedSession
-      };
-      if (status) params.status = status;
-
-      const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/results`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params
-      });
-      
-      setResults(res.data.results || []);
-    } catch (err) {
-      console.error('Failed to fetch results:', err);
-      setMessage('Failed to load results.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredStudents = students.filter(
-    (s) =>
-      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.regNo.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  return (
-    <div className="container-fluid">
-      {/* Header */}
-      <div className="row mb-4">
-        <div className="col-12">
-          <h2 className="mb-3">
-            <Users className="me-2" size={32} />
-            My Class Management
-          </h2>
-          <p className="text-muted">
-            You are class teacher for: {classTeacherFor.map(c => c.name).join(', ') || 'No classes assigned'}
-          </p>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <ul className="nav nav-tabs mb-4">
-        <li className="nav-item">
-          <button 
-            className={`nav-link ${activeTab === 'students' ? 'active' : ''}`}
-            onClick={() => setActiveTab('students')}
-          >
-            <Users size={18} className="me-2" />
-            My Class Students
-          </button>
-        </li>
-        <li className="nav-item">
-          <button 
-            className={`nav-link ${activeTab === 'results' ? 'active' : ''}`}
-            onClick={() => setActiveTab('results')}
-          >
-            <FileText size={18} className="me-2" />
-            My Students Results
-          </button>
-        </li>
-        <li className="nav-item">
-          <button 
-            className={`nav-link ${activeTab === 'history' ? 'active' : ''}`}
-            onClick={() => setActiveTab('history')}
-          >
-            <History size={18} className="me-2" />
-            Results History
-          </button>
-        </li>
-      </ul>
-
-      {message && (
-        <div className="alert alert-info alert-dismissible fade show">
-          {message}
-          <button type="button" className="btn-close" onClick={() => setMessage('')}></button>
-        </div>
-      )}
-
-      {/* Tab Content */}
-      {activeTab === 'students' && (
-        <StudentsTab 
-          students={filteredStudents}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          loading={loading}
-        />
-      )}
-
-      {activeTab === 'results' && (
-        <ResultsTab 
-          students={students}
-          results={results}
-          selectedTerm={selectedTerm}
-          setSelectedTerm={setSelectedTerm}
-          selectedSession={selectedSession}
-          setSelectedSession={setSelectedSession}
-          loading={loading}
-          refreshResults={() => fetchResults('draft')}
-          token={token}
-          setMessage={setMessage}
-        />
-      )}
-
-      {activeTab === 'history' && (
-        <HistoryTab 
-          results={results}
-          selectedTerm={selectedTerm}
-          setSelectedTerm={setSelectedTerm}
-          selectedSession={selectedSession}
-          setSelectedSession={setSelectedSession}
-          loading={loading}
-          token={token}
-        />
-      )}
-    </div>
-  );
-};
-
-// ==================== TAB 1: STUDENTS ====================
-const StudentsTab = ({ students, searchTerm, setSearchTerm, loading }) => {
-  const studentsByClass = students.reduce((acc, student) => {
-    const className = student.classId?.name || 'Unknown';
-    const classId = student.classId?._id || 'unknown';
-    if (!acc[classId]) {
-      acc[classId] = { name: className, students: [] };
-    }
-    acc[classId].students.push(student);
-    return acc;
-  }, {});
-
-  const exportToCSV = (className, studentsData) => {
-    const csvContent = [
-      ['#', 'Name', 'Registration Number'],
-      ...studentsData.map((s, i) => [i + 1, s.name, s.regNo])
-    ].map(row => row.join(',')).join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${className}_students.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  if (loading) {
-    return <div className="text-center py-5"><div className="spinner-border"></div></div>;
-  }
-
-  return (
-    <>
-      {/* Search Bar */}
-      <div className="row mb-4">
-        <div className="col-md-6">
-          <div className="input-group">
-            <span className="input-group-text bg-light">
-              <Search size={20} />
-            </span>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Search by name or registration number..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Students List by Class */}
-      {Object.keys(studentsByClass).map((classId) => {
-        const classData = studentsByClass[classId];
-        return (
-          <div key={classId} className="card shadow-sm mb-4">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <h4 className="card-title mb-0 text-primary">{classData.name}</h4>
-                <button 
-                  className="btn btn-sm btn-outline-primary"
-                  onClick={() => exportToCSV(classData.name, classData.students)}
-                >
-                  <Download size={16} className="me-1" />
-                  Export CSV
-                </button>
-              </div>
-              <div className="table-responsive">
-                <table className="table table-hover">
-                  <thead className="table-light">
-                    <tr>
-                      <th>#</th>
-                      <th>Name</th>
-                      <th>Registration Number</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {classData.students.map((student, index) => (
-                      <tr key={student._id}>
-                        <td>{index + 1}</td>
-                        <td className="fw-semibold">{student.name}</td>
-                        <td>{student.regNo}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-2">
-                <small className="text-muted">
-                  Total Students: {classData.students.length}
-                </small>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-
-      {students.length === 0 && (
-        <div className="alert alert-warning">
-          <p className="mb-2">No students found in your class.</p>
-          <small>Students will appear here after you add them.</small>
-        </div>
-      )}
-    </>
-  );
-};
-
-// ==================== TAB 2: RESULTS ====================
-const ResultsTab = ({ 
-  students, 
-  results, 
-  selectedTerm, 
-  setSelectedTerm, 
-  selectedSession, 
-  setSelectedSession,
-  loading,
-  refreshResults,
-  token,
-  setMessage 
-}) => {
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('manual'); // 'manual' or 'scan'
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [editingResult, setEditingResult] = useState(null);
-
-  const openManualEntry = (student) => {
-    setSelectedStudent(student);
-    setModalMode('manual');
-    setShowModal(true);
-    
-    // Check if result already exists
-    const existing = results.find(r => r.student._id === student._id);
-    setEditingResult(existing || null);
-  };
-
-  const openOCRScan = (student) => {
-    setSelectedStudent(student);
-    setModalMode('scan');
-    setShowModal(true);
-  };
-
-  return (
-    <>
-      {/* Filters */}
-      <div className="row mb-4">
-        <div className="col-md-3">
-          <select 
-            className="form-select" 
-            value={selectedTerm} 
-            onChange={(e) => setSelectedTerm(e.target.value)}
-          >
-            <option value="First Term">First Term</option>
-            <option value="Second Term">Second Term</option>
-            <option value="Third Term">Third Term</option>
-          </select>
-        </div>
-        <div className="col-md-3">
-          <input 
-            type="text" 
-            className="form-control" 
-            placeholder="Session (e.g., 2024/2025)"
-            value={selectedSession}
-            onChange={(e) => setSelectedSession(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="text-center py-5"><div className="spinner-border"></div></div>
-      ) : (
-        <>
-          {/* Students with Result Entry Options */}
-          <div className="row g-3">
-            {students.map(student => {
-              const existingResult = results.find(r => r.student._id === student._id);
-              
-              return (
-                <div key={student._id} className="col-md-6">
-                  <div className="card shadow-sm">
-                    <div className="card-body">
-                      <div className="d-flex justify-content-between align-items-start mb-2">
-                        <div>
-                          <h6 className="mb-0 fw-bold">{student.name}</h6>
-                          <small className="text-muted">{student.regNo} • {student.classId?.name}</small>
-                        </div>
-                        {existingResult && (
-                          <span className={`badge bg-${
-                            existingResult.status === 'draft' ? 'secondary' :
-                            existingResult.status === 'submitted' ? 'primary' :
-                            existingResult.status === 'approved' ? 'success' :
-                            existingResult.status === 'rejected' ? 'danger' : 'info'
-                          }`}>
-                            {existingResult.status}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {existingResult && (
-                        <div className="mb-2">
-                          <small className="text-muted">
-                            Overall: {existingResult.overallTotal} ({existingResult.overallAverage}%) - {existingResult.overallGrade}
-                          </small>
-                        </div>
-                      )}
-
-                      <div className="d-flex gap-2">
-                        <button 
-                          className="btn btn-sm btn-primary"
-                          onClick={() => openManualEntry(student)}
-                        >
-                          <Edit size={14} className="me-1" />
-                          {existingResult ? 'Edit Scores' : 'Enter Scores'}
-                        </button>
-                        <button 
-                          className="btn btn-sm btn-outline-secondary"
-                          onClick={() => openOCRScan(student)}
-                        >
-                          <Scan size={14} className="me-1" />
-                          Scan Scores
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {students.length === 0 && (
-            <div className="alert alert-warning">
-              No students found. Add students first before entering results.
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Result Entry/Edit Modal */}
-      {showModal && (
-        <ResultModal 
-          mode={modalMode}
-          student={selectedStudent}
-          existingResult={editingResult}
-          term={selectedTerm}
-          session={selectedSession}
-          onClose={() => {
-            setShowModal(false);
-            setSelectedStudent(null);
-            setEditingResult(null);
-          }}
-          onSuccess={() => {
-            setShowModal(false);
-            refreshResults();
-            setMessage('Result saved successfully!');
-          }}
-          token={token}
-        />
-      )}
-    </>
-  );
-};
-
-// ==================== TAB 3: HISTORY ====================
-const HistoryTab = ({ 
-  results, 
-  selectedTerm, 
-  setSelectedTerm, 
-  selectedSession, 
-  setSelectedSession,
-  loading,
+const ResultEntryModal = ({ 
+  mode, // 'manual' or 'scan'
+  student, 
+  existingResult, 
+  term, 
+  session, 
+  onClose, 
+  onSuccess,
   token 
 }) => {
-  const [selectedResult, setSelectedResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [currentMode, setCurrentMode] = useState(mode);
+  
+  // Form state
+  const [subjects, setSubjects] = useState([]);
+  const [affectiveTraits, setAffectiveTraits] = useState({
+    punctuality: 3,
+    behaviour: 3,
+    neatness: 3,
+    relationship: 3,
+    attentiveness: 3,
+    initiative: 3
+  });
+  const [fees, setFees] = useState({
+    tuition: 0,
+    uniform: 0,
+    books: 0,
+    lesson: 0,
+    other: 0
+  });
+  const [attendance, setAttendance] = useState({
+    opened: 0,
+    present: 0,
+    absent: 0
+  });
+  const [comments, setComments] = useState({
+    teacher: '',
+    principal: ''
+  });
 
-  const submitResult = async (resultId) => {
+  // OCR state
+  const [scanImage, setScanImage] = useState(null);
+  const [scanning, setScanning] = useState(false);
+
+  useEffect(() => {
+    if (existingResult) {
+      // Load existing result data
+      setSubjects(existingResult.subjects || []);
+      setAffectiveTraits(existingResult.affectiveTraits || affectiveTraits);
+      setFees(existingResult.fees || fees);
+      setAttendance(existingResult.attendance || attendance);
+      setComments(existingResult.comments || comments);
+    } else {
+      // Initialize with common subjects
+      setSubjects(COMMON_SUBJECTS.map(subject => ({
+        subject,
+        ca1: 0,
+        ca2: 0,
+        exam: 0
+      })));
+    }
+  }, [existingResult]);
+
+  const addSubject = () => {
+    setSubjects([...subjects, { subject: '', ca1: 0, ca2: 0, exam: 0 }]);
+  };
+
+  const removeSubject = (index) => {
+    setSubjects(subjects.filter((_, i) => i !== index));
+  };
+
+  const updateSubject = (index, field, value) => {
+    const updated = [...subjects];
+    updated[index][field] = value;
+    setSubjects(updated);
+  };
+
+  const handleSave = async (submitToAdmin = false) => {
     try {
-      await axios.put(
-        `${REACT_APP_API_URL}/api/teacher/results/${resultId}/submit`,
-        {},
+      setLoading(true);
+      setError('');
+
+      // Validate subjects
+      const validSubjects = subjects.filter(s => s.subject && s.subject.trim() !== '');
+      if (validSubjects.length === 0) {
+        setError('Please add at least one subject with scores.');
+        return;
+      }
+
+      const payload = {
+        studentId: student._id,
+        term,
+        session,
+        subjects: validSubjects,
+        affectiveTraits,
+        fees,
+        attendance,
+        comments,
+        status: submitToAdmin ? 'submitted' : 'draft'
+      };
+
+      if (existingResult) {
+        payload.resultId = existingResult._id;
+      }
+
+      const res = await axios.post(
+        `${REACT_APP_API_URL}/api/teacher/results`,
+        payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert('Result submitted to admin successfully!');
-      window.location.reload();
+
+      alert(res.data.message);
+      onSuccess();
     } catch (err) {
-      alert('Failed to submit result: ' + (err.response?.data?.message || err.message));
+      setError(err.response?.data?.message || 'Failed to save result');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const deleteResult = async (resultId) => {
-    if (!confirm('Are you sure you want to delete this result? This action cannot be undone.')) {
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setScanImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleScan = async () => {
+    if (!scanImage) {
+      setError('Please upload an image first');
       return;
     }
-    
+
     try {
-      await axios.delete(
-        `${REACT_APP_API_URL}/api/teacher/results/${resultId}`,
+      setScanning(true);
+      setError('');
+
+      const res = await axios.post(
+        `${REACT_APP_API_URL}/api/teacher/results/scan`,
+        {
+          base64Image: scanImage,
+          studentId: student._id,
+          term,
+          session
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert('Result deleted successfully!');
-      window.location.reload();
+
+      // Load scanned data into form
+      if (res.data.result) {
+        setSubjects(res.data.result.subjects || []);
+        alert('Scores scanned successfully! Please review and edit if needed.');
+        setCurrentMode('manual'); // Switch to manual mode for editing
+      }
     } catch (err) {
-      alert('Failed to delete result: ' + (err.response?.data?.message || err.message));
+      setError(err.response?.data?.message || 'Failed to scan image');
+    } finally {
+      setScanning(false);
     }
   };
 
   return (
-    <>
-      {/* Filters */}
-      <div className="row mb-4">
-        <div className="col-md-3">
-          <select 
-            className="form-select" 
-            value={selectedTerm} 
-            onChange={(e) => setSelectedTerm(e.target.value)}
-          >
-            <option value="">All Terms</option>
-            <option value="First Term">First Term</option>
-            <option value="Second Term">Second Term</option>
-            <option value="Third Term">Third Term</option>
-          </select>
-        </div>
-        <div className="col-md-3">
-          <input 
-            type="text" 
-            className="form-control" 
-            placeholder="Session"
-            value={selectedSession}
-            onChange={(e) => setSelectedSession(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="text-center py-5"><div className="spinner-border"></div></div>
-      ) : (
-        <>
-          <div className="table-responsive">
-            <table className="table table-hover">
-              <thead className="table-light">
-                <tr>
-                  <th>Student</th>
-                  <th>Class</th>
-                  <th>Term</th>
-                  <th>Session</th>
-                  <th>Overall</th>
-                  <th>Grade</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map(result => (
-                  <tr key={result._id}>
-                    <td>
-                      <div className="fw-semibold">{result.student.name}</div>
-                      <small className="text-muted">{result.student.regNo}</small>
-                    </td>
-                    <td>{result.classId.name}</td>
-                    <td>{result.term}</td>
-                    <td>{result.session}</td>
-                    <td>{result.overallTotal}</td>
-                    <td>
-                      <span className={`badge bg-${
-                        result.overallGrade === 'A' ? 'success' :
-                        result.overallGrade === 'B' ? 'primary' :
-                        result.overallGrade === 'C' ? 'info' :
-                        result.overallGrade === 'D' ? 'warning' : 'danger'
-                      }`}>
-                        {result.overallGrade}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge bg-${
-                        result.status === 'draft' ? 'secondary' :
-                        result.status === 'submitted' ? 'primary' :
-                        result.status === 'approved' ? 'success' :
-                        result.status === 'rejected' ? 'danger' : 'info'
-                      }`}>
-                        {result.status}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="btn-group btn-group-sm">
-                        <button 
-                          className="btn btn-outline-primary"
-                          onClick={() => setSelectedResult(result)}
-                        >
-                          <Eye size={14} />
-                        </button>
-                        {result.status === 'draft' && (
-                          <>
-                            <button 
-                              className="btn btn-outline-success"
-                              onClick={() => submitResult(result._id)}
-                            >
-                              <Send size={14} />
-                            </button>
-                            <button 
-                              className="btn btn-outline-danger"
-                              onClick={() => deleteResult(result._id)}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {results.length === 0 && (
-            <div className="alert alert-info">
-              No results found for the selected criteria.
-            </div>
-          )}
-        </>
-      )}
-
-      {/* View Result Modal */}
-      {selectedResult && (
-        <ViewResultModal 
-          result={selectedResult}
-          onClose={() => setSelectedResult(null)}
-        />
-      )}
-    </>
-  );
-};
-
-// Placeholder components - Will be created in next artifacts
-const ResultModal = ({ mode, student, existingResult, term, session, onClose, onSuccess, token }) => {
-  return (
-    <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-      <div className="modal-dialog modal-xl">
+    <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+      <div className="modal-dialog modal-xl modal-dialog-scrollable">
         <div className="modal-content">
           <div className="modal-header">
             <h5 className="modal-title">
-              {mode === 'manual' ? 'Enter/Edit Scores' : 'Scan Scores'} - {student.name}
+              Result Entry - {student.name} ({student.regNo})
             </h5>
             <button type="button" className="btn-close" onClick={onClose}></button>
           </div>
+
           <div className="modal-body">
-            {mode === 'manual' ? (
-              <p>Manual score entry form will be here...</p>
-            ) : (
-              <p>OCR scanning interface will be here...</p>
+            {error && (
+              <div className="alert alert-danger d-flex align-items-center">
+                <AlertCircle size={20} className="me-2" />
+                {error}
+              </div>
+            )}
+
+            {/* Mode Toggle */}
+            <div className="btn-group mb-4" role="group">
+              <button 
+                type="button" 
+                className={`btn ${currentMode === 'manual' ? 'btn-primary' : 'btn-outline-primary'}`}
+                onClick={() => setCurrentMode('manual')}
+              >
+                Manual Entry
+              </button>
+              <button 
+                type="button" 
+                className={`btn ${currentMode === 'scan' ? 'btn-primary' : 'btn-outline-primary'}`}
+                onClick={() => setCurrentMode('scan')}
+              >
+                Scan Scores (OCR)
+              </button>
+            </div>
+
+            {/* OCR Scanning Interface */}
+            {currentMode === 'scan' && (
+              <div className="mb-4">
+                <h6 className="mb-3">Upload Score Sheet Image</h6>
+                <div className="row">
+                  <div className="col-md-6">
+                    <input 
+                      type="file" 
+                      className="form-control mb-3"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                    />
+                    <button 
+                      className="btn btn-primary"
+                      onClick={handleScan}
+                      disabled={!scanImage || scanning}
+                    >
+                      {scanning ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2"></span>
+                          Scanning...
+                        </>
+                      ) : (
+                        <>
+                          <Scan size={18} className="me-2" />
+                          Scan & Extract Scores
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="col-md-6">
+                    {scanImage && (
+                      <div className="border rounded p-2">
+                        <img 
+                          src={scanImage} 
+                          alt="Score sheet" 
+                          className="img-fluid"
+                          style={{ maxHeight: '300px' }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="alert alert-info mt-3">
+                  <small>
+                    <strong>Tips for better OCR results:</strong>
+                    <ul className="mb-0 mt-2">
+                      <li>Ensure the image is clear and well-lit</li>
+                      <li>Scores should be written clearly in boxes/columns</li>
+                      <li>Include subject names in the image</li>
+                      <li>After scanning, review and edit scores before submitting</li>
+                    </ul>
+                  </small>
+                </div>
+              </div>
+            )}
+
+            {/* Manual Entry Form */}
+            {currentMode === 'manual' && (
+              <>
+                {/* Subjects Table */}
+                <div className="mb-4">
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h6 className="mb-0">Subjects & Scores</h6>
+                    <button className="btn btn-sm btn-outline-primary" onClick={addSubject}>
+                      <Plus size={16} className="me-1" />
+                      Add Subject
+                    </button>
+                  </div>
+
+                  <div className="table-responsive">
+                    <table className="table table-bordered">
+                      <thead className="table-light">
+                        <tr>
+                          <th style={{ width: '30%' }}>Subject</th>
+                          <th style={{ width: '12%' }}>CA1 (20)</th>
+                          <th style={{ width: '12%' }}>CA2 (20)</th>
+                          <th style={{ width: '12%' }}>Exam (60)</th>
+                          <th style={{ width: '12%' }}>Total</th>
+                          <th style={{ width: '12%' }}>Grade</th>
+                          <th style={{ width: '10%' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {subjects.map((subject, index) => {
+                          const total = (Number(subject.ca1) || 0) + (Number(subject.ca2) || 0) + (Number(subject.exam) || 0);
+                          const percent = (total / 100) * 100;
+                          let grade = 'F';
+                          if (percent >= 70) grade = 'A';
+                          else if (percent >= 60) grade = 'B';
+                          else if (percent >= 50) grade = 'C';
+                          else if (percent >= 40) grade = 'D';
+
+                          return (
+                            <tr key={index}>
+                              <td>
+                                <input 
+                                  type="text" 
+                                  className="form-control form-control-sm"
+                                  value={subject.subject}
+                                  onChange={(e) => updateSubject(index, 'subject', e.target.value)}
+                                  list="subject-suggestions"
+                                />
+                                <datalist id="subject-suggestions">
+                                  {COMMON_SUBJECTS.map(s => (
+                                    <option key={s} value={s} />
+                                  ))}
+                                </datalist>
+                              </td>
+                              <td>
+                                <input 
+                                  type="number" 
+                                  className="form-control form-control-sm"
+                                  value={subject.ca1}
+                                  onChange={(e) => updateSubject(index, 'ca1', Math.min(20, Math.max(0, Number(e.target.value))))}
+                                  min="0"
+                                  max="20"
+                                />
+                              </td>
+                              <td>
+                                <input 
+                                  type="number" 
+                                  className="form-control form-control-sm"
+                                  value={subject.ca2}
+                                  onChange={(e) => updateSubject(index, 'ca2', Math.min(20, Math.max(0, Number(e.target.value))))}
+                                  min="0"
+                                  max="20"
+                                />
+                              </td>
+                              <td>
+                                <input 
+                                  type="number" 
+                                  className="form-control form-control-sm"
+                                  value={subject.exam}
+                                  onChange={(e) => updateSubject(index, 'exam', Math.min(60, Math.max(0, Number(e.target.value))))}
+                                  min="0"
+                                  max="60"
+                                />
+                              </td>
+                              <td className="text-center fw-bold">{total}</td>
+                              <td className="text-center">
+                                <span className={`badge bg-${
+                                  grade === 'A' ? 'success' :
+                                  grade === 'B' ? 'primary' :
+                                  grade === 'C' ? 'info' :
+                                  grade === 'D' ? 'warning' : 'danger'
+                                }`}>
+                                  {grade}
+                                </span>
+                              </td>
+                              <td className="text-center">
+                                <button 
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => removeSubject(index)}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Affective Traits */}
+                <div className="mb-4">
+                  <h6 className="mb-3">Affective Traits (1-5 Rating)</h6>
+                  <div className="row g-3">
+                    {Object.keys(affectiveTraits).map(trait => (
+                      <div key={trait} className="col-md-4">
+                        <label className="form-label text-capitalize">{trait}</label>
+                        <input 
+                          type="number"
+                          className="form-control"
+                          value={affectiveTraits[trait]}
+                          onChange={(e) => setAffectiveTraits({
+                            ...affectiveTraits,
+                            [trait]: Math.min(5, Math.max(1, Number(e.target.value)))
+                          })}
+                          min="1"
+                          max="5"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Fees */}
+                <div className="mb-4">
+                  <h6 className="mb-3">School Fees (₦)</h6>
+                  <div className="row g-3">
+                    {Object.keys(fees).map(feeType => (
+                      <div key={feeType} className="col-md-4">
+                        <label className="form-label text-capitalize">{feeType}</label>
+                        <input 
+                          type="number"
+                          className="form-control"
+                          value={fees[feeType]}
+                          onChange={(e) => setFees({
+                            ...fees,
+                            [feeType]: Math.max(0, Number(e.target.value))
+                          })}
+                          min="0"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-2">
+                    <strong>Total Fees: ₦{Object.values(fees).reduce((sum, val) => sum + Number(val), 0).toLocaleString()}</strong>
+                  </div>
+                </div>
+
+                {/* Attendance */}
+                <div className="mb-4">
+                  <h6 className="mb-3">Attendance</h6>
+                  <div className="row g-3">
+                    <div className="col-md-4">
+                      <label className="form-label">Days Opened</label>
+                      <input 
+                        type="number"
+                        className="form-control"
+                        value={attendance.opened}
+                        onChange={(e) => setAttendance({
+                          ...attendance,
+                          opened: Math.max(0, Number(e.target.value))
+                        })}
+                        min="0"
+                      />
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label">Days Present</label>
+                      <input 
+                        type="number"
+                        className="form-control"
+                        value={attendance.present}
+                        onChange={(e) => setAttendance({
+                          ...attendance,
+                          present: Math.max(0, Number(e.target.value))
+                        })}
+                        min="0"
+                      />
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label">Days Absent</label>
+                      <input 
+                        type="number"
+                        className="form-control"
+                        value={attendance.absent}
+                        onChange={(e) => setAttendance({
+                          ...attendance,
+                          absent: Math.max(0, Number(e.target.value))
+                        })}
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Comments */}
+                <div className="mb-4">
+                  <h6 className="mb-3">Comments</h6>
+                  <div className="mb-3">
+                    <label className="form-label">Teacher's Comment</label>
+                    <textarea 
+                      className="form-control"
+                      rows="3"
+                      value={comments.teacher}
+                      onChange={(e) => setComments({
+                        ...comments,
+                        teacher: e.target.value
+                      })}
+                      placeholder="Enter your comment about the student's performance..."
+                    ></textarea>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="modal-footer">
+            <button 
+              type="button" 
+              className="btn btn-secondary" 
+              onClick={onClose}
+              disabled={loading}
+            >
+              Cancel
+            </button>
+            {currentMode === 'manual' && (
+              <>
+                <button 
+                  type="button" 
+                  className="btn btn-primary"
+                  onClick={() => handleSave(false)}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <span className="spinner-border spinner-border-sm"></span>
+                  ) : (
+                    <>
+                      <Save size={18} className="me-2" />
+                      Save as Draft
+                    </>
+                  )}
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-success"
+                  onClick={() => handleSave(true)}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <span className="spinner-border spinner-border-sm"></span>
+                  ) : (
+                    <>
+                      <Send size={18} className="me-2" />
+                      Submit to Admin
+                    </>
+                  )}
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -628,22 +554,4 @@ const ResultModal = ({ mode, student, existingResult, term, session, onClose, on
   );
 };
 
-const ViewResultModal = ({ result, onClose }) => {
-  return (
-    <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-      <div className="modal-dialog modal-lg">
-        <div className="modal-content">
-          <div className="modal-header">
-            <h5 className="modal-title">Result Details</h5>
-            <button type="button" className="btn-close" onClick={onClose}></button>
-          </div>
-          <div className="modal-body">
-            <p>Full result details will be shown here...</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default MyClassWithResults;
+export default ResultEntryModal;
