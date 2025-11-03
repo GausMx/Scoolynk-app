@@ -451,14 +451,3 @@ export const deleteResult = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete result.' });
   }
 };
-
-export default {
-  getResultTemplate,
-  getMyClassResults,
-  getResultById,
-  saveResult,
-  scanScores,
-  submitResult,
-  submitMultipleResults,
-  deleteResult
-};
