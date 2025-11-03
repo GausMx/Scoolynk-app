@@ -1,4 +1,4 @@
-// server/routes/teacherRoutes.js - COMPLETE FILE
+// server/routes/teacherRoutes.js - UPDATED WITH RESULT ROUTES
 
 import express from 'express';
 import protect from '../middleware/authMiddleware.js';
@@ -14,6 +14,17 @@ import {
   getClassStudents,
   updateStudent
 } from '../controllers/teacherController.js';
+
+import {
+  getResultTemplate,
+  getMyClassResults,
+  getResultById,
+  saveResult,
+  scanScores,
+  submitResult,
+  submitMultipleResults,
+  deleteResult
+} from '../controllers/resultController.js';
 
 const router = express.Router();
 
@@ -35,5 +46,30 @@ router.get('/classes/:classId/students', protect, requireRole('teacher'), getCla
 
 // Profile
 router.put('/profile', protect, requireRole('teacher'), updateTeacherProfile);
+
+// ✅ RESULT MANAGEMENT ROUTES
+// Get result template
+router.get('/results/template', protect, requireRole('teacher'), getResultTemplate);
+
+// Get all results for teacher's class
+router.get('/results', protect, requireRole('teacher'), getMyClassResults);
+
+// Get single result by ID
+router.get('/results/:resultId', protect, requireRole('teacher'), getResultById);
+
+// Create/update result (manual entry)
+router.post('/results', protect, requireRole('teacher'), saveResult);
+
+// Scan scores using OCR
+router.post('/results/scan', protect, requireRole('teacher'), scanScores);
+
+// Submit single result to admin
+router.put('/results/:resultId/submit', protect, requireRole('teacher'), submitResult);
+
+// Submit multiple results to admin
+router.post('/results/submit-multiple', protect, requireRole('teacher'), submitMultipleResults);
+
+// Delete result (only drafts)
+router.delete('/results/:resultId', protect, requireRole('teacher'), deleteResult);
 
 export default router;
