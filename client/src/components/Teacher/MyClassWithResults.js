@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
-  Users, Search, Download, FileText, History, 
-  Plus, Edit, Trash2, Send, Eye, Upload, Scan
+  Users, Search, Download, FileText, History, Edit, Trash2, Send, Eye, Scan
 } from 'lucide-react';
 
 const { REACT_APP_API_URL } = process.env;
@@ -30,7 +29,7 @@ const MyClassWithResults = () => {
     } else if (activeTab === 'history') {
       fetchResults();
     }
-  }, [activeTab, selectedTerm, selectedSession]);
+  }, [activeTab, selectedTerm, selectedSession, dependencies]);
 
   const fetchStudents = async () => {
     try {
@@ -460,7 +459,7 @@ const HistoryTab = ({
   };
 
   const deleteResult = async (resultId) => {
-    if (!confirm('Are you sure you want to delete this result? This action cannot be undone.')) {
+    if (!window.confirm('Are you sure you want to delete this result? This action cannot be undone.')) {
       return;
     }
     
