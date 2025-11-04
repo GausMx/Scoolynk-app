@@ -1,81 +1,57 @@
-// server/services/ocrService.js - FINAL FIXED VERSION
+// server/services/ocrService.js - TESSERACT.JS VERSION (FREE, NO API KEYS)
 
-import vision from '@google-cloud/vision';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import Tesseract from 'tesseract.js';
 
 class OCRService {
   constructor() {
-    try {
-      let credentials;
-
-      // ✅ Option 1: Base64 encoded (PRODUCTION - Render)
-      if (process.env.GOOGLE_VISION_KEY_BASE64) {
-        console.log('[OCR] Using GOOGLE_VISION_KEY_BASE64');
-        const base64Key = process.env.GOOGLE_VISION_KEY_BASE64;
-        const jsonKey = Buffer.from(base64Key, 'base64').toString('utf8');
-        credentials = JSON.parse(jsonKey);
-      }
-      // ✅ Option 2: Direct JSON string (Alternative)
-      else if (process.env.GOOGLE_VISION_KEY) {
-        console.log('[OCR] Using GOOGLE_VISION_KEY');
-        credentials = JSON.parse(process.env.GOOGLE_VISION_KEY);
-      }
-      // ✅ Option 3: File path (LOCAL DEVELOPMENT)
-      else {
-        console.log('[OCR] Using local file');
-        const keyPath = path.join(__dirname, '../config/google-vision-key.json');
-        this.client = new vision.ImageAnnotatorClient({ keyFilename: keyPath });
-        this.enabled = true;
-        console.log('[OCR] Google Vision initialized from file');
-        return;
-      }
-
-      // Initialize client with credentials from env
-      if (credentials) {
-        this.client = new vision.ImageAnnotatorClient({ credentials });
-        this.enabled = true;
-        console.log('[OCR] Google Vision initialized successfully');
-      } else {
-        throw new Error('No credentials found');
-      }
-
-    } catch (error) {
-      this.enabled = false;
-      console.warn('[OCR] Not configured:', error.message);
-      console.warn('[OCR] Add GOOGLE_VISION_KEY_BASE64 or GOOGLE_VISION_KEY to env');
-    }
+    this.enabled = true;
+    console.log('[OCR] Tesseract.js initialized (FREE, no API keys needed)');
   }
 
   async extractText(imageBuffer) {
     if (!this.enabled) {
       return {
         success: false,
-        message: 'OCR service not configured. Add GOOGLE_VISION_KEY to env'
+        message: 'OCR service not available'
       };
     }
 
     try {
-      const [result] = await this.client.textDetection(imageBuffer);
-      const detections = result.textAnnotations;
+      console.log('[OCR] Starting text extraction with Tesseract...');
 
-      if (!detections || detections.length === 0) {
-        return {
-          success: false,
-          message: 'No text detected in image'
-        };
+      // Convert buffer to base64 if needed
+      let imageSource = imageBuffer;
+      if (Buffer.isBuffer(imageBuffer)) {
+        imageSource = `data:image/png;base64,${imageBuffer.toString('base64')}`;
       }
 
-      const fullText = detections[0].description;
+      // Perform OCR
+      const result = await Tesseract.recognize(
+        imageSource,
+        'eng', // Language
+        {
+          logger: (m) => {
+            if (m.status === 'recognizing text') {
+              console.log(`[OCR] Progress: ${Math.round(m.progress * 100)}%`);
+            }
+          }
+        }
+      );
+
+      const fullText = result.data.text;
       const lines = fullText.split('\n').filter(line => line.trim() !== '');
+      const confidence = result.data.confidence;
+
+      console.log('[OCR] Extraction complete:', {
+        linesFound: lines.length,
+        confidence: `${confidence.toFixed(2)}%`
+      });
 
       return {
         success: true,
         fullText,
         lines,
+        confidence,
         students: this.parseStudentData(lines)
       };
     } catch (error) {
@@ -127,6 +103,7 @@ class OCRService {
 
   async extractFromBase64(base64Image) {
     try {
+      // Remove data URL prefix if present
       const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
       const imageBuffer = Buffer.from(base64Data, 'base64');
       return await this.extractText(imageBuffer);
@@ -137,6 +114,102 @@ class OCRService {
         message: 'Failed to process base64 image'
       };
     }
+  }
+
+  // Enhanced score parsing for result sheets
+  async extractScores(imageBuffer) {
+    try {
+      const result = await this.extractText(imageBuffer);
+      
+      if (!result.success) {
+        return result;
+      }
+
+      const scores = this.parseScoresFromText(result.fullText);
+      
+      return {
+        success: true,
+        scores,
+        confidence: result.confidence,
+        rawText: result.fullText
+      };
+    } catch (error) {
+      console.error('[OCR] Score extraction error:', error);
+      return {
+        success: false,
+        message: 'Failed to extract scores'
+      };
+    }
+  }
+
+  parseScoresFromText(text) {
+    const subjects = [];
+    const lines = text.split('\n').filter(line => line.trim());
+
+    // Common subject patterns
+    const subjectPatterns = [
+      /mathematics/i,
+      /english/i,
+      /science/i,
+      /social\s*studies/i,
+      /yoruba/i,
+      /igbo/i,
+      /hausa/i,
+      /computer/i,
+      /biology/i,
+      /chemistry/i,
+      /physics/i,
+      /economics/i,
+      /geography/i,
+      /history/i,
+      /literature/i,
+      /french/i,
+      /agricultural/i,
+      /civic/i,
+      /business/i,
+      /commerce/i,
+      /accounting/i,
+      /technical/i,
+      /home\s*economics/i,
+      /music/i,
+      /arts/i,
+      /physical/i,
+      /health/i
+    ];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      // Check if line contains a subject name
+      const matchedSubject = subjectPatterns.find(pattern => pattern.test(line));
+      
+      if (matchedSubject) {
+        // Extract subject name (everything before numbers)
+        const subjectName = line.split(/\s+\d/)[0].trim();
+        
+        // Look for numbers in this line and next few lines
+        const numbers = [];
+        for (let j = i; j < Math.min(i + 3, lines.length); j++) {
+          // Extract all numbers from the line
+          const nums = lines[j].match(/\d+/g);
+          if (nums) {
+            numbers.push(...nums.map(Number));
+          }
+        }
+        
+        // We expect at least 3 numbers (CA1, CA2, Exam)
+        if (numbers.length >= 3) {
+          subjects.push({
+            subject: subjectName,
+            ca1: Math.min(numbers[0] || 0, 20),
+            ca2: Math.min(numbers[1] || 0, 20),
+            exam: Math.min(numbers[2] || 0, 60)
+          });
+        }
+      }
+    }
+
+    return subjects;
   }
 }
 
