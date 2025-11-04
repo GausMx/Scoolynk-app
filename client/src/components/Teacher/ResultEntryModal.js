@@ -33,6 +33,8 @@ const ResultEntryModal = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [currentMode, setCurrentMode] = useState(mode);
+  const [template, setTemplate] = useState(null);
+  const [loadingTemplate, setLoadingTemplate] = useState(true);
   
   // Form state
   const [subjects, setSubjects] = useState([]);
@@ -64,6 +66,30 @@ const ResultEntryModal = ({
   // OCR state
   const [scanImage, setScanImage] = useState(null);
   const [scanning, setScanning] = useState(false);
+
+  // Fetch result template
+  useEffect(() => {
+    fetchTemplate();
+  }, [term, session]);
+
+  const fetchTemplate = async () => {
+    try {
+      setLoadingTemplate(true);
+      const res = await axios.get(
+        `${REACT_APP_API_URL}/api/teacher/results/template`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { term, session }
+        }
+      );
+      setTemplate(res.data.template);
+    } catch (err) {
+      console.log('No template found:', err);
+      setTemplate(null);
+    } finally {
+      setLoadingTemplate(false);
+    }
+  };
 
   useEffect(() => {
     if (existingResult) {

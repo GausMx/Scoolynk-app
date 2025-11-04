@@ -44,6 +44,7 @@ const Sidebar = ({ user, role }) => {
     { path: "/admin/manage-courses", label: "Manage Courses" },
     { path: "/admin/payment-setup", label: "Payment Setup" },
     { path: "/admin/payment-history", label: "Payment History" },
+    { path: "/admin/result-management", label: "Result Management" },
     { path: "/admin/settings", label: "Settings" },
   ];
 

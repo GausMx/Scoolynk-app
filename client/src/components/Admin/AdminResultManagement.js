@@ -591,12 +591,22 @@ const UploadTemplateModal = ({ token, onClose, onSuccess }) => {
   const [term, setTerm] = useState('First Term');
   const [session, setSession] = useState('2024/2025');
   const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState(null);
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB');
+        return;
+      }
+
       const reader = new FileReader();
-      reader.onloadend = () => setTemplateImage(reader.result);
+      reader.onloadend = () => {
+        setTemplateImage(reader.result);
+        setPreview(reader.result);
+      };
       reader.readAsDataURL(file);
     }
   };
@@ -607,15 +617,28 @@ const UploadTemplateModal = ({ token, onClose, onSuccess }) => {
       return;
     }
 
+    if (!name.trim()) {
+      alert('Please enter a template name');
+      return;
+    }
+
     try {
       setUploading(true);
-      await axios.post(
+      const response = await axios.post(
         `${REACT_APP_API_URL}/api/admin/results/template`,
-        { base64Image: templateImage, name, term, session },
+        { 
+          base64Image: templateImage, 
+          name: name.trim(), 
+          term, 
+          session 
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      
+      alert('Template uploaded successfully! Teachers can now use it for result entry.');
       onSuccess();
     } catch (err) {
+      console.error('Upload error:', err);
       alert('Failed to upload template: ' + (err.response?.data?.message || err.message));
     } finally {
       setUploading(false);
@@ -624,66 +647,131 @@ const UploadTemplateModal = ({ token, onClose, onSuccess }) => {
 
   return (
     <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1060 }}>
-      <div className="modal-dialog modal-lg">
+      <div className="modal-dialog modal-xl modal-dialog-scrollable">
         <div className="modal-content">
-          <div className="modal-header">
-            <h5 className="modal-title">Upload Result Template</h5>
-            <button type="button" className="btn-close" onClick={onClose}></button>
+          <div className="modal-header bg-primary text-white">
+            <h5 className="modal-title">
+              <Upload size={20} className="me-2" />
+              Upload Result Template
+            </h5>
+            <button type="button" className="btn-close btn-close-white" onClick={onClose}></button>
           </div>
           <div className="modal-body">
-            <div className="mb-3">
-              <label className="form-label">Template Name</label>
-              <input 
-                type="text"
-                className="form-control"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., First Term 2024/2025 Template"
-              />
+            <div className="alert alert-info">
+              <AlertCircle size={18} className="me-2" />
+              <strong>Instructions:</strong> Upload a scanned/photo of your school's result template. 
+              This will be displayed to teachers when entering student results. Teachers can fill scores directly on this template.
             </div>
-            <div className="row mb-3">
-              <div className="col-md-6">
-                <label className="form-label">Term</label>
-                <select className="form-select" value={term} onChange={(e) => setTerm(e.target.value)}>
-                  <option value="First Term">First Term</option>
-                  <option value="Second Term">Second Term</option>
-                  <option value="Third Term">Third Term</option>
-                </select>
+
+            <div className="row">
+              <div className="col-md-5">
+                <div className="mb-3">
+                  <label className="form-label fw-bold">Template Name *</label>
+                  <input 
+                    type="text"
+                    className="form-control"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g., JSS Result Template 2024/2025"
+                  />
+                  <small className="text-muted">Give this template a descriptive name</small>
+                </div>
+                
+                <div className="row mb-3">
+                  <div className="col-md-6">
+                    <label className="form-label fw-bold">Term *</label>
+                    <select className="form-select" value={term} onChange={(e) => setTerm(e.target.value)}>
+                      <option value="First Term">First Term</option>
+                      <option value="Second Term">Second Term</option>
+                      <option value="Third Term">Third Term</option>
+                    </select>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label fw-bold">Session *</label>
+                    <input 
+                      type="text"
+                      className="form-control"
+                      value={session}
+                      onChange={(e) => setSession(e.target.value)}
+                      placeholder="2024/2025"
+                    />
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label fw-bold">Upload Template Image *</label>
+                  <input 
+                    type="file"
+                    className="form-control"
+                    accept="image/*,application/pdf"
+                    onChange={handleImageUpload}
+                  />
+                  <small className="text-muted">
+                    Accepted formats: JPG, PNG, PDF (Max 5MB)<br/>
+                    For best results: Use high-quality scan/photo with good lighting
+                  </small>
+                </div>
+
+                <div className="alert alert-warning">
+                  <strong>Tips for best results:</strong>
+                  <ul className="mb-0 mt-2">
+                    <li>Ensure the template is clearly visible</li>
+                    <li>Include all sections: header, student info, subjects, comments</li>
+                    <li>Make sure text is readable</li>
+                    <li>Avoid shadows and glare</li>
+                  </ul>
+                </div>
               </div>
-              <div className="col-md-6">
-                <label className="form-label">Session</label>
-                <input 
-                  type="text"
-                  className="form-control"
-                  value={session}
-                  onChange={(e) => setSession(e.target.value)}
-                  placeholder="2024/2025"
-                />
+
+              <div className="col-md-7">
+                <label className="form-label fw-bold">Preview</label>
+                {preview ? (
+                  <div className="border rounded p-2 bg-light" style={{ maxHeight: '600px', overflow: 'auto' }}>
+                    <img 
+                      src={preview} 
+                      alt="Template preview" 
+                      className="img-fluid w-100"
+                      style={{ maxHeight: '580px', objectFit: 'contain' }}
+                    />
+                  </div>
+                ) : (
+                  <div 
+                    className="border rounded p-5 bg-light text-center" 
+                    style={{ minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <div className="text-muted">
+                      <Upload size={64} className="mb-3 opacity-50" />
+                      <p>Upload an image to see preview</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="mb-3">
-              <label className="form-label">Upload Template Image</label>
-              <input 
-                type="file"
-                className="form-control"
-                accept="image/*"
-                onChange={handleImageUpload}
-              />
-            </div>
-            {templateImage && (
-              <div className="border rounded p-2">
-                <img src={templateImage} alt="Template" className="img-fluid" />
-              </div>
-            )}
           </div>
           <div className="modal-footer">
-            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+            <button 
+              className="btn btn-secondary" 
+              onClick={onClose}
+              disabled={uploading}
+            >
+              Cancel
+            </button>
             <button 
               className="btn btn-primary"
               onClick={handleUpload}
-              disabled={uploading || !templateImage}
+              disabled={uploading || !templateImage || !name.trim()}
             >
-              {uploading ? 'Uploading...' : 'Upload Template'}
+              {uploading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2"></span>
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload size={18} className="me-2" />
+                  Upload Template
+                </>
+              )}
             </button>
           </div>
         </div>
