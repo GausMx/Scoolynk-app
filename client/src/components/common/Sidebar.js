@@ -37,7 +37,6 @@ const Sidebar = ({ user, role }) => {
 
   const adminLinks = [
     { path: "/admin", label: "Home" },
-    { path: "/admin/review-results", label: "Review Results" },
     { path: "/admin/manage-teachers", label: "Manage Teachers" },
     { path: "/admin/manage-students", label: "Manage Students" },
     { path: "/admin/manage-classes", label: "Manage Classes" },

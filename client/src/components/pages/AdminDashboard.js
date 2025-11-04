@@ -5,7 +5,6 @@ import Layout from '../common/Layout';
 
 // Admin subpages
 import Dashboard from '../Admin/Dashboard'; // this is your Home
-import ReviewResults from '../Admin/ReviewResults';
 import Settings from '../Admin/Settings';
 import ManageTeachers from '../Admin/ManageTeachers';
 import ManageStudents from '../Admin/ManageStudents';
@@ -19,7 +18,6 @@ const AdminDashboard = ({ user }) => {
     <Layout user={user} role="admin">
       <Routes>
         <Route path="/" element={<Dashboard />} />
-        <Route path="/review-results" element={<ReviewResults />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/manage-teachers" element={<ManageTeachers />} />
         <Route path="/manage-students" element={<ManageStudents />} />
