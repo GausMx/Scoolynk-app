@@ -461,7 +461,7 @@ const HistoryTab = ({
   };
 
   const deleteResult = async (resultId) => {
-    if (!confirm('Are you sure you want to delete this result? This action cannot be undone.')) {
+    if (!window.confirm('Are you sure you want to delete this result? This action cannot be undone.')) {
       return;
     }
     
