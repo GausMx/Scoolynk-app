@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
-  Users, Search, Download, FileText, History, Edit, Trash2, Send, Eye, Scan
+  Users, Search, Download, FileText, History, 
+  Edit, Trash2, Send, Eye, Scan
 } from 'lucide-react';
+import ResultEntryModal from './ResultEntryModal';
 
 const { REACT_APP_API_URL } = process.env;
 
@@ -409,7 +411,7 @@ const ResultsTab = ({
 
       {/* Result Entry/Edit Modal */}
       {showModal && (
-        <ResultModal 
+        <ResultEntryModal 
           mode={modalMode}
           student={selectedStudent}
           existingResult={editingResult}
@@ -459,7 +461,7 @@ const HistoryTab = ({
   };
 
   const deleteResult = async (resultId) => {
-    if (!window.confirm('Are you sure you want to delete this result? This action cannot be undone.')) {
+    if (!confirm('Are you sure you want to delete this result? This action cannot be undone.')) {
       return;
     }
     
@@ -602,30 +604,9 @@ const HistoryTab = ({
   );
 };
 
-// Placeholder components - Will be created in next artifacts
-const ResultModal = ({ mode, student, existingResult, term, session, onClose, onSuccess, token }) => {
-  return (
-    <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-      <div className="modal-dialog modal-xl">
-        <div className="modal-content">
-          <div className="modal-header">
-            <h5 className="modal-title">
-              {mode === 'manual' ? 'Enter/Edit Scores' : 'Scan Scores'} - {student.name}
-            </h5>
-            <button type="button" className="btn-close" onClick={onClose}></button>
-          </div>
-          <div className="modal-body">
-            {mode === 'manual' ? (
-              <p>Manual score entry form will be here...</p>
-            ) : (
-              <p>OCR scanning interface will be here...</p>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+// Import the real ResultEntryModal component
+// NOTE: Make sure ResultEntryModal.js exists in the same directory
+// If you haven't created it yet, you need to create it from artifact #8
 
 const ViewResultModal = ({ result, onClose }) => {
   return (
