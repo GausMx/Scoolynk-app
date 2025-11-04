@@ -423,7 +423,7 @@ const AllResultsTab = ({
       return;
     }
 
-    if (!confirm(`Send ${selectedResults.length} result(s) to parents via SMS?`)) {
+    if (!window.confirm(`Send ${selectedResults.length} result(s) to parents via SMS?`)) {
       return;
     }
 
