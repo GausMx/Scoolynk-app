@@ -146,4 +146,4 @@ resultTemplateSchema.index({ schoolId: 1, term: 1, session: 1 });
 
 const ResultTemplate = mongoose.model('ResultTemplate', resultTemplateSchema);
 
-export default ResultTemplate;
+export default ResultTemplate;    
