@@ -1,5 +1,3 @@
-// src/components/Teacher/ResultEntryModal.js - COMPLETE FIXED VERSION
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Save, Send, Upload, Scan, Plus, Trash2, AlertCircle } from 'lucide-react';
@@ -463,7 +461,7 @@ const TemplateBasedEntry = ({ 
               <div className="col-6">
                 <small className="text-muted">Student Name</small>
                 <div className="fw-bold">{student.name}</div>
-              </div>
+                </div>
               <div className="col-6">
                 <small className="text-muted">Reg Number</small>
                 <div className="fw-bold">{student.regNo}</div>
@@ -522,6 +520,7 @@ const TemplateBasedEntry = ({ 
                           value={subject.ca2}
                           onChange={(e) => updateSubject(index, 'ca2', Math.min(20, Math.max(0, Number(e.target.value))))}
                           min="0" max="20"
+                          **/>**
                       </td>
                       <td>
                         <input 
@@ -661,7 +660,7 @@ const TemplateBasedEntry = ({ 
         </div>
         
         <div className="mb-3">
-          <h6 className="mb-2">Principal's Comment</h6>
+          <h6 className="mb-2">Principal's Comment (Read-Only)</h6>
           <textarea 
             className="form-control form-control-sm"
             rows="3"
@@ -671,9 +670,6 @@ const TemplateBasedEntry = ({ 
               principal: e.target.value
             })}
             placeholder="Enter Principal's comment (optional)..."
-            // Note: This field is usually read-only for the teacher
-            // If the teacher is allowed to set it, this is correct.
-            // For now, we assume the prop allows it for completeness.
             disabled={true} // Assuming teacher should not edit this
           ></textarea>
         </div>
@@ -736,7 +732,7 @@ const RegularFormEntry = ({ 
                 else if (percent >= 60) grade = 'B';
                 else if (percent >= 50) grade = 'C';
                 else if (percent >= 40) grade = 'D';
-
+           
                 return (
                   <tr key={index}>
                     <td>
