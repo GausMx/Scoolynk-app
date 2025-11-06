@@ -118,7 +118,10 @@ const resultSchema = new mongoose.Schema({
     scannedAt: { type: Date },
     confidence: { type: Number }, // OCR confidence score
     rawText: { type: String } // Raw OCR text for reference
-  }
+  },
+  
+  // Filled template image (the completed result sheet with scores overlaid)
+  filledTemplateImage: { type: String } // Base64 image of filled result
 }, {
   timestamps: true
 });
