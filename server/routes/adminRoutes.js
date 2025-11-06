@@ -5,8 +5,6 @@ import protect from '../middleware/authMiddleware.js';
 import requireRole from '../middleware/roleMiddleware.js';
 import subscriptionGuard from '../middleware/subscriptionMiddleware.js';
 import {
-  getSubmittedResults,
-  reviewResult,
   getAdminSettings,
   updateAdminSettings,
   getAdminDashboard,
@@ -30,13 +28,16 @@ import {
   getPaymentStatus,
   sendPaymentReminders,
   updateStudentPayment,
+} from '../controllers/adminController.js';
+import{
+  getSubmittedResults,
+  reviewResult,
   uploadResultTemplate,
   getResultTemplates,
   sendResultToParent,
   sendMultipleResultsToParents,
   getAllResults
-} from '../controllers/adminController.js';
-
+} from '../controllers/adminResultController.js';
 const router = express.Router();
 
 // Dashboard (Mounted at /api/admin)
