@@ -1,6 +1,6 @@
 // server/controllers/adminResultController.js - ADMIN RESULT MANAGEMENT
 
-import Result from '../models/Result.js';
+import Result from '../models/Result.js'; 
 import ResultTemplate from '../models/ResultTemplate.js';
 import Student from '../models/Student.js';
 import School from '../models/School.js';

@@ -29,7 +29,12 @@ import {
   deleteStudent,
   getPaymentStatus,
   sendPaymentReminders,
-  updateStudentPayment
+  updateStudentPayment,
+  uploadResultTemplate,
+  getResultTemplates,
+  sendResultToParent,
+  sendMultipleResultsToParents,
+  getAllResults
 } from '../controllers/adminController.js';
 
 const router = express.Router();
@@ -40,7 +45,11 @@ router.get('/', protect, subscriptionGuard, requireRole('admin'), getAdminDashbo
 // Review submitted results
 router.get('/results', protect, requireRole('admin'), getSubmittedResults);
 router.post('/results/review', protect, requireRole('admin'), reviewResult);
-
+router.post('/results/template', protect, requireRole('admin'), uploadResultTemplate);
+router.get('/results/templates', protect, requireRole('admin'), getResultTemplates);
+router.get('/results', protect, requireRole('admin'), getAllResults);
+router.post('/results/:resultId/send', protect, requireRole('admin'), sendResultToParent);
+router.post('/results/send-multiple', protect, requireRole('admin'), sendMultipleResultsToParents);
 // Settings
 router.get('/settings', protect, requireRole('admin'), getAdminSettings);
 router.put('/settings', protect, requireRole('admin'), updateAdminSettings);
