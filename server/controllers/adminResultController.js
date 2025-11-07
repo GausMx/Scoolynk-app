@@ -1,177 +1,218 @@
-// server/controllers/adminResultController.js - ADMIN RESULT MANAGEMENT
+// server/controllers/adminResultController.js - UPDATED FOR MANUAL TEMPLATE BUILDER
 
 import Result from '../models/Result.js'; 
 import ResultTemplate from '../models/ResultTemplate.js';
 import Student from '../models/Student.js';
 import School from '../models/School.js';
 import SMSService from '../services/smsService.js';
-import OCRService from '../services/ocrService.js';
 
-// Upload and process result template
-export const uploadResultTemplate = async (req, res) => {
+// ✅ CREATE RESULT TEMPLATE (Manual Template Builder)
+export const createResultTemplate = async (req, res) => {
   try {
-    const { base64Image, term, session, name } = req.body;
+    const { name, term, session, templateImage, layout } = req.body;
 
-    if (!base64Image || !term || !session) {
+    if (!name || !term || !session || !templateImage || !layout) {
       return res.status(400).json({ 
-        message: 'Image, term, and session are required.' 
+        message: 'Name, term, session, template image, and layout are required.' 
       });
     }
 
-    // Deactivate existing templates for this term/session
-    await ResultTemplate.updateMany(
-      {
-        schoolId: req.user.schoolId,
-        term,
-        session
-      },
-      { isActive: false }
-    );
-
-    // Extract template structure using OCR
-    const ocrResult = await OCRService.extractFromBase64(base64Image);
-
-    // Create basic template structure
-    // In production, you'd use more sophisticated image processing
-    // to detect boxes, lines, and field positions
-    const template = new ResultTemplate({
+    // Check if template already exists for this term/session
+    const existingTemplate = await ResultTemplate.findOne({
       schoolId: req.user.schoolId,
-      name: name || `${term} ${session} Result Template`,
       term,
       session,
-      templateImage: base64Image,
+      isActive: true
+    });
+
+    if (existingTemplate) {
+      return res.status(400).json({
+        message: `A template already exists for ${term}, ${session}. Please edit or deactivate it first.`
+      });
+    }
+
+    // Create new template
+    const template = new ResultTemplate({
+      schoolId: req.user.schoolId,
+      name,
+      term,
+      session,
+      templateImage,
+      layout,
       createdBy: req.user._id,
-      layout: {
-        header: {
-          schoolName: {
-            label: 'School Name',
-            type: 'text',
-            coordinates: { x: 100, y: 50, width: 400, height: 40 },
-            isEditable: false,
-            category: 'other'
-          },
-          logo: {
-            label: 'School Logo',
-            type: 'image',
-            coordinates: { x: 50, y: 30, width: 80, height: 80 },
-            isEditable: false,
-            category: 'other'
-          },
-          address: {
-            label: 'School Address',
-            type: 'text',
-            coordinates: { x: 100, y: 100, width: 400, height: 30 },
-            isEditable: false,
-            category: 'other'
-          }
-        },
-        studentInfo: {
-          name: {
-            label: 'Student Name',
-            type: 'text',
-            coordinates: { x: 100, y: 150, width: 300, height: 30 },
-            isEditable: false,
-            category: 'student_info'
-          },
-          regNo: {
-            label: 'Reg No',
-            type: 'text',
-            coordinates: { x: 100, y: 190, width: 200, height: 30 },
-            isEditable: false,
-            category: 'student_info'
-          },
-          className: {
-            label: 'Class',
-            type: 'text',
-            coordinates: { x: 100, y: 230, width: 150, height: 30 },
-            isEditable: false,
-            category: 'student_info'
-          },
-          session: {
-            label: 'Session',
-            type: 'text',
-            coordinates: { x: 300, y: 230, width: 150, height: 30 },
-            isEditable: false,
-            category: 'student_info'
-          },
-          photo: {
-            label: 'Student Photo',
-            type: 'image',
-            coordinates: { x: 500, y: 150, width: 100, height: 120 },
-            isEditable: false,
-            category: 'student_info'
-          }
-        },
-        scoresTable: {
-          headers: [
-            { name: 'Subject', coordinates: { x: 50, y: 300, width: 150, height: 30 } },
-            { name: 'CA1', coordinates: { x: 200, y: 300, width: 60, height: 30 } },
-            { name: 'CA2', coordinates: { x: 260, y: 300, width: 60, height: 30 } },
-            { name: 'Exam', coordinates: { x: 320, y: 300, width: 60, height: 30 } },
-            { name: 'Total', coordinates: { x: 380, y: 300, width: 60, height: 30 } },
-            { name: 'Grade', coordinates: { x: 440, y: 300, width: 60, height: 30 } },
-            { name: 'Remark', coordinates: { x: 500, y: 300, width: 100, height: 30 } }
-          ],
-          rowHeight: 35,
-          startY: 330,
-          subjectColumn: { x: 50, width: 150 }
-        },
-        affective: {
-          traits: [
-            { name: 'Punctuality', field: { label: 'Punctuality', type: 'number', coordinates: { x: 50, y: 700, width: 200, height: 25 }, category: 'affective' } },
-            { name: 'Behaviour', field: { label: 'Behaviour', type: 'number', coordinates: { x: 50, y: 730, width: 200, height: 25 }, category: 'affective' } },
-            { name: 'Neatness', field: { label: 'Neatness', type: 'number', coordinates: { x: 50, y: 760, width: 200, height: 25 }, category: 'affective' } },
-            { name: 'Relationship', field: { label: 'Relationship', type: 'number', coordinates: { x: 50, y: 790, width: 200, height: 25 }, category: 'affective' } }
-          ]
-        },
-        fees: {
-          fields: [
-            { name: 'Tuition', field: { label: 'Tuition', type: 'number', coordinates: { x: 350, y: 700, width: 200, height: 25 }, category: 'fees' } },
-            { name: 'Uniform', field: { label: 'Uniform', type: 'number', coordinates: { x: 350, y: 730, width: 200, height: 25 }, category: 'fees' } },
-            { name: 'Books', field: { label: 'Books', type: 'number', coordinates: { x: 350, y: 760, width: 200, height: 25 }, category: 'fees' } }
-          ]
-        },
-        attendance: {
-          opened: { label: 'Days Opened', type: 'number', coordinates: { x: 50, y: 850, width: 150, height: 25 }, category: 'attendance' },
-          present: { label: 'Days Present', type: 'number', coordinates: { x: 220, y: 850, width: 150, height: 25 }, category: 'attendance' },
-          absent: { label: 'Days Absent', type: 'number', coordinates: { x: 390, y: 850, width: 150, height: 25 }, category: 'attendance' }
-        },
-        comments: {
-          teacher: { label: "Teacher's Comment", type: 'text', coordinates: { x: 50, y: 900, width: 500, height: 60 }, category: 'comments', isEditable: true },
-          principal: { label: "Principal's Comment", type: 'text', coordinates: { x: 50, y: 970, width: 500, height: 60 }, category: 'comments', isEditable: true }
-        },
-        signatures: {
-          teacher: { label: "Teacher's Signature", type: 'signature', coordinates: { x: 50, y: 1050, width: 200, height: 50 }, category: 'other' },
-          principal: { label: "Principal's Signature", type: 'signature', coordinates: { x: 350, y: 1050, width: 200, height: 50 }, category: 'other' }
-        }
-      }
+      isActive: true
     });
 
     await template.save();
 
     res.status(201).json({ 
-      message: 'Result template uploaded successfully.',
+      message: 'Result template created successfully.',
       template 
     });
   } catch (err) {
-    console.error('[UploadResultTemplate]', err);
-    res.status(500).json({ message: 'Failed to upload template.' });
+    console.error('[CreateResultTemplate]', err);
+    res.status(500).json({ message: 'Failed to create template.' });
   }
 };
 
-// Get all result templates
+// ✅ UPDATE RESULT TEMPLATE
+export const updateResultTemplate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, term, session, templateImage, layout, isActive } = req.body;
+
+    const template = await ResultTemplate.findOne({
+      _id: id,
+      schoolId: req.user.schoolId
+    });
+
+    if (!template) {
+      return res.status(404).json({ message: 'Template not found.' });
+    }
+
+    // Update fields
+    if (name) template.name = name;
+    if (term) template.term = term;
+    if (session) template.session = session;
+    if (templateImage) template.templateImage = templateImage;
+    if (layout) template.layout = layout;
+    if (isActive !== undefined) template.isActive = isActive;
+
+    await template.save();
+
+    res.json({ 
+      message: 'Template updated successfully.',
+      template 
+    });
+  } catch (err) {
+    console.error('[UpdateResultTemplate]', err);
+    res.status(500).json({ message: 'Failed to update template.' });
+  }
+};
+
+// ✅ GET ALL TEMPLATES
 export const getResultTemplates = async (req, res) => {
   try {
-    const templates = await ResultTemplate.find({
-      schoolId: req.user.schoolId
-    })
-    .populate('createdBy', 'name')
-    .sort({ createdAt: -1 });
+    const { term, session, isActive } = req.query;
+
+    const query = { schoolId: req.user.schoolId };
+    if (term) query.term = term;
+    if (session) query.session = session;
+    if (isActive !== undefined) query.isActive = isActive === 'true';
+
+    const templates = await ResultTemplate.find(query)
+      .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 });
 
     res.json({ templates });
   } catch (err) {
     console.error('[GetResultTemplates]', err);
     res.status(500).json({ message: 'Failed to fetch templates.' });
+  }
+};
+
+// ✅ GET SINGLE TEMPLATE
+export const getResultTemplate = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const template = await ResultTemplate.findOne({
+      _id: id,
+      schoolId: req.user.schoolId
+    }).populate('createdBy', 'name email');
+
+    if (!template) {
+      return res.status(404).json({ message: 'Template not found.' });
+    }
+
+    res.json({ template });
+  } catch (err) {
+    console.error('[GetResultTemplate]', err);
+    res.status(500).json({ message: 'Failed to fetch template.' });
+  }
+};
+
+// ✅ DELETE TEMPLATE (Soft delete)
+export const deleteResultTemplate = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const template = await ResultTemplate.findOne({
+      _id: id,
+      schoolId: req.user.schoolId
+    });
+
+    if (!template) {
+      return res.status(404).json({ message: 'Template not found.' });
+    }
+
+    // Soft delete by setting isActive to false
+    template.isActive = false;
+    await template.save();
+
+    res.json({ message: 'Template deactivated successfully.' });
+  } catch (err) {
+    console.error('[DeleteResultTemplate]', err);
+    res.status(500).json({ message: 'Failed to delete template.' });
+  }
+};
+
+// ✅ DUPLICATE TEMPLATE FOR NEW TERM/SESSION
+export const duplicateResultTemplate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newTerm, newSession, newName } = req.body;
+
+    if (!newTerm || !newSession) {
+      return res.status(400).json({ 
+        message: 'New term and session are required.' 
+      });
+    }
+
+    const originalTemplate = await ResultTemplate.findOne({
+      _id: id,
+      schoolId: req.user.schoolId
+    });
+
+    if (!originalTemplate) {
+      return res.status(404).json({ message: 'Original template not found.' });
+    }
+
+    // Check if template already exists for new term/session
+    const existingTemplate = await ResultTemplate.findOne({
+      schoolId: req.user.schoolId,
+      term: newTerm,
+      session: newSession,
+      isActive: true
+    });
+
+    if (existingTemplate) {
+      return res.status(400).json({
+        message: `A template already exists for ${newTerm}, ${newSession}.`
+      });
+    }
+
+    // Create duplicate
+    const newTemplate = new ResultTemplate({
+      schoolId: originalTemplate.schoolId,
+      name: newName || `${originalTemplate.name} (${newTerm} - ${newSession})`,
+      term: newTerm,
+      session: newSession,
+      templateImage: originalTemplate.templateImage,
+      layout: originalTemplate.layout,
+      createdBy: req.user._id,
+      isActive: true
+    });
+
+    await newTemplate.save();
+
+    res.status(201).json({
+      message: 'Template duplicated successfully.',
+      template: newTemplate
+    });
+  } catch (err) {
+    console.error('[DuplicateResultTemplate]', err);
+    res.status(500).json({ message: 'Failed to duplicate template.' });
   }
 };
 
@@ -202,12 +243,13 @@ export const getSubmittedResults = async (req, res) => {
   }
 };
 
-// Review and edit result (admin can edit everything except scores)
+// Review and edit result (admin can edit everything)
 export const reviewResult = async (req, res) => {
   try {
     const { resultId } = req.params;
     const {
       action, // 'approve' or 'reject'
+      subjects, // Admin can now edit scores too
       affectiveTraits,
       fees,
       attendance,
@@ -230,7 +272,8 @@ export const reviewResult = async (req, res) => {
       });
     }
 
-    // Admin can edit non-score fields
+    // Admin can edit all fields including scores
+    if (subjects) result.subjects = subjects;
     if (affectiveTraits) result.affectiveTraits = affectiveTraits;
     if (fees) result.fees = fees;
     if (attendance) result.attendance = attendance;
@@ -435,14 +478,4 @@ export const getAllResults = async (req, res) => {
     console.error('[GetAllResults]', err);
     res.status(500).json({ message: 'Failed to fetch results.' });
   }
-};
-
-export default {
-  uploadResultTemplate,
-  getResultTemplates,
-  getSubmittedResults,
-  reviewResult,
-  sendResultToParent,
-  sendMultipleResultsToParents,
-  getAllResults
 };
