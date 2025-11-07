@@ -20,7 +20,6 @@ import {
   getMyClassResults,
   getResultById,
   saveResult,
-  scanScores,
   submitResult,
   submitMultipleResults,
   deleteResult
@@ -28,42 +27,39 @@ import {
 
 const router = express.Router();
 
-// Dashboard
+// ========== DASHBOARD ==========
 router.get('/dashboard', protect, requireRole('teacher'), getTeacherDashboard);
 
-// Classes and courses
+// ========== CLASSES AND COURSES ==========
 router.get('/classes-courses', getClassesAndCourses);
 router.get('/school-classes', protect, requireRole('teacher'), getTeacherSchoolClasses);
 
-// Onboarding
+// ========== ONBOARDING ==========
 router.post('/onboarding/class-teacher', protect, requireRole('teacher'), saveClassTeacherInfo);
 
-// Student management
+// ========== STUDENT MANAGEMENT ==========
 router.post('/students/bulk', protect, requireRole('teacher'), bulkAddStudents);
 router.put('/students/:studentId', protect, requireRole('teacher'), updateStudent);
 router.get('/my-class/students', protect, requireRole('teacher'), getMyClassStudents);
 router.get('/classes/:classId/students', protect, requireRole('teacher'), getClassStudents);
 
-// Profile
+// ========== PROFILE ==========
 router.put('/profile', protect, requireRole('teacher'), updateTeacherProfile);
 
-// ✅ RESULT MANAGEMENT ROUTES
-// Get result template
+// ========== RESULT MANAGEMENT ==========
+// Get active result template for current term/session
 router.get('/results/template', protect, requireRole('teacher'), getResultTemplate);
 
-// Get all results for teacher's class
+// Get all results for teacher's class (with filters)
 router.get('/results', protect, requireRole('teacher'), getMyClassResults);
 
 // Get single result by ID
 router.get('/results/:resultId', protect, requireRole('teacher'), getResultById);
 
-// Create/update result (manual entry)
+// Create or update result (with filled template image)
 router.post('/results', protect, requireRole('teacher'), saveResult);
 
-// Scan scores using OCR
-router.post('/results/scan', protect, requireRole('teacher'), scanScores);
-
-// Submit single result to admin
+// Submit single result to admin for review
 router.put('/results/:resultId/submit', protect, requireRole('teacher'), submitResult);
 
 // Submit multiple results to admin
