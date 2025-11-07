@@ -8,7 +8,7 @@ import TeacherHome from './TeacherHome';
 import MyClass from './MyClassWithResults';
 import ClassView from './ClassView';
 import TeacherProfile from './TeacherProfile';
-import InteractiveTemplateEntry from './InteractiveTemplateEntry';
+import InteractiveTemplateEntry from './VisualResultEntry';
 const { REACT_APP_API_URL } = process.env;
 //main function for teacher dashboard
 const TeacherDashboard = () => {

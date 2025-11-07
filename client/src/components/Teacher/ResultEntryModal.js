@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Save, Send, Scan, Plus, Trash2, AlertCircle } from 'lucide-react';
 import BrowserOCR from '../utils/ocrHelper';
-import InteractiveTemplateEntry from './InteractiveTemplateEntry'; // <-- already imported
+import InteractiveTemplateEntry from './VisualResultEntry'; // <-- already imported
 
 const { REACT_APP_API_URL } = process.env;
 

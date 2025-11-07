@@ -13,7 +13,7 @@ import ManageCourses from '../Admin/ManageCourses';
 import PaymentSetup from '../Admin/PaymentSetup';
 import PaymentHistory from '../Admin/PaymentHistory';
 import AdminResultManagement from '../Admin/AdminResultManagement'; 
-import TemplateBuilder from '../Admin/TemplateBuilder';
+import TemplateBuilder from '../Admin/VisualTemplateBuilder';
 const AdminDashboard = ({ user }) => {
   return (
     <Layout user={user} role="admin">
