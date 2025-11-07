@@ -45,6 +45,7 @@ const Sidebar = ({ user, role }) => {
     { path: "/admin/payment-history", label: "Payment History" },
     { path: "/admin/result-management", label: "Result Management" },
     { path: "/admin/settings", label: "Settings" },
+    { path: "/admin/template-builder", label: "Template Builder" }
   ];
 
   // Dynamic teacher links based on their classes
@@ -56,6 +57,7 @@ const Sidebar = ({ user, role }) => {
       label: cls.name,
     })),
     { path: "/teacher/teacher-profile", label: "My Profile" },
+    { path: "/teacher/template-entry", label: "Template Entry" },
   ];
 
   const links =

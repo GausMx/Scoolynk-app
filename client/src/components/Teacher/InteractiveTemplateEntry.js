@@ -1,8 +1,8 @@
 // src/components/Teacher/InteractiveTemplateEntry.js
-// This component overlays scores onto the template image
+// Uses manually mapped template for direct input on image
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Trash2, Save, Send } from 'lucide-react';
+import { Save, Send, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
 const InteractiveTemplateEntry = ({
   template,
@@ -20,427 +20,587 @@ const InteractiveTemplateEntry = ({
   onSave,
   onSubmit
 }) => {
-  const canvasRef = useRef(null);
-  const [canvasImage, setCanvasImage] = useState(null);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const containerRef = useRef(null);
+  const imageRef = useRef(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [isSaving, setIsSaving] = useState(false);
+  const [allFields, setAllFields] = useState([]);
 
-  // Generate filled template when data changes
+  // Load image and get dimensions
   useEffect(() => {
-    if (template?.templateImage) {
-      generateFilledTemplate();
+    if (template?.templateImage && imageRef.current) {
+      const img = new Image();
+      img.onload = () => {
+        setImageDimensions({ width: img.width, height: img.height });
+        setImageLoaded(true);
+      };
+      img.src = template.templateImage;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subjects, affectiveTraits, fees, attendance, comments]);
+  }, [template?.templateImage]);
 
-  const addSubject = () => {
-    setSubjects([...subjects, { subject: '', ca1: 0, ca2: 0, exam: 0 }]);
+  // Extract all fields from template layout
+  useEffect(() => {
+    if (!template?.layout) return;
+    
+    const fields = [];
+    const layout = template.layout;
+    
+    // Student Info fields
+    if (layout.studentInfo) {
+      Object.entries(layout.studentInfo).forEach(([key, field]) => {
+        if (field?.coordinates) {
+          fields.push({
+            id: `student_${key}`,
+            type: 'student_info',
+            fieldKey: key,
+            ...field
+          });
+        }
+      });
+    }
+    
+    // Scores table
+    if (layout.scoresTable) {
+      fields.push({
+        id: 'scores_table',
+        type: 'scores_table',
+        data: layout.scoresTable
+      });
+    }
+    
+    // Affective traits
+    if (layout.affective?.traits) {
+      layout.affective.traits.forEach((trait, idx) => {
+        if (trait.field?.coordinates) {
+          fields.push({
+            id: `affective_${idx}`,
+            type: 'affective',
+            traitName: trait.name,
+            ...trait.field
+          });
+        }
+      });
+    }
+    
+    // Fees
+    if (layout.fees?.fields) {
+      layout.fees.fields.forEach((fee, idx) => {
+        if (fee.field?.coordinates) {
+          fields.push({
+            id: `fee_${idx}`,
+            type: 'fee',
+            feeName: fee.name,
+            ...fee.field
+          });
+        }
+      });
+    }
+    
+    // Attendance
+    if (layout.attendance) {
+      Object.entries(layout.attendance).forEach(([key, field]) => {
+        if (field?.coordinates) {
+          fields.push({
+            id: `attendance_${key}`,
+            type: 'attendance',
+            fieldKey: key,
+            ...field
+          });
+        }
+      });
+    }
+    
+    // Comments
+    if (layout.comments) {
+      Object.entries(layout.comments).forEach(([key, field]) => {
+        if (field?.coordinates) {
+          fields.push({
+            id: `comment_${key}`,
+            type: 'comment',
+            fieldKey: key,
+            ...field
+          });
+        }
+      });
+    }
+    
+    setAllFields(fields);
+  }, [template?.layout]);
+
+  // Calculate scale factor
+  const getScaleFactor = () => {
+    if (!containerRef.current || !imageDimensions.width) return 1;
+    const containerWidth = containerRef.current.clientWidth - 40;
+    return (containerWidth / imageDimensions.width) * zoom;
   };
 
-  const removeSubject = (index) => {
-    setSubjects(subjects.filter((_, i) => i !== index));
-  };
+  const scale = getScaleFactor();
 
+  // Ensure we have enough subject rows
+  useEffect(() => {
+    if (template?.layout?.scoresTable) {
+      const estimatedRows = 15; // Default number of subject rows
+      if (subjects.length < estimatedRows) {
+        const newSubjects = [...subjects];
+        while (newSubjects.length < estimatedRows) {
+          newSubjects.push({ subject: '', ca1: 0, ca2: 0, exam: 0 });
+        }
+        setSubjects(newSubjects);
+      }
+    }
+  }, [template]);
+
+  // Update subject field
   const updateSubject = (index, field, value) => {
     const updated = [...subjects];
-    updated[index][field] = value;
+    if (!updated[index]) {
+      updated[index] = { subject: '', ca1: 0, ca2: 0, exam: 0 };
+    }
+    updated[index][field] = field === 'subject' ? value : Number(value);
     setSubjects(updated);
   };
 
-  const generateFilledTemplate = async () => {
-    if (!template?.templateImage || !canvasRef.current) return;
-
-    setIsGenerating(true);
-
-    try {
-      const canvas = canvasRef.current;
+  // Generate filled canvas
+  const generateFilledCanvas = () => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-
-      // Load the template image
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
       
+      const img = new Image();
       img.onload = () => {
-        // Set canvas size to match image
         canvas.width = img.width;
         canvas.height = img.height;
-
-        // Draw template image
         ctx.drawImage(img, 0, 0);
-
-        // Set text properties
+        
         ctx.fillStyle = '#000000';
-        ctx.font = 'bold 20px Arial';
-
-        // Calculate positions (adjust these based on your template)
-        const startX = 50;
-        const startY = 200;
-        const lineHeight = 35;
-
-        // Draw student info
-        ctx.font = 'bold 24px Arial';
-        ctx.fillText(student.name || '', 150, 120);
-        ctx.fillText(student.regNo || '', 500, 120);
-        ctx.fillText(student.classId?.name || '', 150, 150);
-
-        // Draw subject headers
-        ctx.font = 'bold 18px Arial';
-        ctx.fillText('Subject', startX, startY);
-        ctx.fillText('CA1', startX + 200, startY);
-        ctx.fillText('CA2', startX + 270, startY);
-        ctx.fillText('Exam', startX + 340, startY);
-        ctx.fillText('Total', startX + 420, startY);
-        ctx.fillText('Grade', startX + 500, startY);
-
-        // Draw subjects and scores
-        ctx.font = '16px Arial';
-        subjects.forEach((subject, index) => {
-          const y = startY + 30 + (index * lineHeight);
-          const total = (Number(subject.ca1) || 0) + (Number(subject.ca2) || 0) + (Number(subject.exam) || 0);
-          const percent = (total / 100) * 100;
-          let grade = 'F';
-          if (percent >= 70) grade = 'A';
-          else if (percent >= 60) grade = 'B';
-          else if (percent >= 50) grade = 'C';
-          else if (percent >= 40) grade = 'D';
-
-          ctx.fillText(subject.subject || '', startX, y);
-          ctx.fillText(subject.ca1?.toString() || '0', startX + 200, y);
-          ctx.fillText(subject.ca2?.toString() || '0', startX + 270, y);
-          ctx.fillText(subject.exam?.toString() || '0', startX + 340, y);
-          ctx.fillText(total.toString(), startX + 420, y);
-          ctx.fillText(grade, startX + 500, y);
-        });
-
-        // Draw affective traits
-        const traitsY = startY + (subjects.length * lineHeight) + 80;
-        ctx.font = 'bold 16px Arial';
-        ctx.fillText('Affective Traits:', startX, traitsY);
         
-        ctx.font = '14px Arial';
-        let traitY = traitsY + 25;
-        Object.entries(affectiveTraits).forEach(([trait, value]) => {
-          ctx.fillText(`${trait}: ${value}/5`, startX, traitY);
-          traitY += 25;
-        });
-
-        // Draw fees
-        ctx.font = 'bold 16px Arial';
-        const feesX = startX + 350;
-        ctx.fillText('School Fees:', feesX, traitsY);
-        
-        ctx.font = '14px Arial';
-        let feeY = traitsY + 25;
-        Object.entries(fees).forEach(([feeType, amount]) => {
-          ctx.fillText(`${feeType}: ₦${Number(amount).toLocaleString()}`, feesX, feeY);
-          feeY += 25;
-        });
-
-        // Draw attendance
-        const attendanceY = Math.max(traitY, feeY) + 40;
-        ctx.font = 'bold 16px Arial';
-        ctx.fillText('Attendance:', startX, attendanceY);
-        ctx.font = '14px Arial';
-        ctx.fillText(`Opened: ${attendance.opened} | Present: ${attendance.present} | Absent: ${attendance.absent}`, startX, attendanceY + 25);
-
-        // Draw comments
-        const commentY = attendanceY + 80;
-        ctx.font = 'bold 16px Arial';
-        ctx.fillText("Teacher's Comment:", startX, commentY);
-        ctx.font = '14px Arial';
-        
-        // Wrap comment text
-        const maxWidth = canvas.width - (startX * 2);
-        const words = (comments.teacher || '').split(' ');
-        let line = '';
-        let lineY = commentY + 25;
-        
-        words.forEach(word => {
-          const testLine = line + word + ' ';
-          const metrics = ctx.measureText(testLine);
-          if (metrics.width > maxWidth) {
-            ctx.fillText(line, startX, lineY);
-            line = word + ' ';
-            lineY += 20;
-          } else {
-            line = testLine;
+        // Draw all filled fields
+        allFields.forEach(field => {
+          if (field.type === 'student_info') {
+            ctx.font = 'bold 18px Arial';
+            let value = '';
+            if (field.fieldKey === 'name') value = student.name || '';
+            else if (field.fieldKey === 'regno') value = student.regNo || '';
+            else if (field.fieldKey === 'classname') value = student.classId?.name || '';
+            
+            if (value) {
+              ctx.fillText(value, field.coordinates.x, field.coordinates.y + 18);
+            }
+          }
+          else if (field.type === 'affective') {
+            ctx.font = '14px Arial';
+            const traitKey = field.traitName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const value = affectiveTraits[traitKey] || 3;
+            ctx.fillText(value.toString(), field.coordinates.x + 5, field.coordinates.y + 15);
+          }
+          else if (field.type === 'fee') {
+            ctx.font = '14px Arial';
+            const feeKey = field.feeName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const value = fees[feeKey] || 0;
+            ctx.fillText('₦' + value.toLocaleString(), field.coordinates.x + 5, field.coordinates.y + 15);
+          }
+          else if (field.type === 'attendance') {
+            ctx.font = '14px Arial';
+            const value = attendance[field.fieldKey] || 0;
+            ctx.fillText(value.toString(), field.coordinates.x + 5, field.coordinates.y + 15);
+          }
+          else if (field.type === 'comment') {
+            ctx.font = '12px Arial';
+            const text = field.fieldKey === 'teacher' ? comments.teacher : comments.principal;
+            if (text) {
+              wrapText(ctx, text, field.coordinates.x + 5, field.coordinates.y + 15, field.coordinates.width - 10, 16);
+            }
           }
         });
-        ctx.fillText(line, startX, lineY);
-
-        // Convert canvas to image
-        const filledImage = canvas.toDataURL('image/png');
-        setCanvasImage(filledImage);
-        setIsGenerating(false);
+        
+        // Draw scores table
+        const scoresField = allFields.find(f => f.type === 'scores_table');
+        if (scoresField) {
+          const table = scoresField.data;
+          ctx.font = '14px Arial';
+          
+          subjects.forEach((subject, index) => {
+            if (!subject.subject) return;
+            
+            const y = table.startY + (index * table.rowHeight) + 18;
+            
+            // Subject name
+            ctx.fillText(subject.subject, table.subjectColumn.x + 5, y);
+            
+            // Scores
+            table.headers.forEach(header => {
+              let value = '';
+              const headerName = header.name.toLowerCase();
+              
+              if (headerName.includes('ca1') || headerName.includes('ca 1')) {
+                value = (subject.ca1 || 0).toString();
+              } else if (headerName.includes('ca2') || headerName.includes('ca 2')) {
+                value = (subject.ca2 || 0).toString();
+              } else if (headerName.includes('exam')) {
+                value = (subject.exam || 0).toString();
+              } else if (headerName.includes('total')) {
+                const total = (Number(subject.ca1) || 0) + (Number(subject.ca2) || 0) + (Number(subject.exam) || 0);
+                value = total.toString();
+              } else if (headerName.includes('grade')) {
+                const total = (Number(subject.ca1) || 0) + (Number(subject.ca2) || 0) + (Number(subject.exam) || 0);
+                const percent = total;
+                if (percent >= 70) value = 'A';
+                else if (percent >= 60) value = 'B';
+                else if (percent >= 50) value = 'C';
+                else if (percent >= 40) value = 'D';
+                else value = 'F';
+              }
+              
+              if (value) {
+                ctx.fillText(value, header.coordinates.x + 5, y);
+              }
+            });
+          });
+        }
+        
+        resolve(canvas.toDataURL('image/png'));
       };
-
-      img.onerror = () => {
-        console.error('Failed to load template image');
-        setIsGenerating(false);
-      };
-
       img.src = template.templateImage;
-    } catch (error) {
-      console.error('Error generating filled template:', error);
-      setIsGenerating(false);
-    }
+    });
   };
 
-  const handleSaveWithImage = async () => {
-    await generateFilledTemplate();
-    if (onSave) {
-      onSave(canvasImage);
-    }
+  // Helper to wrap text
+  const wrapText = (ctx, text, x, y, maxWidth, lineHeight) => {
+    const words = text.split(' ');
+    let line = '';
+    let currentY = y;
+    
+    words.forEach(word => {
+      const testLine = line + word + ' ';
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && line !== '') {
+        ctx.fillText(line, x, currentY);
+        line = word + ' ';
+        currentY += lineHeight;
+      } else {
+        line = testLine;
+      }
+    });
+    ctx.fillText(line, x, currentY);
   };
 
-  const handleSubmitWithImage = async () => {
-    await generateFilledTemplate();
-    if (onSubmit) {
-      onSubmit(canvasImage);
-    }
+  const handleSave = async () => {
+    setIsSaving(true);
+    const filledImage = await generateFilledCanvas();
+    if (onSave) await onSave(filledImage);
+    setIsSaving(false);
   };
+
+  const handleSubmit = async () => {
+    setIsSaving(true);
+    const filledImage = await generateFilledCanvas();
+    if (onSubmit) await onSubmit(filledImage);
+    setIsSaving(false);
+  };
+
+  if (!template || !imageLoaded) {
+    return (
+      <div className="text-center py-5">
+        <div className="spinner-border text-primary" role="status" />
+        <p className="mt-2">Loading template...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="row">
-      {/* Left: Entry Form */}
-      <div className="col-md-6" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-        <div className="card bg-light mb-3">
-          <div className="card-body py-2">
-            <div className="row">
-              <div className="col-6">
-                <small className="text-muted">Student</small>
-                <div className="fw-bold">{student?.name}</div>
-              </div>
-              <div className="col-6">
-                <small className="text-muted">Reg No</small>
-                <div className="fw-bold">{student?.regNo}</div>
-              </div>
-            </div>
-          </div>
+    <div>
+      {/* Zoom Controls */}
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <span className="badge bg-info me-2">Template: {template.name}</span>
+          <span className="badge bg-secondary">{allFields.length} fields</span>
         </div>
-
-        {/* Subjects */}
-        <div className="mb-3">
-          <div className="d-flex justify-content-between align-items-center mb-2">
-            <h6 className="mb-0">Subject Scores</h6>
-            <button className="btn btn-sm btn-outline-primary" onClick={addSubject}>
-              <Plus size={14} className="me-1" />
-              Add
-            </button>
-          </div>
-          <div className="table-responsive">
-            <table className="table table-sm table-bordered">
-              <thead className="table-light">
-                <tr>
-                  <th>Subject</th>
-                  <th width="60">CA1</th>
-                  <th width="60">CA2</th>
-                  <th width="60">Exam</th>
-                  <th width="60">Total</th>
-                  <th width="40"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {subjects.map((subject, index) => {
-                  const total = (Number(subject.ca1) || 0) + (Number(subject.ca2) || 0) + (Number(subject.exam) || 0);
-                  return (
-                    <tr key={index}>
-                      <td>
-                        <input 
-                          type="text" 
-                          className="form-control form-control-sm"
-                          value={subject.subject}
-                          onChange={(e) => updateSubject(index, 'subject', e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <input 
-                          type="number" 
-                          className="form-control form-control-sm"
-                          value={subject.ca1}
-                          onChange={(e) => updateSubject(index, 'ca1', Math.min(20, Math.max(0, Number(e.target.value))))}
-                          min="0" max="20"
-                        />
-                      </td>
-                      <td>
-                        <input 
-                          type="number" 
-                          className="form-control form-control-sm"
-                          value={subject.ca2}
-                          onChange={(e) => updateSubject(index, 'ca2', Math.min(20, Math.max(0, Number(e.target.value))))}
-                          min="0" max="20"
-                        />
-                      </td>
-                      <td>
-                        <input 
-                          type="number" 
-                          className="form-control form-control-sm"
-                          value={subject.exam}
-                          onChange={(e) => updateSubject(index, 'exam', Math.min(60, Math.max(0, Number(e.target.value))))}
-                          min="0" max="60"
-                        />
-                      </td>
-                      <td className="text-center fw-bold">{total}</td>
-                      <td className="text-center">
-                        <button className="btn btn-sm btn-outline-danger" onClick={() => removeSubject(index)}>
-                          <Trash2 size={12} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Affective Traits - Compact */}
-        <div className="mb-3">
-          <h6 className="mb-2">Affective Traits (1-5)</h6>
-          <div className="row g-2">
-            {Object.keys(affectiveTraits).map(trait => (
-              <div key={trait} className="col-6">
-                <div className="input-group input-group-sm">
-                  <span className="input-group-text text-capitalize" style={{ fontSize: '11px' }}>{trait}</span>
-                  <input 
-                    type="number"
-                    className="form-control"
-                    value={affectiveTraits[trait]}
-                    onChange={(e) => setAffectiveTraits({
-                      ...affectiveTraits,
-                      [trait]: Math.min(5, Math.max(1, Number(e.target.value)))
-                    })}
-                    min="1" max="5"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Fees - Compact */}
-        <div className="mb-3">
-          <h6 className="mb-2">Fees (₦)</h6>
-          <div className="row g-2">
-            {Object.keys(fees).map(feeType => (
-              <div key={feeType} className="col-6">
-                <div className="input-group input-group-sm">
-                  <span className="input-group-text text-capitalize" style={{ fontSize: '11px' }}>{feeType}</span>
-                  <input 
-                    type="number"
-                    className="form-control"
-                    value={fees[feeType]}
-                    onChange={(e) => setFees({
-                      ...fees,
-                      [feeType]: Math.max(0, Number(e.target.value))
-                    })}
-                    min="0"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Attendance */}
-        <div className="mb-3">
-          <h6 className="mb-2">Attendance</h6>
-          <div className="row g-2">
-            <div className="col-4">
-              <input 
-                type="number"
-                className="form-control form-control-sm"
-                placeholder="Opened"
-                value={attendance.opened}
-                onChange={(e) => setAttendance({
-                  ...attendance,
-                  opened: Math.max(0, Number(e.target.value))
-                })}
-                min="0"
-              />
-            </div>
-            <div className="col-4">
-              <input 
-                type="number"
-                className="form-control form-control-sm"
-                placeholder="Present"
-                value={attendance.present}
-                onChange={(e) => setAttendance({
-                  ...attendance,
-                  present: Math.max(0, Number(e.target.value))
-                })}
-                min="0"
-              />
-            </div>
-            <div className="col-4">
-              <input 
-                type="number"
-                className="form-control form-control-sm"
-                placeholder="Absent"
-                value={attendance.absent}
-                onChange={(e) => setAttendance({
-                  ...attendance,
-                  absent: Math.max(0, Number(e.target.value))
-                })}
-                min="0"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Comment */}
-        <div className="mb-3">
-          <h6 className="mb-2">Teacher's Comment</h6>
-          <textarea 
-            className="form-control form-control-sm"
-            rows="3"
-            value={comments.teacher}
-            onChange={(e) => setComments({
-              ...comments,
-              teacher: e.target.value
-            })}
-            placeholder="Enter your comment..."
-          ></textarea>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="d-flex gap-2">
-          <button className="btn btn-primary" onClick={handleSaveWithImage}>
-            <Save size={16} className="me-1" />
-            Save Draft
+        
+        <div className="btn-group btn-group-sm me-3">
+          <button className="btn btn-outline-secondary" onClick={() => setZoom(z => Math.max(0.5, z - 0.1))}>
+            <ZoomOut size={14} />
           </button>
-          <button className="btn btn-success" onClick={handleSubmitWithImage}>
-            <Send size={16} className="me-1" />
-            Submit to Admin
+          <button className="btn btn-outline-secondary" onClick={() => setZoom(1)}>
+            <RotateCcw size={14} /> {Math.round(zoom * 100)}%
+          </button>
+          <button className="btn btn-outline-secondary" onClick={() => setZoom(z => Math.min(2, z + 0.1))}>
+            <ZoomIn size={14} />
+          </button>
+        </div>
+        
+        <div className="d-flex gap-2">
+          <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={isSaving}>
+            <Save size={14} className="me-1" />
+            {isSaving ? 'Saving...' : 'Save Draft'}
+          </button>
+          <button className="btn btn-success btn-sm" onClick={handleSubmit} disabled={isSaving}>
+            <Send size={14} className="me-1" />
+            {isSaving ? 'Submitting...' : 'Submit to Admin'}
           </button>
         </div>
       </div>
 
-      {/* Right: Live Preview of Filled Template */}
-      <div className="col-md-6">
-        <div className="sticky-top" style={{ top: '20px' }}>
-          <h6 className="mb-2">
-            Live Preview
-            {isGenerating && <span className="spinner-border spinner-border-sm ms-2"></span>}
-          </h6>
-          
-          {/* Canvas for generating filled template */}
-          <canvas ref={canvasRef} style={{ display: 'none' }} />
-          
-          {/* Display filled template */}
-          <div className="border rounded p-2 bg-light" style={{ maxHeight: '70vh', overflow: 'auto' }}>
-            {canvasImage ? (
-              <img src={canvasImage} alt="Filled result" className="img-fluid w-100" />
-            ) : (
-              <div className="text-center text-muted py-5">
-                Fill in the form to see the result preview
-              </div>
-            )}
-          </div>
-          
-          <div className="alert alert-info mt-2 small">
-            <strong>Live Preview:</strong> Scores are automatically overlaid on the template. This is what admin will see.
-          </div>
+      {/* Interactive Template Container */}
+      <div 
+        ref={containerRef}
+        className="position-relative border rounded bg-light"
+        style={{ 
+          overflow: 'auto',
+          maxHeight: '80vh',
+          padding: '20px'
+        }}
+      >
+        <div 
+          className="position-relative mx-auto"
+          style={{ 
+            width: imageDimensions.width * scale,
+            height: imageDimensions.height * scale
+          }}
+        >
+          {/* Template Image */}
+          <img
+            ref={imageRef}
+            src={template.templateImage}
+            alt="Result Template"
+            style={{ 
+              width: '100%',
+              height: '100%',
+              display: 'block',
+              pointerEvents: 'none'
+            }}
+          />
+
+          {/* Render all input fields */}
+          {allFields.map(field => {
+            // Student Info Fields (Read-only)
+            if (field.type === 'student_info') {
+              let value = '';
+              if (field.fieldKey === 'name') value = student.name || '';
+              else if (field.fieldKey === 'regno') value = student.regNo || '';
+              else if (field.fieldKey === 'classname') value = student.classId?.name || '';
+              
+              return (
+                <input
+                  key={field.id}
+                  type="text"
+                  value={value}
+                  readOnly
+                  className="position-absolute form-control form-control-sm"
+                  style={{
+                    left: field.coordinates.x * scale,
+                    top: field.coordinates.y * scale,
+                    width: field.coordinates.width * scale,
+                    height: field.coordinates.height * scale,
+                    fontSize: `${Math.max(10, 12 * scale)}px`,
+                    border: '1px solid rgba(0,123,255,0.3)',
+                    backgroundColor: 'rgba(230,240,255,0.8)',
+                    fontWeight: 'bold'
+                  }}
+                />
+              );
+            }
+            
+            // Affective Traits
+            if (field.type === 'affective') {
+              const traitKey = field.traitName.toLowerCase().replace(/[^a-z0-9]/g, '');
+              return (
+                <input
+                  key={field.id}
+                  type="number"
+                  value={affectiveTraits[traitKey] || 3}
+                  onChange={(e) => setAffectiveTraits({
+                    ...affectiveTraits,
+                    [traitKey]: Math.min(5, Math.max(1, Number(e.target.value)))
+                  })}
+                  min="1"
+                  max="5"
+                  className="position-absolute form-control form-control-sm"
+                  style={{
+                    left: field.coordinates.x * scale,
+                    top: field.coordinates.y * scale,
+                    width: field.coordinates.width * scale,
+                    height: field.coordinates.height * scale,
+                    fontSize: `${Math.max(9, 11 * scale)}px`,
+                    border: '1px solid rgba(255,193,7,0.5)',
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    textAlign: 'center'
+                  }}
+                />
+              );
+            }
+            
+            // Fees
+            if (field.type === 'fee') {
+              const feeKey = field.feeName.toLowerCase().replace(/[^a-z0-9]/g, '');
+              return (
+                <input
+                  key={field.id}
+                  type="number"
+                  value={fees[feeKey] || 0}
+                  onChange={(e) => setFees({
+                    ...fees,
+                    [feeKey]: Math.max(0, Number(e.target.value))
+                  })}
+                  min="0"
+                  className="position-absolute form-control form-control-sm"
+                  style={{
+                    left: field.coordinates.x * scale,
+                    top: field.coordinates.y * scale,
+                    width: field.coordinates.width * scale,
+                    height: field.coordinates.height * scale,
+                    fontSize: `${Math.max(9, 11 * scale)}px`,
+                    border: '1px solid rgba(220,53,69,0.5)',
+                    backgroundColor: 'rgba(255,255,255,0.9)'
+                  }}
+                />
+              );
+            }
+            
+            // Attendance
+            if (field.type === 'attendance') {
+              return (
+                <input
+                  key={field.id}
+                  type="number"
+                  value={attendance[field.fieldKey] || 0}
+                  onChange={(e) => setAttendance({
+                    ...attendance,
+                    [field.fieldKey]: Math.max(0, Number(e.target.value))
+                  })}
+                  min="0"
+                  className="position-absolute form-control form-control-sm"
+                  style={{
+                    left: field.coordinates.x * scale,
+                    top: field.coordinates.y * scale,
+                    width: field.coordinates.width * scale,
+                    height: field.coordinates.height * scale,
+                    fontSize: `${Math.max(9, 11 * scale)}px`,
+                    border: '1px solid rgba(23,162,184,0.5)',
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    textAlign: 'center'
+                  }}
+                />
+              );
+            }
+            
+            // Comments
+            if (field.type === 'comment') {
+              const commentKey = field.fieldKey === 'teacher' ? 'teacher' : 'principal';
+              return (
+                <textarea
+                  key={field.id}
+                  value={comments[commentKey] || ''}
+                  onChange={(e) => setComments({
+                    ...comments,
+                    [commentKey]: e.target.value
+                  })}
+                  placeholder={`${field.label || 'Comment'}...`}
+                  className="position-absolute form-control form-control-sm"
+                  style={{
+                    left: field.coordinates.x * scale,
+                    top: field.coordinates.y * scale,
+                    width: field.coordinates.width * scale,
+                    height: field.coordinates.height * scale,
+                    fontSize: `${Math.max(9, 10 * scale)}px`,
+                    border: '1px solid rgba(108,117,125,0.5)',
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    resize: 'none'
+                  }}
+                />
+              );
+            }
+            
+            return null;
+          })}
+
+          {/* Scores Table */}
+          {(() => {
+            const scoresField = allFields.find(f => f.type === 'scores_table');
+            if (!scoresField) return null;
+            
+            const table = scoresField.data;
+            
+            return subjects.map((subject, index) => {
+              const y = table.startY + (index * table.rowHeight);
+              
+              return (
+                <React.Fragment key={`subject-${index}`}>
+                  {/* Subject Name */}
+                  <input
+                    type="text"
+                    value={subject.subject || ''}
+                    onChange={(e) => updateSubject(index, 'subject', e.target.value)}
+                    placeholder="Subject"
+                    className="position-absolute form-control form-control-sm"
+                    style={{
+                      left: table.subjectColumn.x * scale,
+                      top: y * scale,
+                      width: table.subjectColumn.width * scale,
+                      height: table.rowHeight * scale,
+                      fontSize: `${Math.max(9, 11 * scale)}px`,
+                      border: '1px solid rgba(0,123,255,0.4)',
+                      backgroundColor: 'rgba(255,255,255,0.9)'
+                    }}
+                  />
+
+                  {/* Score Columns */}
+                  {table.headers.map((header, headerIndex) => {
+                    const headerName = header.name.toLowerCase();
+                    let fieldName = '';
+                    let isEditable = true;
+                    let maxValue = 100;
+                    
+                    if (headerName.includes('ca1') || headerName.includes('ca 1')) {
+                      fieldName = 'ca1';
+                      maxValue = 20;
+                    } else if (headerName.includes('ca2') || headerName.includes('ca 2')) {
+                      fieldName = 'ca2';
+                      maxValue = 20;
+                    } else if (headerName.includes('exam')) {
+                      fieldName = 'exam';
+                      maxValue = 60;
+                    } else {
+                      isEditable = false; // Total, Grade, etc. are calculated
+                    }
+
+                    if (!isEditable) return null;
+
+                    return (
+                      <input
+                        key={`${index}-${headerIndex}`}
+                        type="number"
+                        value={subject[fieldName] || 0}
+                        onChange={(e) => {
+                          const val = Math.min(maxValue, Math.max(0, Number(e.target.value)));
+                          updateSubject(index, fieldName, val);
+                        }}
+                        min="0"
+                        max={maxValue}
+                        className="position-absolute form-control form-control-sm"
+                        style={{
+                          left: header.coordinates.x * scale,
+                          top: y * scale,
+                          width: header.coordinates.width * scale,
+                          height: table.rowHeight * scale,
+                          fontSize: `${Math.max(9, 11 * scale)}px`,
+                          border: '1px solid rgba(40,167,69,0.5)',
+                          backgroundColor: 'rgba(255,255,255,0.9)',
+                          textAlign: 'center'
+                        }}
+                      />
+                    );
+                  })}
+                </React.Fragment>
+              );
+            });
+          })()}
         </div>
+      </div>
+
+      <div className="alert alert-info mt-3 small mb-0">
+        <strong>💡 Instructions:</strong> Fill in the scores directly on the template image. All fields are positioned exactly as they appear on your school's result sheet. Use zoom controls if needed.
       </div>
     </div>
   );

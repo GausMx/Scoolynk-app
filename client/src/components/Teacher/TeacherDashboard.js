@@ -8,6 +8,7 @@ import TeacherHome from './TeacherHome';
 import MyClass from './MyClassWithResults';
 import ClassView from './ClassView';
 import TeacherProfile from './TeacherProfile';
+import InteractiveTemplateEntry from './InteractiveTemplateEntry';
 const { REACT_APP_API_URL } = process.env;
 //main function for teacher dashboard
 const TeacherDashboard = () => {
@@ -67,6 +68,7 @@ const TeacherDashboard = () => {
         <Route path="/my-class" element={<MyClass />} />
         <Route path="/class/:classId" element={<ClassView />} />
         <Route path="/teacher-profile" element={<TeacherProfile teacher={teacherData.teacher} refreshData={fetchDashboardData} />} />
+        <Route path="/interactive-template-entry" element={<InteractiveTemplateEntry />} />
       </Routes>
     </Layout>
   );
