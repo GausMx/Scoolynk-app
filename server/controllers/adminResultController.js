@@ -1,4 +1,4 @@
-// server/controllers/adminResultController.js - UPDATED FOR MANUAL TEMPLATE BUILDER
+// server/controllers/adminResultController.js - VISUAL TEMPLATE BUILDER
 
 import Result from '../models/Result.js'; 
 import ResultTemplate from '../models/ResultTemplate.js';
@@ -6,20 +6,20 @@ import Student from '../models/Student.js';
 import School from '../models/School.js';
 import SMSService from '../services/smsService.js';
 
-// ✅ CREATE RESULT TEMPLATE (Manual Template Builder)
+// ✅ CREATE RESULT TEMPLATE (Visual Builder)
 export const createResultTemplate = async (req, res) => {
   try {
-    const { name, term, session, templateImage, layout } = req.body;
+    const { name, term, session, schoolId, components } = req.body;
 
-    if (!name || !term || !session || !templateImage || !layout) {
+    if (!name || !term || !session || !components) {
       return res.status(400).json({ 
-        message: 'Name, term, session, template image, and layout are required.' 
+        message: 'Name, term, session, and components are required.' 
       });
     }
 
     // Check if template already exists for this term/session
     const existingTemplate = await ResultTemplate.findOne({
-      schoolId: req.user.schoolId,
+      schoolId: schoolId || req.user.schoolId,
       term,
       session,
       isActive: true
@@ -31,14 +31,14 @@ export const createResultTemplate = async (req, res) => {
       });
     }
 
-    // Create new template
+    // Create new template with component-based structure
     const template = new ResultTemplate({
-      schoolId: req.user.schoolId,
+      schoolId: schoolId || req.user.schoolId,
       name,
       term,
       session,
-      templateImage,
-      layout,
+      templateType: 'visual', // NEW: Mark as visual template
+      components, // Store component configuration
       createdBy: req.user._id,
       isActive: true
     });
@@ -51,7 +51,7 @@ export const createResultTemplate = async (req, res) => {
     });
   } catch (err) {
     console.error('[CreateResultTemplate]', err);
-    res.status(500).json({ message: 'Failed to create template.' });
+    res.status(500).json({ message: 'Failed to create template.', error: err.message });
   }
 };
 
@@ -59,7 +59,7 @@ export const createResultTemplate = async (req, res) => {
 export const updateResultTemplate = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, term, session, templateImage, layout, isActive } = req.body;
+    const { name, term, session, components, isActive } = req.body;
 
     const template = await ResultTemplate.findOne({
       _id: id,
@@ -74,8 +74,7 @@ export const updateResultTemplate = async (req, res) => {
     if (name) template.name = name;
     if (term) template.term = term;
     if (session) template.session = session;
-    if (templateImage) template.templateImage = templateImage;
-    if (layout) template.layout = layout;
+    if (components) template.components = components;
     if (isActive !== undefined) template.isActive = isActive;
 
     await template.save();
@@ -198,8 +197,8 @@ export const duplicateResultTemplate = async (req, res) => {
       name: newName || `${originalTemplate.name} (${newTerm} - ${newSession})`,
       term: newTerm,
       session: newSession,
-      templateImage: originalTemplate.templateImage,
-      layout: originalTemplate.layout,
+      templateType: originalTemplate.templateType,
+      components: originalTemplate.components,
       createdBy: req.user._id,
       isActive: true
     });
@@ -243,13 +242,13 @@ export const getSubmittedResults = async (req, res) => {
   }
 };
 
-// Review and edit result (admin can edit everything)
+// Review and edit result
 export const reviewResult = async (req, res) => {
   try {
     const { resultId } = req.params;
     const {
       action, // 'approve' or 'reject'
-      subjects, // Admin can now edit scores too
+      subjects,
       affectiveTraits,
       fees,
       attendance,
@@ -272,7 +271,7 @@ export const reviewResult = async (req, res) => {
       });
     }
 
-    // Admin can edit all fields including scores
+    // Admin can edit all fields
     if (subjects) result.subjects = subjects;
     if (affectiveTraits) result.affectiveTraits = affectiveTraits;
     if (fees) result.fees = fees;
@@ -390,7 +389,6 @@ export const sendMultipleResultsToParents = async (req, res) => {
     }
 
     const school = await School.findById(req.user.schoolId).select('name phone');
-
     const messages = [];
     const successfulSends = [];
     const failedSends = [];

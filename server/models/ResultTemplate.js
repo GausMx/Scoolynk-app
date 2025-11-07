@@ -1,34 +1,6 @@
-// server/models/ResultTemplate.js
+// server/models/ResultTemplate.js - UPDATED FOR VISUAL BUILDER
 
 import mongoose from 'mongoose';
-
-const fieldSchema = new mongoose.Schema({
-  label: { type: String, required: true }, // e.g., "Student Name", "CA1", "Exam"
-  type: { type: String, enum: ['text', 'number', 'date', 'signature', 'image', 'table'], required: true },
-  coordinates: {
-    x: { type: Number, required: true },
-    y: { type: Number, required: true },
-    width: { type: Number, required: true },
-    height: { type: Number, required: true }
-  },
-  isEditable: { type: Boolean, default: true },
-  isRequired: { type: Boolean, default: false },
-  category: { 
-    type: String, 
-    enum: ['student_info', 'scores', 'affective', 'comments', 'fees', 'attendance', 'other'],
-    default: 'other'
-  }
-}, { _id: false });
-
-const subjectColumnSchema = new mongoose.Schema({
-  name: { type: String, required: true }, // CA1, CA2, Exam, Total, Grade, Remark
-  coordinates: {
-    x: { type: Number, required: true },
-    y: { type: Number, required: true },
-    width: { type: Number, required: true },
-    height: { type: Number, required: true }
-  }
-}, { _id: false });
 
 const resultTemplateSchema = new mongoose.Schema({
   schoolId: {
@@ -38,8 +10,7 @@ const resultTemplateSchema = new mongoose.Schema({
   },
   name: {
     type: String,
-    required: true,
-    default: 'Default Result Template'
+    required: true
   },
   term: {
     type: String,
@@ -50,80 +21,84 @@ const resultTemplateSchema = new mongoose.Schema({
     type: String,
     required: true // e.g., "2024/2025"
   },
-  // Scanned template image stored as base64
-  templateImage: {
-    type: String, // Base64 encoded image
-    required: true
-  },
   
-  // Extracted template structure
-  layout: {
-    // Header section (school name, logo, motto)
+  // Template type: 'visual' (form-based) or 'image' (coordinate-based - legacy)
+  templateType: {
+    type: String,
+    enum: ['visual', 'image'],
+    default: 'visual'
+  },
+
+  // ✅ NEW: Component-based structure for visual builder
+  components: {
+    // School header section
     header: {
-      schoolName: fieldSchema,
-      logo: fieldSchema,
-      address: fieldSchema,
-      motto: fieldSchema
+      enabled: { type: Boolean, default: true }
     },
     
-    // Student information section
+    // Student information
     studentInfo: {
-      name: fieldSchema,
-      regNo: fieldSchema,
-      className: fieldSchema,
-      session: fieldSchema,
-      term: fieldSchema,
-      photo: fieldSchema
+      enabled: { type: Boolean, default: true }
     },
     
-    // Subjects table with scores
+    // Subject scores table
     scoresTable: {
-      headers: [subjectColumnSchema], // CA1, CA2, Exam, Total, Grade, Remark
-      rowHeight: { type: Number, default: 30 },
-      startY: { type: Number, required: true },
-      subjectColumn: {
-        x: { type: Number, required: true },
-        width: { type: Number, required: true }
-      }
+      enabled: { type: Boolean, default: true },
+      columns: [{
+        name: String, // e.g., "CA1", "CA2", "Exam", "Total", "Grade"
+        maxScore: Number, // Maximum possible score
+        enabled: Boolean,
+        editable: Boolean, // False for calculated fields like Total/Grade
+        calculated: Boolean // True for auto-calculated fields
+      }],
+      defaultSubjects: { type: Number, default: 12 } // Default number of subject rows
     },
     
-    // Affective traits section
-    affective: {
-      traits: [{ // punctuality, behaviour, neatness, etc.
-        name: String,
-        field: fieldSchema
+    // Affective traits
+    affectiveTraits: {
+      enabled: { type: Boolean, default: true },
+      traits: [{
+        name: String, // e.g., "Punctuality", "Behaviour"
+        enabled: Boolean
       }]
     },
     
-    // Fees section
+    // School fees
     fees: {
-      fields: [{ // tuition, uniform, books, etc.
-        name: String,
-        field: fieldSchema
+      enabled: { type: Boolean, default: true },
+      types: [{
+        name: String, // e.g., "Tuition", "Uniform"
+        enabled: Boolean
       }]
     },
     
     // Attendance
     attendance: {
-      opened: fieldSchema,
-      present: fieldSchema,
-      absent: fieldSchema
+      enabled: { type: Boolean, default: true }
     },
     
     // Comments
     comments: {
-      teacher: fieldSchema,
-      principal: fieldSchema
+      enabled: { type: Boolean, default: true },
+      teacher: { type: Boolean, default: true },
+      principal: { type: Boolean, default: true }
     },
     
     // Signatures
     signatures: {
-      teacher: fieldSchema,
-      principal: fieldSchema
-    },
-    
-    // Additional custom fields
-    customFields: [fieldSchema]
+      enabled: { type: Boolean, default: false }
+    }
+  },
+
+  // ⚠️ LEGACY: Keep for backward compatibility with old image-based templates
+  templateImage: {
+    type: String, // Base64 encoded image (for old system)
+    default: null
+  },
+  
+  layout: {
+    type: mongoose.Schema.Types.Mixed, // For old coordinate-based system
+    default: null
   },
   
   // Metadata
@@ -143,7 +118,8 @@ const resultTemplateSchema = new mongoose.Schema({
 // Indexes
 resultTemplateSchema.index({ schoolId: 1, isActive: 1 });
 resultTemplateSchema.index({ schoolId: 1, term: 1, session: 1 });
+resultTemplateSchema.index({ schoolId: 1, term: 1, session: 1, isActive: 1 });
 
 const ResultTemplate = mongoose.model('ResultTemplate', resultTemplateSchema);
 
-export default ResultTemplate;    
+export default ResultTemplate;
