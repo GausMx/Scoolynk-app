@@ -185,7 +185,53 @@ const VisualTemplateBuilder = ({
           header: { enabled: components.header },
           studentInfo: { enabled: components.studentInfo },
           scoresTable: {
-            
+            enabled: components.scoresTable,
+            columns: scoreColumns,
+            defaultSubjects: defaultSubjectRows
+          },
+          affectiveTraits: {
+            enabled: components.affectiveTraits,
+            traits: affectiveTraits
+          },
+          fees: {
+            enabled: components.fees,
+            types: feeTypes
+          },
+          attendance: { enabled: components.attendance },
+          comments: {
+            enabled: components.comments,
+            teacher: enableTeacherComment,
+            principal: enablePrincipalComment
+          },
+          signatures: { enabled: components.signatures }
+        }
+      };
+
+      const url = existingTemplate
+        ? `${REACT_APP_API_URL}/api/admin/templates/${existingTemplate._id}`
+        : `${REACT_APP_API_URL}/api/admin/templates`;
+
+      const method = existingTemplate ? 'put' : 'post';
+
+      // Check if token already has "Bearer" prefix
+      const authHeader = token.startsWith('Bearer ') 
+        ? token 
+        : `Bearer ${token}`;
+
+      const res = await axios[method](url, templateData, {
+        headers: { Authorization: authHeader }
+      });
+
+      alert(res.data.message || 'Template saved successfully!');
+      if (onClose) onClose();
+
+    } catch (err) {
+      console.error('Save error:', err);
+      setError(err.response?.data?.message || 'Failed to save template');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="container-fluid py-4">
