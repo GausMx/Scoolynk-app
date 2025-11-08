@@ -21,7 +21,7 @@ export const getResultTemplate = async (req, res) => {
       term,
       session,
       isActive: true
-    });
+    }).populate('schoolId', 'name address'); // Populate school name and address
 
     if (!template) {
       return res.json({ 
