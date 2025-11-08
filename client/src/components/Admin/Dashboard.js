@@ -1,4 +1,4 @@
-// src/components/Admin/Dashboard.js - REAL BACKEND DATA
+// src/components/Admin/Dashboard.js - UPDATED WITH REAL ROUTES
 
 import React, { useEffect, useState } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
@@ -55,10 +55,10 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      
-      // Fetch dashboard data from backend
+
+      // ✅ Correct route: /api/admin (getAdminDashboard)
       const res = await axios.get(`${REACT_APP_API_URL}/api/admin`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const data = res.data;
@@ -67,7 +67,7 @@ const Dashboard = () => {
         totalStudents: data.totalStudents || 0,
         totalTeachers: data.totalTeachers || 0,
         totalClasses: data.totalClasses || 0,
-        activeStudents: data.totalStudents || 0,
+        activeStudents: data.activeStudents || 0,
         unpaidFees: data.unpaidFeesAmount || 0,
         partialPaid: data.partialPaidCount || 0,
         fullPaid: data.fullPaidCount || 0,
@@ -76,12 +76,10 @@ const Dashboard = () => {
         rejectedResults: data.rejectedResults || 0,
         feesTrend: data.feesTrend || [0, 0, 0, 0, 0, 0],
         resultsTrend: data.resultsTrend || [0, 0, 0, 0, 0, 0],
-        recentActivity: data.recentActivity || []
+        recentActivity: data.recentActivity || [],
       });
-
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
-      // Set default values on error
       setStats({
         totalStudents: 0,
         totalTeachers: 0,
@@ -95,7 +93,7 @@ const Dashboard = () => {
         rejectedResults: 0,
         feesTrend: [0, 0, 0, 0, 0, 0],
         resultsTrend: [0, 0, 0, 0, 0, 0],
-        recentActivity: []
+        recentActivity: [],
       });
     } finally {
       setLoading(false);
@@ -151,16 +149,13 @@ const Dashboard = () => {
           <h2 className="fw-bold text-dark mb-1">School Admin Dashboard</h2>
           <p className="text-muted mb-0">Welcome back! Here's what's happening in your school.</p>
         </div>
-        <button 
-          className="btn btn-outline-primary rounded-3"
-          onClick={() => window.location.reload()}
-        >
+        <button className="btn btn-outline-primary rounded-3" onClick={() => window.location.reload()}>
           <i className="bi-arrow-clockwise me-2"></i>
           Refresh
         </button>
       </div>
 
-      {/* Overview Stats Cards */}
+      {/* Overview Stats */}
       <div className="row g-4 mb-4">
         <StatCard
           title="Total Students"
@@ -188,13 +183,12 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Payment Stats */}
+      {/* Payments */}
       <div className="row g-4 mb-4">
         <div className="col-12">
           <div className="card shadow-sm rounded-4 p-4">
             <h5 className="fw-bold mb-4">
-              <i className="bi-cash-stack me-2 text-success"></i>
-              Payment Overview
+              <i className="bi-cash-stack me-2 text-success"></i> Payment Overview
             </h5>
             <div className="row g-3">
               <div className="col-md-4">
@@ -220,22 +214,21 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Results Stats */}
+      {/* Results */}
       <div className="row g-4 mb-4">
         <div className="col-12">
           <div className="card shadow-sm rounded-4 p-4">
             <h5 className="fw-bold mb-4">
-              <i className="bi-file-earmark-text me-2 text-primary"></i>
-              Results Overview
+              <i className="bi-file-earmark-text me-2 text-primary"></i> Results Overview
             </h5>
             <div className="row g-3">
               <div className="col-md-4">
                 <div className="border-start border-warning border-4 ps-3">
                   <small className="text-muted d-block mb-1">Pending Review</small>
                   <h4 className="fw-bold text-warning mb-0">{stats.pendingResults}</h4>
-                  <button 
+                  <button
                     className="btn btn-sm btn-warning mt-2"
-                    onClick={() => navigate('/admin/results')}
+                    onClick={() => navigate('/admin/results/submitted')}
                   >
                     Review Now
                   </button>
@@ -258,76 +251,23 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Charts Section */}
+      {/* Charts */}
       <div className="row g-4 mb-4">
         <div className="col-lg-6">
           <div className="card shadow-sm rounded-4 p-4">
             <h6 className="fw-bold mb-3">
-              <i className="bi-graph-up me-2 text-success"></i>
-              Fees Collection Trend
+              <i className="bi-graph-up me-2 text-success"></i> Fees Collection Trend
             </h6>
-            <Bar
-              data={barData}
-              options={{ 
-                responsive: true, 
-                maintainAspectRatio: true,
-                plugins: { 
-                  legend: { display: false },
-                  tooltip: {
-                    callbacks: {
-                      label: function(context) {
-                        return '₦' + context.parsed.y.toLocaleString();
-                      }
-                    }
-                  }
-                },
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    ticks: {
-                      callback: function(value) {
-                        return '₦' + value.toLocaleString();
-                      }
-                    }
-                  }
-                }
-              }}
-            />
+            <Bar data={barData} options={{ responsive: true, maintainAspectRatio: true }} />
           </div>
         </div>
 
         <div className="col-lg-6">
           <div className="card shadow-sm rounded-4 p-4">
             <h6 className="fw-bold mb-3">
-              <i className="bi-graph-up-arrow me-2 text-danger"></i>
-              Results Submission Trend
+              <i className="bi-graph-up-arrow me-2 text-danger"></i> Results Submission Trend
             </h6>
-            <Line
-              data={sparklineData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: { 
-                  legend: { display: false },
-                  tooltip: {
-                    callbacks: {
-                      label: function(context) {
-                        return context.parsed.y + ' results';
-                      }
-                    }
-                  }
-                },
-                elements: { point: { radius: 4, hitRadius: 10 } },
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    ticks: {
-                      stepSize: 1
-                    }
-                  }
-                }
-              }}
-            />
+            <Line data={sparklineData} options={{ responsive: true, maintainAspectRatio: true }} />
           </div>
         </div>
       </div>
@@ -335,12 +275,11 @@ const Dashboard = () => {
       {/* Quick Actions */}
       <div className="card shadow-sm rounded-4 p-4">
         <h5 className="fw-bold mb-3">
-          <i className="bi-lightning-fill me-2 text-warning"></i>
-          Quick Actions
+          <i className="bi-lightning-fill me-2 text-warning"></i> Quick Actions
         </h5>
         <div className="row g-3">
           <div className="col-6 col-md-3">
-            <button 
+            <button
               className="btn btn-outline-primary w-100 rounded-3 py-3"
               onClick={() => navigate('/admin/results')}
             >
@@ -349,16 +288,16 @@ const Dashboard = () => {
             </button>
           </div>
           <div className="col-6 col-md-3">
-            <button 
+            <button
               className="btn btn-outline-success w-100 rounded-3 py-3"
-              onClick={() => navigate('/admin/settings?tab=payments')}
+              onClick={() => navigate('/admin/settings')}
             >
               <i className="bi-cash-stack fs-4 d-block mb-2"></i>
-              <span className="fw-semibold">View Payments</span>
+              <span className="fw-semibold">Settings</span>
             </button>
           </div>
           <div className="col-6 col-md-3">
-            <button 
+            <button
               className="btn btn-outline-info w-100 rounded-3 py-3"
               onClick={() => navigate('/admin/students')}
             >
@@ -367,7 +306,7 @@ const Dashboard = () => {
             </button>
           </div>
           <div className="col-6 col-md-3">
-            <button 
+            <button
               className="btn btn-outline-warning w-100 rounded-3 py-3"
               onClick={() => navigate('/admin/teachers')}
             >
@@ -378,7 +317,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Alert for pending actions */}
+      {/* Alert */}
       {stats.pendingResults > 0 && (
         <div className="alert alert-warning rounded-4 mt-4">
           <div className="d-flex align-items-center">
@@ -386,12 +325,12 @@ const Dashboard = () => {
             <div className="flex-grow-1">
               <h6 className="mb-1">Action Required!</h6>
               <p className="mb-0">
-                You have <strong>{stats.pendingResults}</strong> result(s) waiting for your review.
+                You have <strong>{stats.pendingResults}</strong> result(s) waiting for review.
               </p>
             </div>
-            <button 
+            <button
               className="btn btn-warning"
-              onClick={() => navigate('/admin/results')}
+              onClick={() => navigate('/admin/results/submitted')}
             >
               Review Now
             </button>
