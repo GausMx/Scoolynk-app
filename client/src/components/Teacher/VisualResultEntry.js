@@ -35,7 +35,7 @@ const VisualResultEntry = ({
       setAttendance(existingResult.attendance || { opened: 0, present: 0, absent: 0 });
       setComments(existingResult.comments || { teacher: '', principal: '' });
     } else if (template) {
-      // Initialize subjects from template subjects list if available, else fallback to empty rows
+      // Initialize subjects from template subjects list if available, else fallback to numbered placeholder rows
       const templateSubjects = template.components?.scoresTable?.subjects || [];
       const scoreColumns = template.components?.scoresTable?.columns || [];
 
@@ -54,7 +54,8 @@ const VisualResultEntry = ({
             const rows = [];
             const count = template.components?.scoresTable?.defaultSubjects || 12;
             for (let i = 0; i < count; i++) {
-              const subjectData = { subject: '' };
+              // Use numbered placeholders for better clarity
+              const subjectData = { subject: `Subject ${i + 1}` };
               scoreColumns.forEach(col => {
                 if (col.editable) {
                   const key = col.name.toLowerCase().replace(/\s+/g, '');
@@ -72,7 +73,6 @@ const VisualResultEntry = ({
       const traitsInit = {};
       (template.components?.affectiveTraits?.traits || []).forEach(trait => {
         const key = trait.name.toLowerCase().replace(/\s+/g, '');
-        // Default to middle value or 3 if no default set
         traitsInit[key] = trait.defaultValue !== undefined ? trait.defaultValue : 3;
       });
       setAffectiveTraits(traitsInit);
