@@ -225,8 +225,8 @@ const VisualResultEntry = ({
                 {/* Header Section */}
                 {components.header?.enabled && (
                   <div className="text-center mb-4 pb-3 border-bottom">
-                    <h5 className="fw-bold mb-1">SCHOOL NAME</h5>
-                    <small className="text-muted">School Address</small>
+                    <h5 className="fw-bold mb-1">{template.schoolId?.name || 'SCHOOL NAME'}</h5>
+                    <small className="text-muted">{template.schoolId?.address || 'School Address'}</small>
                     <div className="mt-2 fw-bold">{term} Report Card - {session}</div>
                   </div>
                 )}
@@ -351,70 +351,68 @@ const VisualResultEntry = ({
                   </div>
                 )}
 
-                <div className="row">
-                  {/* Affective Traits */}
-                  {components.affectiveTraits?.enabled && (
-                    <div className="col-md-6 mb-4">
-                      <h6 className="fw-bold mb-3">Affective Traits (1-5)</h6>
-                      <div className="row g-2">
-                        {(components.affectiveTraits.traits || []).map((trait, index) => {
-                          const key = trait.name.toLowerCase().replace(/\s+/g, '');
-                          return (
-                            <div key={index} className="col-6">
-                              <div className="input-group input-group-sm">
-                                <span className="input-group-text" style={{ minWidth: '120px' }}>
-                                  {trait.name}
-                                </span>
-                                <input
-                                  type="number"
-                                  className="form-control text-center"
-                                  value={affectiveTraits[key] || 3}
-                                  onChange={(e) => setAffectiveTraits({
-                                    ...affectiveTraits,
-                                    [key]: Math.min(5, Math.max(1, Number(e.target.value)))
-                                  })}
-                                  min="1"
-                                  max="5"
-                                />
-                              </div>
+                {/* Affective Traits */}
+                {components.affectiveTraits?.enabled && (
+                  <div className="col-md-6 mb-4">
+                    <h6 className="fw-bold mb-3">Affective Traits (1-5)</h6>
+                    <div className="row g-2">
+                      {(components.affectiveTraits.traits || []).map((trait, index) => {
+                        const key = trait.name.toLowerCase().replace(/\s+/g, '');
+                        return (
+                          <div key={index} className="col-6">
+                            <div className="input-group input-group-sm">
+                              <span className="input-group-text" style={{ minWidth: '120px' }}>
+                                {trait.name}
+                              </span>
+                              <input
+                                type="number"
+                                className="form-control text-center"
+                                value={affectiveTraits[key] || 3}
+                                onChange={(e) => setAffectiveTraits({
+                                  ...affectiveTraits,
+                                  [key]: Math.min(5, Math.max(1, Number(e.target.value)))
+                                })}
+                                min="1"
+                                max="5"
+                              />
                             </div>
-                          );
-                        })}
-                      </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* Fees */}
-                  {components.fees?.enabled && (
-                    <div className="col-md-6 mb-4">
-                      <h6 className="fw-bold mb-3">School Fees (₦)</h6>
-                      <div className="row g-2">
-                        {(components.fees.types || []).map((fee, index) => {
-                          const key = fee.name.toLowerCase().replace(/\s+/g, '');
-                          return (
-                            <div key={index} className="col-6">
-                              <div className="input-group input-group-sm">
-                                <span className="input-group-text" style={{ minWidth: '100px' }}>
-                                  {fee.name}
-                                </span>
-                                <input
-                                  type="number"
-                                  className="form-control"
-                                  value={fees[key] || 0}
-                                  onChange={(e) => setFees({
-                                    ...fees,
-                                    [key]: Math.max(0, Number(e.target.value))
-                                  })}
-                                  min="0"
-                                />
-                              </div>
+                {/* Fees */}
+                {components.fees?.enabled && (
+                  <div className="col-md-6 mb-4">
+                    <h6 className="fw-bold mb-3">School Fees (₦)</h6>
+                    <div className="row g-2">
+                      {(components.fees.types || []).map((fee, index) => {
+                        const key = fee.name.toLowerCase().replace(/\s+/g, '');
+                        return (
+                          <div key={index} className="col-6">
+                            <div className="input-group input-group-sm">
+                              <span className="input-group-text" style={{ minWidth: '100px' }}>
+                                {fee.name}
+                              </span>
+                              <input
+                                type="number"
+                                className="form-control"
+                                value={fees[key] || 0}
+                                onChange={(e) => setFees({
+                                  ...fees,
+                                  [key]: Math.max(0, Number(e.target.value))
+                                })}
+                                min="0"
+                              />
                             </div>
-                          );
-                        })}
-                      </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 {/* Attendance */}
                 {components.attendance?.enabled && (
