@@ -299,7 +299,7 @@ const Dashboard = () => {
           <div className="col-6 col-md-3">
             <button
               className="btn btn-outline-info w-100 rounded-3 py-3"
-              onClick={() => navigate('/admin/students')}
+              onClick={() => navigate('/admin/manage-students')}
             >
               <i className="bi-people fs-4 d-block mb-2"></i>
               <span className="fw-semibold">Manage Students</span>
@@ -308,7 +308,7 @@ const Dashboard = () => {
           <div className="col-6 col-md-3">
             <button
               className="btn btn-outline-warning w-100 rounded-3 py-3"
-              onClick={() => navigate('/admin/teachers')}
+              onClick={() => navigate('/admin/manage-teachers')}
             >
               <i className="bi-person-badge fs-4 d-block mb-2"></i>
               <span className="fw-semibold">Manage Teachers</span>
