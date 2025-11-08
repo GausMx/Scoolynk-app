@@ -1,5 +1,5 @@
 // src/components/Teacher/VisualResultEntry.js
-// Clean form-based result entry using visual template
+// Enhanced form-based result entry dynamically rendering full admin template structure
 
 import React, { useState, useEffect } from 'react';
 import { Save, Send, Plus, Trash2, AlertCircle } from 'lucide-react';
@@ -26,7 +26,7 @@ const VisualResultEntry = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Initialize from existing result or template defaults
+  // Initialize full form state from existingResult or from full template structure
   useEffect(() => {
     if (existingResult) {
       setSubjects(existingResult.subjects || []);
@@ -35,60 +35,92 @@ const VisualResultEntry = ({
       setAttendance(existingResult.attendance || { opened: 0, present: 0, absent: 0 });
       setComments(existingResult.comments || { teacher: '', principal: '' });
     } else if (template) {
-      // Initialize with template defaults
-      const defaultSubjects = [];
-      const subjectCount = template.components?.scoresTable?.defaultSubjects || 12;
-      
-      for (let i = 0; i < subjectCount; i++) {
-        const subjectData = { subject: '' };
-        template.components?.scoresTable?.columns?.forEach(col => {
-          if (col.editable) {
-            subjectData[col.name.toLowerCase().replace(/\s+/g, '')] = 0;
-          }
-        });
-        defaultSubjects.push(subjectData);
-      }
+      // Initialize subjects from template subjects list if available, else fallback to empty rows
+      const templateSubjects = template.components?.scoresTable?.subjects || [];
+      const scoreColumns = template.components?.scoresTable?.columns || [];
+
+      const defaultSubjects = templateSubjects.length > 0
+        ? templateSubjects.map(subj => {
+            const subjectData = { subject: subj.subject || subj.name || '' };
+            scoreColumns.forEach(col => {
+              if (col.editable) {
+                const key = col.name.toLowerCase().replace(/\s+/g, '');
+                subjectData[key] = 0;
+              }
+            });
+            return subjectData;
+          })
+        : (() => {
+            const rows = [];
+            const count = template.components?.scoresTable?.defaultSubjects || 12;
+            for (let i = 0; i < count; i++) {
+              const subjectData = { subject: '' };
+              scoreColumns.forEach(col => {
+                if (col.editable) {
+                  const key = col.name.toLowerCase().replace(/\s+/g, '');
+                  subjectData[key] = 0;
+                }
+              });
+              rows.push(subjectData);
+            }
+            return rows;
+          })();
+
       setSubjects(defaultSubjects);
 
-      // Initialize affective traits
-      const traits = {};
-      template.components?.affectiveTraits?.traits?.forEach(trait => {
-        traits[trait.name.toLowerCase().replace(/\s+/g, '')] = 3;
+      // Initialize affective traits with default value 3 or from trait config default if provided
+      const traitsInit = {};
+      (template.components?.affectiveTraits?.traits || []).forEach(trait => {
+        const key = trait.name.toLowerCase().replace(/\s+/g, '');
+        // Default to middle value or 3 if no default set
+        traitsInit[key] = trait.defaultValue !== undefined ? trait.defaultValue : 3;
       });
-      setAffectiveTraits(traits);
+      setAffectiveTraits(traitsInit);
 
-      // Initialize fees
-      const feeData = {};
-      template.components?.fees?.types?.forEach(fee => {
-        feeData[fee.name.toLowerCase().replace(/\s+/g, '')] = 0;
+      // Initialize fees with zero or default if provided
+      const feesInit = {};
+      (template.components?.fees?.types || []).forEach(fee => {
+        const key = fee.name.toLowerCase().replace(/\s+/g, '');
+        feesInit[key] = fee.defaultValue !== undefined ? fee.defaultValue : 0;
       });
-      setFees(feeData);
+      setFees(feesInit);
+
+      // Initialize attendance defaults or zero
+      setAttendance(template.components?.attendance?.defaultValues || { opened: 0, present: 0, absent: 0 });
+
+      // Initialize comments empty or from template defaults if any
+      setComments({ teacher: '', principal: '' });
     }
   }, [existingResult, template]);
 
+  // Update subject field by index and field name
   const updateSubject = (index, field, value) => {
     const updated = [...subjects];
     updated[index] = { ...updated[index], [field]: value };
     setSubjects(updated);
   };
 
+  // Add new subject row with all editable columns zeroed
   const addSubjectRow = () => {
     const newSubject = { subject: '' };
-    template.components?.scoresTable?.columns?.forEach(col => {
+    (template.components?.scoresTable?.columns || []).forEach(col => {
       if (col.editable) {
-        newSubject[col.name.toLowerCase().replace(/\s+/g, '')] = 0;
+        const key = col.name.toLowerCase().replace(/\s+/g, '');
+        newSubject[key] = 0;
       }
     });
     setSubjects([...subjects, newSubject]);
   };
 
+  // Remove subject row by index
   const removeSubjectRow = (index) => {
     setSubjects(subjects.filter((_, i) => i !== index));
   };
 
+  // Calculate total score across all editable columns for subject
   const calculateTotal = (subject) => {
     let total = 0;
-    template.components?.scoresTable?.columns?.forEach(col => {
+    (template.components?.scoresTable?.columns || []).forEach(col => {
       if (col.editable) {
         const fieldName = col.name.toLowerCase().replace(/\s+/g, '');
         total += Number(subject[fieldName]) || 0;
@@ -97,21 +129,22 @@ const VisualResultEntry = ({
     return total;
   };
 
+  // Calculate grade from total score using standard scale
   const calculateGrade = (total) => {
-    const percentage = total;
-    if (percentage >= 70) return 'A';
-    if (percentage >= 60) return 'B';
-    if (percentage >= 50) return 'C';
-    if (percentage >= 40) return 'D';
+    if (total >= 70) return 'A';
+    if (total >= 60) return 'B';
+    if (total >= 50) return 'C';
+    if (total >= 40) return 'D';
     return 'F';
   };
 
+  // Save or submit result to backend
   const handleSave = async (submitToAdmin = false) => {
     try {
       setLoading(true);
       setError('');
 
-      // Validate subjects
+      // Validate subjects: at least one subject with non-empty name
       const validSubjects = subjects.filter(s => s.subject && s.subject.trim() !== '');
       if (validSubjects.length === 0) {
         setError('Please add at least one subject with scores');
@@ -153,7 +186,7 @@ const VisualResultEntry = ({
 
   if (!template) {
     return (
-      <div className="alert alert-warning">
+      <div className="alert alert-warning d-flex align-items-center">
         <AlertCircle size={20} className="me-2" />
         No template found for {term}, {session}. Please contact admin to create a template.
       </div>
@@ -222,6 +255,7 @@ const VisualResultEntry = ({
                     <div className="d-flex justify-content-between align-items-center mb-3">
                       <h6 className="fw-bold mb-0">Academic Performance</h6>
                       <button 
+                        type="button"
                         className="btn btn-sm btn-outline-primary"
                         onClick={addSubjectRow}
                       >
@@ -264,7 +298,6 @@ const VisualResultEntry = ({
                                 </td>
                                 {scoreColumns.filter(c => c.enabled).map((col, colIndex) => {
                                   if (col.calculated) {
-                                    // Show calculated fields
                                     if (col.name.toLowerCase().includes('total')) {
                                       return (
                                         <td key={colIndex} className="text-center fw-bold">
@@ -280,7 +313,6 @@ const VisualResultEntry = ({
                                     }
                                     return <td key={colIndex} className="text-center">-</td>;
                                   } else {
-                                    // Editable fields
                                     const fieldName = col.name.toLowerCase().replace(/\s+/g, '');
                                     return (
                                       <td key={colIndex}>
@@ -302,6 +334,7 @@ const VisualResultEntry = ({
                                 })}
                                 <td className="text-center">
                                   <button
+                                    type="button"
                                     className="btn btn-sm btn-outline-danger"
                                     onClick={() => removeSubjectRow(index)}
                                     title="Remove subject"
@@ -324,7 +357,7 @@ const VisualResultEntry = ({
                     <div className="col-md-6 mb-4">
                       <h6 className="fw-bold mb-3">Affective Traits (1-5)</h6>
                       <div className="row g-2">
-                        {components.affectiveTraits.traits?.map((trait, index) => {
+                        {(components.affectiveTraits.traits || []).map((trait, index) => {
                           const key = trait.name.toLowerCase().replace(/\s+/g, '');
                           return (
                             <div key={index} className="col-6">
@@ -356,7 +389,7 @@ const VisualResultEntry = ({
                     <div className="col-md-6 mb-4">
                       <h6 className="fw-bold mb-3">School Fees (₦)</h6>
                       <div className="row g-2">
-                        {components.fees.types?.map((fee, index) => {
+                        {(components.fees.types || []).map((fee, index) => {
                           const key = fee.name.toLowerCase().replace(/\s+/g, '');
                           return (
                             <div key={index} className="col-6">
