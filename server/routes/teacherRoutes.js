@@ -47,7 +47,7 @@ router.get('/classes/:classId/students', protect, requireRole('teacher'), getCla
 router.put('/profile', protect, requireRole('teacher'), updateTeacherProfile);
 
 // ========== RESULT MANAGEMENT ==========
-// Get active result template for current term/session
+// Get active result template for current term/session with school details populated
 router.get('/results/template', protect, requireRole('teacher'), getResultTemplate);
 
 // Get all results for teacher's class (with filters)
