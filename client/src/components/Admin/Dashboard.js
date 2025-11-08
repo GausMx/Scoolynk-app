@@ -330,7 +330,7 @@ const Dashboard = () => {
             </div>
             <button
               className="btn btn-warning"
-              onClick={() => navigate('/admin/results/submitted')}
+              onClick={() => navigate('/admin/result-management')}
             >
               Review Now
             </button>

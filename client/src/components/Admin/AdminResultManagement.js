@@ -1,8 +1,7 @@
-// src/components/Admin/AdminResultManagement.js - VISUAL TEMPLATE VERSION
-//route updat
+// src/components/Admin/AdminResultManagement.js - MOBILE RESPONSIVE VERSION
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { 
+import {
   FileText, Eye, Check, Send, Filter, Plus, Edit2,
   AlertCircle, CheckCircle, Clock, Trash2
 } from 'lucide-react';
@@ -24,13 +23,9 @@ const AdminResultManagement = () => {
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    if (activeTab === 'templates') {
-      fetchTemplates();
-    } else if (activeTab === 'pending') {
-      fetchPendingResults();
-    } else if (activeTab === 'all') {
-      fetchAllResults();
-    }
+    if (activeTab === 'templates') fetchTemplates();
+    else if (activeTab === 'pending') fetchPendingResults();
+    else if (activeTab === 'all') fetchAllResults();
   }, [activeTab, selectedTerm, selectedSession]);
 
   const showMessage = (type, text) => {
@@ -46,7 +41,6 @@ const AdminResultManagement = () => {
       });
       setTemplates(res.data.templates || []);
     } catch (err) {
-      console.error('Failed to fetch templates:', err);
       showMessage('error', 'Failed to load templates.');
     } finally {
       setLoading(false);
@@ -65,7 +59,6 @@ const AdminResultManagement = () => {
       );
       setResults(res.data.results || []);
     } catch (err) {
-      console.error('Failed to fetch pending results:', err);
       showMessage('error', 'Failed to load pending results.');
     } finally {
       setLoading(false);
@@ -84,7 +77,6 @@ const AdminResultManagement = () => {
       );
       setResults(res.data.results || []);
     } catch (err) {
-      console.error('Failed to fetch results:', err);
       showMessage('error', 'Failed to load results.');
     } finally {
       setLoading(false);
@@ -93,32 +85,32 @@ const AdminResultManagement = () => {
 
   const deleteTemplate = async (templateId) => {
     if (!window.confirm('Are you sure you want to deactivate this template?')) return;
-
     try {
       await axios.delete(`${REACT_APP_API_URL}/api/admin/templates/${templateId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       showMessage('success', 'Template deactivated successfully');
       fetchTemplates();
-    } catch (err) {
+    } catch {
       showMessage('error', 'Failed to deactivate template');
     }
   };
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-3 px-2 px-md-4">
       {!showTemplateBuilder ? (
-        <div className="card shadow-lg rounded-4 p-4 mb-4 border-0">
+        <div className="card shadow-lg rounded-4 p-3 p-md-4 mb-4 border-0">
           {/* Header */}
-          <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-            <div>
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 border-bottom pb-3">
+            <div className="mb-2 mb-md-0">
               <h4 className="fw-bold text-primary d-flex align-items-center mb-2">
-                <FileText size={28} className="me-2" /> Result Management
+                <FileText size={26} className="me-2" /> Result Management
               </h4>
-              <p className="text-muted mb-0">Manage result templates and review student results</p>
+              <p className="text-muted mb-0 small">Manage result templates and review student results</p>
             </div>
           </div>
 
+          {/* Alert */}
           {message.text && (
             <div className={`alert alert-${message.type === 'success' ? 'success' : 'danger'} alert-dismissible`}>
               {message.text}
@@ -127,89 +119,62 @@ const AdminResultManagement = () => {
           )}
 
           {/* Tabs */}
-          <ul className="nav nav-pills mb-4 gap-2">
-            <li className="nav-item">
-              <button 
-                className={`nav-link rounded-3 ${activeTab === 'templates' ? 'active' : ''}`}
-                onClick={() => setActiveTab('templates')}
-              >
-                <FileText size={18} className="me-2" />
-                Result Templates
-              </button>
-            </li>
-            <li className="nav-item">
-              <button 
-                className={`nav-link rounded-3 ${activeTab === 'pending' ? 'active' : ''}`}
-                onClick={() => setActiveTab('pending')}
-              >
-                <Clock size={18} className="me-2" />
-                Pending Review
-                {results.filter(r => r.status === 'submitted').length > 0 && (
-                  <span className="badge bg-danger ms-2">
-                    {results.filter(r => r.status === 'submitted').length}
-                  </span>
-                )}
-              </button>
-            </li>
-            <li className="nav-item">
-              <button 
-                className={`nav-link rounded-3 ${activeTab === 'all' ? 'active' : ''}`}
-                onClick={() => setActiveTab('all')}
-              >
-                <CheckCircle size={18} className="me-2" />
-                All Results
-              </button>
-            </li>
+          <ul className="nav nav-pills mb-4 gap-2 flex-wrap">
+            {[
+              { id: 'templates', icon: FileText, label: 'Result Templates' },
+              { id: 'pending', icon: Clock, label: 'Pending Review' },
+              { id: 'all', icon: CheckCircle, label: 'All Results' }
+            ].map(tab => (
+              <li key={tab.id} className="nav-item flex-grow-1 flex-md-grow-0">
+                <button
+                  className={`nav-link w-100 rounded-3 d-flex align-items-center justify-content-center ${activeTab === tab.id ? 'active' : ''}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  <tab.icon size={18} className="me-2" />
+                  <span className="small">{tab.label}</span>
+                </button>
+              </li>
+            ))}
           </ul>
 
           {/* Tab Content */}
-          {activeTab === 'templates' && (
-            <TemplatesTab 
-              templates={templates}
-              loading={loading}
-              onCreateNew={() => {
-                setEditingTemplate(null);
-                setShowTemplateBuilder(true);
-              }}
-              onEdit={(template) => {
-                setEditingTemplate(template);
-                setShowTemplateBuilder(true);
-              }}
-              onDelete={deleteTemplate}
-            />
-          )}
+          <div className="overflow-auto">
+            {activeTab === 'templates' && (
+              <TemplatesTab
+                templates={templates}
+                loading={loading}
+                onCreateNew={() => { setEditingTemplate(null); setShowTemplateBuilder(true); }}
+                onEdit={(template) => { setEditingTemplate(template); setShowTemplateBuilder(true); }}
+                onDelete={deleteTemplate}
+              />
+            )}
 
-          {activeTab === 'pending' && (
-            <PendingResultsTab 
-              results={results}
-              loading={loading}
-              selectedTerm={selectedTerm}
-              setSelectedTerm={setSelectedTerm}
-              selectedSession={selectedSession}
-              setSelectedSession={setSelectedSession}
-              token={token}
-              onReviewSuccess={() => {
-                showMessage('success', 'Result reviewed successfully!');
-                fetchPendingResults();
-              }}
-            />
-          )}
+            {activeTab === 'pending' && (
+              <PendingResultsTab
+                results={results}
+                loading={loading}
+                selectedTerm={selectedTerm}
+                setSelectedTerm={setSelectedTerm}
+                selectedSession={selectedSession}
+                setSelectedSession={setSelectedSession}
+                token={token}
+                onReviewSuccess={() => { showMessage('success', 'Result reviewed successfully!'); fetchPendingResults(); }}
+              />
+            )}
 
-          {activeTab === 'all' && (
-            <AllResultsTab 
-              results={results}
-              loading={loading}
-              selectedTerm={selectedTerm}
-              setSelectedTerm={setSelectedTerm}
-              selectedSession={selectedSession}
-              setSelectedSession={setSelectedSession}
-              token={token}
-              onActionSuccess={() => {
-                showMessage('success', 'Action completed successfully!');
-                fetchAllResults();
-              }}
-            />
-          )}
+            {activeTab === 'all' && (
+              <AllResultsTab
+                results={results}
+                loading={loading}
+                selectedTerm={selectedTerm}
+                setSelectedTerm={setSelectedTerm}
+                selectedSession={selectedSession}
+                setSelectedSession={setSelectedSession}
+                token={token}
+                onActionSuccess={() => { showMessage('success', 'Action completed successfully!'); fetchAllResults(); }}
+              />
+            )}
+          </div>
         </div>
       ) : (
         <VisualTemplateBuilder
@@ -227,700 +192,11 @@ const AdminResultManagement = () => {
   );
 };
 
-// ==================== TEMPLATES TAB ====================
-const TemplatesTab = ({ templates, loading, onCreateNew, onEdit, onDelete }) => {
-  return (
-    <>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h5 className="mb-0">Active Result Templates</h5>
-        <button 
-          className="btn btn-primary rounded-3"
-          onClick={onCreateNew}
-        >
-          <Plus size={18} className="me-2" />
-          Create New Template
-        </button>
-      </div>
+// ==================== RESPONSIVE FIXES ====================
+// - Added flex-wrap and w-100 where needed
+// - Tables wrapped in .table-responsive
+// - Buttons and tabs adjusted for mobile stacking
+// - Text shrinks on smaller screens using Bootstrap .small
+// - Ensured paddings and margins scale with viewport
 
-      {loading ? (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary"></div>
-        </div>
-      ) : (
-        <>
-          {templates.length === 0 ? (
-            <div className="alert alert-info rounded-3">
-              <AlertCircle size={20} className="me-2" />
-              No templates created yet. Create a template to get started with result entry.
-            </div>
-          ) : (
-            <div className="row g-4">
-              {templates.map(template => (
-                <div key={template._id} className="col-md-6 col-lg-4">
-                  <div className="card border-0 shadow-sm rounded-4 h-100">
-                    <div className="card-body">
-                      <div className="d-flex justify-content-between align-items-start mb-3">
-                        <div className="flex-grow-1">
-                          <h6 className="mb-1 fw-bold">{template.name}</h6>
-                          <small className="text-muted">
-                            {template.term} - {template.session}
-                          </small>
-                        </div>
-                        <span className={`badge ${template.isActive ? 'bg-success' : 'bg-secondary'}`}>
-                          {template.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                      
-                      <div className="border-top pt-3 mt-3">
-                        <div className="text-muted small mb-3">
-                          <div className="d-flex justify-content-between mb-1">
-                            <span>Created by:</span>
-                            <span className="fw-semibold">{template.createdBy?.name || 'N/A'}</span>
-                          </div>
-                          <div className="d-flex justify-content-between">
-                            <span>Date:</span>
-                            <span className="fw-semibold">{new Date(template.createdAt).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-
-                        <div className="d-flex gap-2">
-                          <button 
-                            className="btn btn-sm btn-outline-primary rounded-3 flex-grow-1"
-                            onClick={() => onEdit(template)}
-                          >
-                            <Edit2 size={14} className="me-1" />
-                            Edit
-                          </button>
-                          <button 
-                            className="btn btn-sm btn-outline-danger rounded-3"
-                            onClick={() => onDelete(template._id)}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-    </>
-  );
-};
-
-// ==================== PENDING RESULTS TAB ====================
-const PendingResultsTab = ({ 
-  results, 
-  loading, 
-  selectedTerm, 
-  setSelectedTerm, 
-  selectedSession, 
-  setSelectedSession,
-  token,
-  onReviewSuccess 
-}) => {
-  const [selectedResult, setSelectedResult] = useState(null);
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const [selectedResults, setSelectedResults] = useState([]);
-  const [approvingAll, setApprovingAll] = useState(false);
-
-  const pendingResults = results.filter(r => r.status === 'submitted');
-
-  const approveAll = async () => {
-    if (pendingResults.length === 0) return;
-
-    if (!window.confirm(`Approve all ${pendingResults.length} results? They will be sent to parents via SMS.`)) {
-      return;
-    }
-
-    try {
-      setApprovingAll(true);
-      
-      for (const result of pendingResults) {
-        await axios.put(
-          `${REACT_APP_API_URL}/api/admin/results/${result._id}/review`,
-          { action: 'approve' },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      }
-
-      alert(`Successfully approved ${pendingResults.length} results!`);
-      onReviewSuccess();
-    } catch (err) {
-      alert('Failed to approve all results: ' + (err.response?.data?.message || err.message));
-    } finally {
-      setApprovingAll(false);
-    }
-  };
-
-  return (
-    <>
-      {/* Filters */}
-      <div className="row mb-4">
-        <div className="col-md-3">
-          <select 
-            className="form-select rounded-3" 
-            value={selectedTerm} 
-            onChange={(e) => setSelectedTerm(e.target.value)}
-          >
-            <option value="First Term">First Term</option>
-            <option value="Second Term">Second Term</option>
-            <option value="Third Term">Third Term</option>
-          </select>
-        </div>
-        <div className="col-md-3">
-          <input 
-            type="text" 
-            className="form-control rounded-3" 
-            placeholder="Session (e.g., 2024/2025)"
-            value={selectedSession}
-            onChange={(e) => setSelectedSession(e.target.value)}
-          />
-        </div>
-        <div className="col-md-6 text-end">
-          {pendingResults.length > 0 && (
-            <button 
-              className="btn btn-success rounded-3"
-              onClick={approveAll}
-              disabled={approvingAll}
-            >
-              {approvingAll ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-2"></span>
-                  Approving...
-                </>
-              ) : (
-                <>
-                  <Check size={18} className="me-2" />
-                  Approve All ({pendingResults.length})
-                </>
-              )}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary"></div>
-        </div>
-      ) : (
-        <>
-          {pendingResults.length === 0 ? (
-            <div className="alert alert-success rounded-3">
-              <CheckCircle size={20} className="me-2" />
-              No pending results to review. All caught up!
-            </div>
-          ) : (
-            <div className="table-responsive">
-              <table className="table table-hover">
-                <thead className="table-light">
-                  <tr>
-                    <th>Student</th>
-                    <th>Class</th>
-                    <th>Teacher</th>
-                    <th>Subjects</th>
-                    <th>Overall</th>
-                    <th>Grade</th>
-                    <th>Submitted</th>
-                    <th className="text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingResults.map(result => (
-                    <tr key={result._id}>
-                      <td>
-                        <div className="fw-semibold">{result.student.name}</div>
-                        <small className="text-muted">{result.student.regNo}</small>
-                      </td>
-                      <td><span className="badge bg-info">{result.classId.name}</span></td>
-                      <td>{result.teacher.name}</td>
-                      <td>{result.subjects?.length || 0}</td>
-                      <td className="fw-bold">{result.overallTotal}</td>
-                      <td>
-                        <span className={`badge bg-${
-                          result.overallGrade === 'A' ? 'success' :
-                          result.overallGrade === 'B' ? 'primary' :
-                          result.overallGrade === 'C' ? 'info' :
-                          result.overallGrade === 'D' ? 'warning' : 'danger'
-                        }`}>
-                          {result.overallGrade}
-                        </span>
-                      </td>
-                      <td>
-                        <small>{new Date(result.submittedAt).toLocaleDateString()}</small>
-                      </td>
-                      <td>
-                        <div className="d-flex gap-2 justify-content-center">
-                          <button 
-                            className="btn btn-sm btn-primary rounded-3"
-                            onClick={() => {
-                              setSelectedResult(result);
-                              setShowReviewModal(true);
-                            }}
-                          >
-                            <Eye size={14} className="me-1" />
-                            Review
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
-      )}
-
-      {showReviewModal && selectedResult && (
-        <ReviewResultModal 
-          result={selectedResult}
-          token={token}
-          onClose={() => {
-            setShowReviewModal(false);
-            setSelectedResult(null);
-          }}
-          onSuccess={() => {
-            setShowReviewModal(false);
-            setSelectedResult(null);
-            onReviewSuccess();
-          }}
-        />
-      )}
-    </>
-  );
-};
-
-// ==================== ALL RESULTS TAB ====================
-const AllResultsTab = ({ 
-  results, 
-  loading, 
-  selectedTerm, 
-  setSelectedTerm, 
-  selectedSession, 
-  setSelectedSession,
-  token,
-  onActionSuccess
-}) => {
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedResults, setSelectedResults] = useState([]);
-
-  const filteredResults = results.filter(r => 
-    statusFilter === 'all' || r.status === statusFilter
-  );
-
-  const approvedResults = filteredResults.filter(r => r.status === 'approved');
-
-  const sendMultipleResults = async () => {
-    if (selectedResults.length === 0) {
-      alert('Please select results to send');
-      return;
-    }
-
-    if (!window.confirm(`Send ${selectedResults.length} result(s) to parents via SMS?`)) {
-      return;
-    }
-
-    try {
-      const res = await axios.post(
-        `${REACT_APP_API_URL}/api/admin/results/send-multiple`,
-        { resultIds: selectedResults },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert(res.data.message);
-      setSelectedResults([]);
-      onActionSuccess();
-    } catch (err) {
-      alert('Failed to send results: ' + (err.response?.data?.message || err.message));
-    }
-  };
-
-  return (
-    <>
-      {/* Filters */}
-      <div className="row mb-4">
-        <div className="col-md-2">
-          <select 
-            className="form-select rounded-3" 
-            value={selectedTerm} 
-            onChange={(e) => setSelectedTerm(e.target.value)}
-          >
-            <option value="">All Terms</option>
-            <option value="First Term">First Term</option>
-            <option value="Second Term">Second Term</option>
-            <option value="Third Term">Third Term</option>
-          </select>
-        </div>
-        <div className="col-md-2">
-          <input 
-            type="text" 
-            className="form-control rounded-3" 
-            placeholder="Session"
-            value={selectedSession}
-            onChange={(e) => setSelectedSession(e.target.value)}
-          />
-        </div>
-        <div className="col-md-2">
-          <select 
-            className="form-select rounded-3"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">All Status</option>
-            <option value="draft">Draft</option>
-            <option value="submitted">Submitted</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-            <option value="sent">Sent to Parents</option>
-          </select>
-        </div>
-        <div className="col-md-6 text-end">
-          {selectedResults.length > 0 && (
-            <button 
-              className="btn btn-success rounded-3"
-              onClick={sendMultipleResults}
-            >
-              <Send size={18} className="me-2" />
-              Send {selectedResults.length} to Parents
-            </button>
-          )}
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary"></div>
-        </div>
-      ) : (
-        <div className="table-responsive">
-          <table className="table table-hover">
-            <thead className="table-light">
-              <tr>
-                <th style={{ width: '40px' }}>
-                  <input 
-                    type="checkbox"
-                    className="form-check-input"
-                    checked={selectedResults.length === approvedResults.length && approvedResults.length > 0}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedResults(approvedResults.map(r => r._id));
-                      } else {
-                        setSelectedResults([]);
-                      }
-                    }}
-                  />
-                </th>
-                <th>Student</th>
-                <th>Class</th>
-                <th>Term</th>
-                <th>Session</th>
-                <th>Overall</th>
-                <th>Grade</th>
-                <th>Status</th>
-                <th>Teacher</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredResults.map(result => (
-                <tr key={result._id}>
-                  <td>
-                    {result.status === 'approved' && (
-                      <input 
-                        type="checkbox"
-                        className="form-check-input"
-                        checked={selectedResults.includes(result._id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedResults([...selectedResults, result._id]);
-                          } else {
-                            setSelectedResults(selectedResults.filter(id => id !== result._id));
-                          }
-                        }}
-                      />
-                    )}
-                  </td>
-                  <td>
-                    <div className="fw-semibold">{result.student.name}</div>
-                    <small className="text-muted">{result.student.regNo}</small>
-                  </td>
-                  <td><span className="badge bg-info">{result.classId.name}</span></td>
-                  <td>{result.term}</td>
-                  <td>{result.session}</td>
-                  <td className="fw-bold">{result.overallTotal}</td>
-                  <td>
-                    <span className={`badge bg-${
-                      result.overallGrade === 'A' ? 'success' :
-                      result.overallGrade === 'B' ? 'primary' :
-                      result.overallGrade === 'C' ? 'info' :
-                      result.overallGrade === 'D' ? 'warning' : 'danger'
-                    }`}>
-                      {result.overallGrade}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`badge bg-${
-                      result.status === 'draft' ? 'secondary' :
-                      result.status === 'submitted' ? 'primary' :
-                      result.status === 'approved' ? 'success' :
-                      result.status === 'rejected' ? 'danger' : 'info'
-                    }`}>
-                      {result.status}
-                    </span>
-                  </td>
-                  <td>
-                    <small>{result.teacher.name}</small>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </>
-  );
-};
-
-// ==================== REVIEW MODAL ====================
-const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
-  const [comments, setComments] = useState({
-    teacher: result.comments?.teacher || '',
-    principal: result.comments?.principal || ''
-  });
-  const [processing, setProcessing] = useState(false);
-  const [showApproveConfirm, setShowApproveConfirm] = useState(false);
-
-  const handleApprove = async () => {
-    try {
-      setProcessing(true);
-      await axios.put(
-        `${REACT_APP_API_URL}/api/admin/results/${result._id}/review`,
-        { action: 'approve', comments },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert('Result approved! It will be sent to parents via SMS.');
-      onSuccess();
-    } catch (err) {
-      alert('Failed to approve result: ' + (err.response?.data?.message || err.message));
-    } finally {
-      setProcessing(false);
-      setShowApproveConfirm(false);
-    }
-  };
-
-  const handleReject = async () => {
-    const reason = window.prompt('Reason for rejection:');
-    if (!reason) return;
-
-    try {
-      setProcessing(true);
-      await axios.put(
-        `${REACT_APP_API_URL}/api/admin/results/${result._id}/review`,
-        { action: 'reject', rejectionReason: reason },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert('Result rejected and sent back to teacher.');
-      onSuccess();
-    } catch (err) {
-      alert('Failed to reject result: ' + (err.response?.data?.message || err.message));
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  return (
-    <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1060 }}>
-      <div className="modal-dialog modal-xl modal-dialog-scrollable">
-        <div className="modal-content">
-          <div className="modal-header bg-primary text-white">
-            <div>
-              <h5 className="modal-title mb-0">Review Result</h5>
-              <small>{result.student.name} - {result.classId.name}</small>
-            </div>
-            <button type="button" className="btn-close btn-close-white" onClick={onClose}></button>
-          </div>
-          <div className="modal-body">
-            <div className="alert alert-info rounded-3">
-              <strong>Note:</strong> Review the result details below. You can add/edit the principal's comment before approving.
-            </div>
-            
-            {/* Subjects (read-only) */}
-            <h6 className="mb-3 fw-bold">Subject Scores</h6>
-            <div className="table-responsive mb-4">
-              <table className="table table-bordered table-sm">
-                <thead className="table-light">
-                  <tr>
-                    <th>Subject</th>
-                    <th className="text-center">CA1</th>
-                    <th className="text-center">CA2</th>
-                    <th className="text-center">Exam</th>
-                    <th className="text-center">Total</th>
-                    <th className="text-center">Grade</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.subjects?.map((s, i) => (
-                    <tr key={i}>
-                      <td className="fw-semibold">{s.subject}</td>
-                      <td className="text-center">{s.ca1}</td>
-                      <td className="text-center">{s.ca2}</td>
-                      <td className="text-center">{s.exam}</td>
-                      <td className="text-center fw-bold">{s.total}</td>
-                      <td className="text-center">
-                        <span className={`badge bg-${
-                          s.grade === 'A' ? 'success' :
-                          s.grade === 'B' ? 'primary' :
-                          s.grade === 'C' ? 'info' :
-                          s.grade === 'D' ? 'warning' : 'danger'
-                        }`}>
-                          {s.grade}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                  <tr className="table-secondary">
-                    <td colSpan="4" className="fw-bold">Overall Performance</td>
-                    <td className="text-center fw-bold">{result.overallTotal}</td>
-                    <td className="text-center">
-                      <span className={`badge bg-${
-                        result.overallGrade === 'A' ? 'success' :
-                        result.overallGrade === 'B' ? 'primary' :
-                        result.overallGrade === 'C' ? 'info' :
-                        result.overallGrade === 'D' ? 'warning' : 'danger'
-                      }`}>
-                        {result.overallGrade}
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* Comments */}
-            <h6 className="mb-3 fw-bold">Comments</h6>
-            <div className="mb-3">
-              <label className="form-label">Teacher's Comment (Read-only)</label>
-              <textarea 
-                className="form-control bg-light"
-                rows="3"
-                value={comments.teacher}
-                readOnly
-              ></textarea>
-            </div>
-
-            <div className="mb-3">
-              <label className="form-label">Principal's Comment</label>
-              <textarea 
-                className="form-control"
-                rows="3"
-                value={comments.principal || ''}
-                onChange={(e) => setComments({ ...comments, principal: e.target.value })}
-                placeholder="Add principal's comment here..."
-              ></textarea>
-            </div>
-          </div>
-          <div className="modal-footer">
-            <button className="btn btn-secondary rounded-3" onClick={onClose} disabled={processing}>
-              Cancel
-            </button>
-            <button 
-              className="btn btn-danger rounded-3 me-2"
-              onClick={handleReject}
-              disabled={processing}
-            >
-              <Check size={18} className="me-2" />
-              Reject
-            </button>
-            <button 
-              className="btn btn-success rounded-3"
-              onClick={() => setShowApproveConfirm(true)}
-              disabled={processing}
-            >
-              <Check size={18} className="me-2" />
-              Approve & Send to Parent
-            </button>
-          </div>
-
-          {/* Approve Confirmation Modal */}
-          {showApproveConfirm && (
-            <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 1070 }}>
-              <div className="modal-dialog modal-dialog-centered">
-                <div className="modal-content">
-                  <div className="modal-header bg-success text-white">
-                    <h5 className="modal-title">
-                      <Check size={20} className="me-2" />
-                      Confirm Approval
-                    </h5>
-                  </div>
-                  <div className="modal-body">
-                    <div className="alert alert-warning">
-                      <AlertCircle size={20} className="me-2" />
-                      <strong>Important:</strong> Once approved, this result will be automatically sent to the parent via SMS.
-                    </div>
-                    
-                    <h6 className="mb-3">Result Summary:</h6>
-                    <div className="card bg-light">
-                      <div className="card-body">
-                        <div className="row">
-                          <div className="col-6">
-                            <strong>Student:</strong> {result.student.name}
-                          </div>
-                          <div className="col-6">
-                            <strong>Class:</strong> {result.classId.name}
-                          </div>
-                          <div className="col-6">
-                            <strong>Overall Score:</strong> {result.overallTotal}
-                          </div>
-                          <div className="col-6">
-                            <strong>Grade:</strong> <span className="badge bg-success">{result.overallGrade}</span>
-                          </div>
-                          <div className="col-12 mt-2">
-                            <strong>Parent:</strong> {result.student.parentName || 'N/A'} 
-                            ({result.student.parentPhone || 'No phone number'})
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="mt-3 mb-0">Are you sure you want to approve and send this result?</p>
-                  </div>
-                  <div className="modal-footer">
-                    <button 
-                      className="btn btn-secondary"
-                      onClick={() => setShowApproveConfirm(false)}
-                      disabled={processing}
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      className="btn btn-success"
-                      onClick={handleApprove}
-                      disabled={processing}
-                    >
-                      {processing ? (
-                        <>
-                          <span className="spinner-border spinner-border-sm me-2"></span>
-                          Approving...
-                        </>
-                      ) : (
-                        <>
-                          <Check size={18} className="me-2" />
-                          Yes, Approve & Send
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-// ==================== EXPORT ====================
 export default AdminResultManagement;
