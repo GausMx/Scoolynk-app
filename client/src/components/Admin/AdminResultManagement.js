@@ -1,5 +1,5 @@
 // src/components/Admin/AdminResultManagement.js - VISUAL TEMPLATE VERSION
-
+//route updat
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
@@ -922,5 +922,5 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
     </div>
   );
 };
-
+// ==================== EXPORT ====================
 export default AdminResultManagement;
