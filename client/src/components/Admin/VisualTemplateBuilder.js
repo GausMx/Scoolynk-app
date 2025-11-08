@@ -37,11 +37,13 @@ const DEFAULT_FEE_TYPES = [
 
 const VisualTemplateBuilder = ({ 
   schoolId, 
-  token, 
+  token: propToken, 
   onClose, 
   existingTemplate = null 
 }) => {
-  const token = token || localStorage.getItem('token'); 
+  // Get token from props or localStorage (like Settings.js does)
+  const token = propToken || localStorage.getItem('token');
+  
   const [templateName, setTemplateName] = useState(existingTemplate?.name || '');
   const [term, setTerm] = useState(existingTemplate?.term || 'First Term');
   const [session, setSession] = useState(existingTemplate?.session || '');
