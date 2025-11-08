@@ -443,11 +443,72 @@ export const reviewResult = async (req, res) => {
 // -------------------------
 // Admin dashboard
 // -------------------------
-export const getAdminDashboard = (req, res) => {
-  res.json({
-    message: `Welcome to the Admin Dashboard, ${req.user.name}. Your school ID is ${req.user.schoolId}.`
-  });
+// -------------------------
+// Admin dashboard (Real Data)
+// -------------------------
+export const getAdminDashboard = async (req, res) => {
+  try {
+    const schoolId = req.user.schoolId;
+
+    const [
+      totalStudents,
+      totalTeachers,
+      totalClasses,
+      pendingResults,
+      approvedResults,
+      rejectedResults,
+      recentActivity
+    ] = await Promise.all([
+      Student.countDocuments({ schoolId }),
+      User.countDocuments({ schoolId, role: 'teacher' }),
+      Class.countDocuments({ schoolId }),
+      Result.countDocuments({ status: 'submitted' }),
+      Result.countDocuments({ status: 'verified' }),
+      Result.countDocuments({ status: 'rejected' }),
+      Result.find({ schoolId })
+        .sort({ updatedAt: -1 })
+        .limit(5)
+        .populate('student', 'name regNo')
+        .populate('teacher', 'name')
+    ]);
+
+    // Payment stats
+    const students = await Student.find({ schoolId }).populate('classId', 'fee');
+    const fullPaid = students.filter(s => s.amountPaid >= (s.classId?.fee || 0)).length;
+    const partialPaid = students.filter(
+      s => s.amountPaid > 0 && s.amountPaid < (s.classId?.fee || 0)
+    ).length;
+    const unpaidFeesAmount = students
+      .filter(s => s.amountPaid < (s.classId?.fee || 0))
+      .reduce((sum, s) => sum + ((s.classId?.fee || 0) - s.amountPaid), 0);
+
+    const activeStudents = students.filter(s => s.amountPaid > 0).length;
+
+    // Mock trend data for now (could later track monthly)
+    const feesTrend = [40000, 50000, 70000, 85000, 90000, 95000];
+    const resultsTrend = [10, 15, 8, 20, 18, 22];
+
+    res.json({
+      totalStudents,
+      totalTeachers,
+      totalClasses,
+      activeStudents,
+      unpaidFeesAmount,
+      partialPaid,
+      fullPaid,
+      pendingResults,
+      approvedResults,
+      rejectedResults,
+      feesTrend,
+      resultsTrend,
+      recentActivity
+    });
+  } catch (err) {
+    console.error('[AdminDashboardError]', err);
+    res.status(500).json({ message: 'Failed to fetch dashboard data.' });
+  }
 };
+
 
 // -------------------------
 // Get school code
