@@ -1,7 +1,7 @@
 // src/components/Admin/VisualTemplateBuilder.js
 // Visual drag-and-drop template builder for non-tech admins
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Save, Eye, EyeOff, ChevronDown, ChevronUp, 
   Plus, Trash2, Check, X 
@@ -47,6 +47,13 @@ const VisualTemplateBuilder = ({
   const [templateName, setTemplateName] = useState(existingTemplate?.name || '');
   const [term, setTerm] = useState(existingTemplate?.term || 'First Term');
   const [session, setSession] = useState(existingTemplate?.session || '');
+  
+  // School info state
+  const [schoolInfo, setSchoolInfo] = useState({
+    name: '',
+    address: '',
+    motto: ''
+  });
   
   // Component toggles
   const [components, setComponents] = useState({
@@ -101,6 +108,36 @@ const VisualTemplateBuilder = ({
   const [showPreview, setShowPreview] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // Fetch school info on mount
+  useEffect(() => {
+    const fetchSchoolInfo = async () => {
+      try {
+        const res = await axios.get(`${REACT_APP_API_URL}/api/admin/settings`, {
+          headers: { Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}` }
+        });
+        
+        const { school } = res.data;
+        setSchoolInfo({
+          name: school.name || 'Your School Name',
+          address: school.address || 'School Address, City, State',
+          motto: school.motto || ''
+        });
+      } catch (err) {
+        console.error('Failed to fetch school info:', err);
+        // Use default values if fetch fails
+        setSchoolInfo({
+          name: 'Your School Name',
+          address: 'School Address, City, State',
+          motto: ''
+        });
+      }
+    };
+
+    if (token) {
+      fetchSchoolInfo();
+    }
+  }, [token]);
 
   const toggleComponent = (component) => {
     setComponents({ ...components, [component]: !components[component] });
@@ -670,8 +707,11 @@ const VisualTemplateBuilder = ({
                   {/* Header */}
                   {components.header && (
                     <div className="text-center mb-4 pb-3 border-bottom">
-                      <h5 className="fw-bold mb-1">YOUR SCHOOL NAME</h5>
-                      <small className="text-muted">School Address, City, State</small>
+                      <h5 className="fw-bold mb-1">{schoolInfo.name}</h5>
+                      <small className="text-muted">{schoolInfo.address}</small>
+                      {schoolInfo.motto && (
+                        <div className="fst-italic text-muted small mt-1">"{schoolInfo.motto}"</div>
+                      )}
                       <div className="mt-2 fw-bold">{term} Report Card - {session}</div>
                     </div>
                   )}

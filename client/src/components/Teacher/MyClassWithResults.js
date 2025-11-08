@@ -6,8 +6,7 @@ import {
   Users, Search, Download, FileText, History, 
   Edit, Trash2, Send, Eye, Scan
 } from 'lucide-react';
-import ResultEntryModal from './ResultEntryModal';
-
+import VisualResultEntry from './VisualResultEntry';
 const { REACT_APP_API_URL } = process.env;
 
 const MyClassWithResults = () => {
@@ -411,7 +410,7 @@ const ResultsTab = ({
 
       {/* Result Entry/Edit Modal */}
       {showModal && (
-        <ResultEntryModal 
+        <VisualResultEntry 
           mode={modalMode}
           student={selectedStudent}
           existingResult={editingResult}

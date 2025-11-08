@@ -1,21 +1,20 @@
+// src/components/Admin/Dashboard.js - REAL BACKEND DATA
+
 import React, { useEffect, useState } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'chart.js/auto';
 
-const MOCK_STATS = {
-  activeStudents: 1000,
-  unpaidFees: 25000,
-  pendingApprovals: 5,
-  feesTrend: [5000, 8000, 12000, 15000, 20000, 25000],
-  approvalsTrend: [0, 1, 2, 2, 3, 5],
-};
+const { REACT_APP_API_URL } = process.env;
 
-const StatCard = ({ title, value, iconClass, bgClass, textClass }) => (
+const StatCard = ({ title, value, iconClass, bgClass, textClass, onClick }) => (
   <div className="col-12 col-md-4">
     <div
       className={`card shadow-sm rounded-4 p-3 ${bgClass} hover:shadow-lg transition`}
       style={{ cursor: 'pointer' }}
+      onClick={onClick}
     >
       <div className="d-flex align-items-center justify-content-between">
         <div>
@@ -29,19 +28,89 @@ const StatCard = ({ title, value, iconClass, bgClass, textClass }) => (
 );
 
 const Dashboard = () => {
-  const [stats, setStats] = useState(MOCK_STATS);
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    totalTeachers: 0,
+    totalClasses: 0,
+    activeStudents: 0,
+    unpaidFees: 0,
+    partialPaid: 0,
+    fullPaid: 0,
+    pendingResults: 0,
+    approvedResults: 0,
+    rejectedResults: 0,
+    feesTrend: [],
+    resultsTrend: [],
+    recentActivity: []
+  });
+
+  const token = localStorage.getItem('token');
 
   useEffect(() => {
-    // Replace with backend API fetch if needed
+    fetchDashboardData();
   }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch dashboard data from backend
+      const res = await axios.get(`${REACT_APP_API_URL}/api/admin`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const data = res.data;
+
+      setStats({
+        totalStudents: data.totalStudents || 0,
+        totalTeachers: data.totalTeachers || 0,
+        totalClasses: data.totalClasses || 0,
+        activeStudents: data.totalStudents || 0,
+        unpaidFees: data.unpaidFeesAmount || 0,
+        partialPaid: data.partialPaidCount || 0,
+        fullPaid: data.fullPaidCount || 0,
+        pendingResults: data.pendingResults || 0,
+        approvedResults: data.approvedResults || 0,
+        rejectedResults: data.rejectedResults || 0,
+        feesTrend: data.feesTrend || [0, 0, 0, 0, 0, 0],
+        resultsTrend: data.resultsTrend || [0, 0, 0, 0, 0, 0],
+        recentActivity: data.recentActivity || []
+      });
+
+    } catch (err) {
+      console.error('Failed to fetch dashboard data:', err);
+      // Set default values on error
+      setStats({
+        totalStudents: 0,
+        totalTeachers: 0,
+        totalClasses: 0,
+        activeStudents: 0,
+        unpaidFees: 0,
+        partialPaid: 0,
+        fullPaid: 0,
+        pendingResults: 0,
+        approvedResults: 0,
+        rejectedResults: 0,
+        feesTrend: [0, 0, 0, 0, 0, 0],
+        resultsTrend: [0, 0, 0, 0, 0, 0],
+        recentActivity: []
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const barData = {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
     datasets: [
       {
-        label: 'Fees Collected',
+        label: 'Fees Collected (₦)',
         data: stats.feesTrend,
         backgroundColor: 'rgba(75, 192, 192, 0.7)',
+        borderColor: 'rgba(75, 192, 192, 1)',
+        borderWidth: 1,
       },
     ],
   };
@@ -50,68 +119,213 @@ const Dashboard = () => {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
     datasets: [
       {
-        label: 'Pending Approvals',
-        data: stats.approvalsTrend,
+        label: 'Pending Results',
+        data: stats.resultsTrend,
         borderColor: 'rgba(255, 99, 132, 0.8)',
         backgroundColor: 'rgba(255, 99, 132, 0.2)',
         tension: 0.4,
+        fill: true,
       },
     ],
   };
 
+  if (loading) {
+    return (
+      <div className="container-fluid py-4">
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+          <div className="text-center">
+            <div className="spinner-border text-primary mb-3" style={{ width: '3rem', height: '3rem' }} role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="text-muted">Loading dashboard data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container-fluid py-4">
-      <h2 className="fw-bold mb-4 text-dark">School Admin Dashboard</h2>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 className="fw-bold text-dark mb-1">School Admin Dashboard</h2>
+          <p className="text-muted mb-0">Welcome back! Here's what's happening in your school.</p>
+        </div>
+        <button 
+          className="btn btn-outline-primary rounded-3"
+          onClick={() => window.location.reload()}
+        >
+          <i className="bi-arrow-clockwise me-2"></i>
+          Refresh
+        </button>
+      </div>
 
-      {/* Top Stats Cards */}
+      {/* Overview Stats Cards */}
       <div className="row g-4 mb-4">
         <StatCard
-          title="Active Students"
-          value={stats.activeStudents}
-          iconClass="bi-journal-check"
-          bgClass="bg-info bg-opacity-10"
-          textClass="text-info"
+          title="Total Students"
+          value={stats.totalStudents}
+          iconClass="bi-people-fill"
+          bgClass="bg-primary bg-opacity-10"
+          textClass="text-primary"
+          onClick={() => navigate('/admin/students')}
         />
         <StatCard
-          title="Unpaid Fees"
-          value={`₦${stats.unpaidFees}`}
-          iconClass="bi-currency-exchange"
+          title="Total Teachers"
+          value={stats.totalTeachers}
+          iconClass="bi-person-badge-fill"
           bgClass="bg-success bg-opacity-10"
           textClass="text-success"
+          onClick={() => navigate('/admin/teachers')}
         />
         <StatCard
-          title="Pending Approvals"
-          value={stats.pendingApprovals}
-          iconClass="bi-clock-fill"
-          bgClass="bg-danger bg-opacity-10"
-          textClass="text-danger"
+          title="Total Classes"
+          value={stats.totalClasses}
+          iconClass="bi-door-open-fill"
+          bgClass="bg-info bg-opacity-10"
+          textClass="text-info"
+          onClick={() => navigate('/admin/classes')}
         />
       </div>
 
-      {/* Charts Section */}
+      {/* Payment Stats */}
       <div className="row g-4 mb-4">
-        <div className="col-lg-12">
-          <div className="card shadow-sm rounded-4 p-3">
-            <h6 className="fw-bold mb-3">Fees Collection Trend</h6>
-            <Bar
-              data={barData}
-              options={{ responsive: true, plugins: { legend: { display: false } } }}
-            />
+        <div className="col-12">
+          <div className="card shadow-sm rounded-4 p-4">
+            <h5 className="fw-bold mb-4">
+              <i className="bi-cash-stack me-2 text-success"></i>
+              Payment Overview
+            </h5>
+            <div className="row g-3">
+              <div className="col-md-4">
+                <div className="border-start border-success border-4 ps-3">
+                  <small className="text-muted d-block mb-1">Fully Paid</small>
+                  <h4 className="fw-bold text-success mb-0">{stats.fullPaid}</h4>
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="border-start border-warning border-4 ps-3">
+                  <small className="text-muted d-block mb-1">Partial Payment</small>
+                  <h4 className="fw-bold text-warning mb-0">{stats.partialPaid}</h4>
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="border-start border-danger border-4 ps-3">
+                  <small className="text-muted d-block mb-1">Outstanding Fees</small>
+                  <h4 className="fw-bold text-danger mb-0">₦{stats.unpaidFees.toLocaleString()}</h4>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Sparkline Section */}
+      {/* Results Stats */}
       <div className="row g-4 mb-4">
-        <div className="col-lg-12">
-          <div className="card shadow-sm rounded-4 p-3">
-            <h6 className="fw-bold mb-3">Pending Approvals Over Time</h6>
+        <div className="col-12">
+          <div className="card shadow-sm rounded-4 p-4">
+            <h5 className="fw-bold mb-4">
+              <i className="bi-file-earmark-text me-2 text-primary"></i>
+              Results Overview
+            </h5>
+            <div className="row g-3">
+              <div className="col-md-4">
+                <div className="border-start border-warning border-4 ps-3">
+                  <small className="text-muted d-block mb-1">Pending Review</small>
+                  <h4 className="fw-bold text-warning mb-0">{stats.pendingResults}</h4>
+                  <button 
+                    className="btn btn-sm btn-warning mt-2"
+                    onClick={() => navigate('/admin/results')}
+                  >
+                    Review Now
+                  </button>
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="border-start border-success border-4 ps-3">
+                  <small className="text-muted d-block mb-1">Approved</small>
+                  <h4 className="fw-bold text-success mb-0">{stats.approvedResults}</h4>
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="border-start border-danger border-4 ps-3">
+                  <small className="text-muted d-block mb-1">Rejected</small>
+                  <h4 className="fw-bold text-danger mb-0">{stats.rejectedResults}</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Charts Section */}
+      <div className="row g-4 mb-4">
+        <div className="col-lg-6">
+          <div className="card shadow-sm rounded-4 p-4">
+            <h6 className="fw-bold mb-3">
+              <i className="bi-graph-up me-2 text-success"></i>
+              Fees Collection Trend
+            </h6>
+            <Bar
+              data={barData}
+              options={{ 
+                responsive: true, 
+                maintainAspectRatio: true,
+                plugins: { 
+                  legend: { display: false },
+                  tooltip: {
+                    callbacks: {
+                      label: function(context) {
+                        return '₦' + context.parsed.y.toLocaleString();
+                      }
+                    }
+                  }
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    ticks: {
+                      callback: function(value) {
+                        return '₦' + value.toLocaleString();
+                      }
+                    }
+                  }
+                }
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="col-lg-6">
+          <div className="card shadow-sm rounded-4 p-4">
+            <h6 className="fw-bold mb-3">
+              <i className="bi-graph-up-arrow me-2 text-danger"></i>
+              Results Submission Trend
+            </h6>
             <Line
               data={sparklineData}
               options={{
                 responsive: true,
-                plugins: { legend: { display: false } },
-                elements: { point: { radius: 3 } },
+                maintainAspectRatio: true,
+                plugins: { 
+                  legend: { display: false },
+                  tooltip: {
+                    callbacks: {
+                      label: function(context) {
+                        return context.parsed.y + ' results';
+                      }
+                    }
+                  }
+                },
+                elements: { point: { radius: 4, hitRadius: 10 } },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    ticks: {
+                      stepSize: 1
+                    }
+                  }
+                }
               }}
             />
           </div>
@@ -119,15 +333,71 @@ const Dashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="row g-3 mt-4">
-        {['View Results', 'View Payments'].map((action, i) => (
-          <div className="col-6" key={i}>
-            <button className="btn btn-outline-primary w-100 rounded-4 py-3 fw-semibold">
-              {action}
+      <div className="card shadow-sm rounded-4 p-4">
+        <h5 className="fw-bold mb-3">
+          <i className="bi-lightning-fill me-2 text-warning"></i>
+          Quick Actions
+        </h5>
+        <div className="row g-3">
+          <div className="col-6 col-md-3">
+            <button 
+              className="btn btn-outline-primary w-100 rounded-3 py-3"
+              onClick={() => navigate('/admin/results')}
+            >
+              <i className="bi-file-earmark-check fs-4 d-block mb-2"></i>
+              <span className="fw-semibold">View Results</span>
             </button>
           </div>
-        ))}
+          <div className="col-6 col-md-3">
+            <button 
+              className="btn btn-outline-success w-100 rounded-3 py-3"
+              onClick={() => navigate('/admin/settings?tab=payments')}
+            >
+              <i className="bi-cash-stack fs-4 d-block mb-2"></i>
+              <span className="fw-semibold">View Payments</span>
+            </button>
+          </div>
+          <div className="col-6 col-md-3">
+            <button 
+              className="btn btn-outline-info w-100 rounded-3 py-3"
+              onClick={() => navigate('/admin/students')}
+            >
+              <i className="bi-people fs-4 d-block mb-2"></i>
+              <span className="fw-semibold">Manage Students</span>
+            </button>
+          </div>
+          <div className="col-6 col-md-3">
+            <button 
+              className="btn btn-outline-warning w-100 rounded-3 py-3"
+              onClick={() => navigate('/admin/teachers')}
+            >
+              <i className="bi-person-badge fs-4 d-block mb-2"></i>
+              <span className="fw-semibold">Manage Teachers</span>
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Alert for pending actions */}
+      {stats.pendingResults > 0 && (
+        <div className="alert alert-warning rounded-4 mt-4">
+          <div className="d-flex align-items-center">
+            <i className="bi-exclamation-triangle-fill fs-4 me-3"></i>
+            <div className="flex-grow-1">
+              <h6 className="mb-1">Action Required!</h6>
+              <p className="mb-0">
+                You have <strong>{stats.pendingResults}</strong> result(s) waiting for your review.
+              </p>
+            </div>
+            <button 
+              className="btn btn-warning"
+              onClick={() => navigate('/admin/results')}
+            >
+              Review Now
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
