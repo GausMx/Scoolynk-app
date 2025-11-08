@@ -778,13 +778,13 @@ const Settings = () => {
   };
 
   return (
-    <div className="container-fluid py-4">
+<div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
       <div className="mb-4">
-        <h2 className="fw-bold text-primary d-flex align-items-center">
+<h2 className="fw-bold text-primary d-flex align-items-center fs-4 fs-md-3">
           <SettingsIcon size={32} className="me-2" />
           Settings
         </h2>
-        <p className="text-muted">Manage your school configuration and preferences</p>
+        <p className="text-muted small">Manage your school configuration and preferences</p>
       </div>
 
       {message.text && (
@@ -794,10 +794,10 @@ const Settings = () => {
         </div>
       )}
 
-      <ul className="nav nav-pills mb-4 gap-2">
+<ul className="nav nav-pills mb-4 gap-2 flex-column flex-md-row">
         <li className="nav-item">
           <button
-            className={`nav-link rounded-3 ${activeTab === 'profile' ? 'active' : ''}`}
+            className={`nav-link rounded-3 w-100 w-md-auto ${activeTab === 'profile' ? 'active' : ''}`}
             onClick={() => setActiveTab('profile')}
           >
             <User size={18} className="me-2" />
@@ -806,7 +806,7 @@ const Settings = () => {
         </li>
         <li className="nav-item">
           <button
-            className={`nav-link rounded-3 ${activeTab === 'security' ? 'active' : ''}`}
+            className={`nav-link rounded-3 w-100 w-md-auto ${activeTab === 'security' ? 'active' : ''}`}
             onClick={() => setActiveTab('security')}
           >
             <Lock size={18} className="me-2" />
@@ -815,7 +815,7 @@ const Settings = () => {
         </li>
         <li className="nav-item">
           <button
-            className={`nav-link rounded-3 ${activeTab === 'fees' ? 'active' : ''}`}
+            className={`nav-link rounded-3 w-100 w-md-auto ${activeTab === 'fees' ? 'active' : ''}`}
             onClick={() => setActiveTab('fees')}
           >
             <CreditCard size={18} className="me-2" />
@@ -824,7 +824,7 @@ const Settings = () => {
         </li>
         <li className="nav-item">
           <button
-            className={`nav-link rounded-3 ${activeTab === 'payments' ? 'active' : ''}`}
+            className={`nav-link rounded-3 w-100 w-md-auto ${activeTab === 'payments' ? 'active' : ''}`}
             onClick={() => setActiveTab('payments')}
           >
             <DollarSign size={18} className="me-2" />

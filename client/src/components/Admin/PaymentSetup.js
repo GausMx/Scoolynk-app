@@ -1,4 +1,4 @@
-// src/components/Admin/PaymentSetup.js - COMPLETE ENHANCED VERSION
+// src/components/Admin/PaymentSetup.js - MOBILE RESPONSIVE VERSION
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -46,7 +46,6 @@ const PaymentSetup = () => {
       setIsConfigured(res.data.isConfigured);
       setConfig(res.data);
       
-      // PROPERLY set ALL form fields if configured
       if (res.data.isConfigured && res.data.bankDetails) {
         setFormData({
           accountNumber: res.data.bankDetails.accountNumber || '',
@@ -116,32 +115,33 @@ const PaymentSetup = () => {
   };
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
       <div className="mb-4">
-        <h2 className="fw-bold text-primary d-flex align-items-center">
-          <Building size={32} className="me-2" />
+        <h2 className="fw-bold text-primary d-flex align-items-center fs-4 fs-md-3">
+          <Building size={28} className="me-2" />
           Payment Account Setup
         </h2>
-        <p className="text-muted">Configure your school's bank account to receive payments</p>
+        <p className="text-muted small">Configure your school's bank account to receive payments</p>
       </div>
 
       {message.text && (
         <div className={`alert alert-${message.type === 'success' ? 'success' : 'danger'} rounded-3`}>
-          {message.text}
+          <small>{message.text}</small>
         </div>
       )}
 
       {isConfigured && (
         <div className="alert alert-success rounded-3 mb-4">
           <Check size={20} className="me-2" />
-          <strong>Payment Account Configured!</strong> Your school can now receive payments.
+          <strong className="small">Payment Account Configured!</strong>
+          <span className="small"> Your school can now receive payments.</span>
         </div>
       )}
 
       <div className="row justify-content-center">
-        <div className="col-lg-8">
+        <div className="col-12 col-lg-8">
           <div className="card border-0 shadow-sm rounded-4">
-            <div className="card-body p-4">
+            <div className="card-body p-3 p-md-4">
               <div className="alert alert-info rounded-3 mb-4">
                 <AlertCircle size={20} className="me-2" />
                 <small>
@@ -154,7 +154,7 @@ const PaymentSetup = () => {
                 {/* Bank Code (Display if configured) */}
                 {isConfigured && formData.bankCode && (
                   <div className="mb-3">
-                    <label className="form-label fw-semibold">Bank Code</label>
+                    <label className="form-label fw-semibold small">Bank Code</label>
                     <input
                       type="text"
                       className="form-control rounded-3 bg-light"
@@ -168,7 +168,7 @@ const PaymentSetup = () => {
 
                 {/* Bank Name */}
                 <div className="mb-3">
-                  <label className="form-label fw-semibold">
+                  <label className="form-label fw-semibold small">
                     {isConfigured ? 'Current Bank' : 'Select Bank'} *
                   </label>
                   {isConfigured && formData.bankName ? (
@@ -209,7 +209,7 @@ const PaymentSetup = () => {
 
                 {/* Account Number */}
                 <div className="mb-3">
-                  <label className="form-label fw-semibold">
+                  <label className="form-label fw-semibold small">
                     Account Number *
                   </label>
                   {isConfigured && formData.accountNumber ? (
@@ -226,10 +226,10 @@ const PaymentSetup = () => {
                       </small>
                     </>
                   ) : (
-                    <div className="input-group">
+                    <div className="input-group flex-column flex-md-row">
                       <input
                         type="text"
-                        className="form-control rounded-start-3"
+                        className="form-control rounded-3 rounded-md-start-3 rounded-md-end-0 mb-2 mb-md-0"
                         value={formData.accountNumber}
                         onChange={(e) => setFormData({ 
                           ...formData, 
@@ -242,7 +242,7 @@ const PaymentSetup = () => {
                       />
                       <button
                         type="button"
-                        className="btn btn-primary rounded-end-3"
+                        className="btn btn-primary rounded-3 rounded-md-start-0 rounded-md-end-3 w-100 w-md-auto"
                         onClick={verifyAccount}
                         disabled={loading || !formData.bankCode || formData.accountNumber.length !== 10}
                       >
@@ -255,10 +255,10 @@ const PaymentSetup = () => {
                 {/* Account Name */}
                 {formData.accountName && (
                   <div className="mb-3">
-                    <label className="form-label fw-semibold">Account Name</label>
+                    <label className="form-label fw-semibold small">Account Name</label>
                     <div className="alert alert-success rounded-3 mb-0">
                       <Check size={18} className="me-2" />
-                      <strong>{formData.accountName}</strong>
+                      <strong className="small">{formData.accountName}</strong>
                     </div>
                   </div>
                 )}
@@ -266,7 +266,7 @@ const PaymentSetup = () => {
                 <div className="card bg-light border-0 p-3 mb-4">
                   <small className="text-muted">
                     <strong>How it works:</strong>
-                    <ul className="mb-0 mt-2">
+                    <ul className="mb-0 mt-2" style={{ fontSize: '0.85rem' }}>
                       <li>Parents pay school fees online</li>
                       <li>Money goes directly to your bank account</li>
                       <li>Platform fee ({config?.paymentSettings?.platformFeePercentage || 5}%) is deducted automatically</li>
@@ -304,28 +304,28 @@ const PaymentSetup = () => {
           {/* Display Summary if Configured */}
           {isConfigured && (
             <div className="card border-0 shadow-sm rounded-4 mt-4 bg-light">
-              <div className="card-body p-4">
-                <h5 className="text-primary mb-3">Configuration Summary</h5>
+              <div className="card-body p-3 p-md-4">
+                <h5 className="text-primary mb-3 fs-6">Configuration Summary</h5>
                 <div className="row g-3">
-                  <div className="col-md-6">
+                  <div className="col-6 col-md-6">
                     <small className="text-muted d-block mb-1">Bank Code</small>
-                    <strong>{formData.bankCode || 'N/A'}</strong>
+                    <strong className="small">{formData.bankCode || 'N/A'}</strong>
                   </div>
-                  <div className="col-md-6">
+                  <div className="col-6 col-md-6">
                     <small className="text-muted d-block mb-1">Bank Name</small>
-                    <strong>{formData.bankName || 'N/A'}</strong>
+                    <strong className="small">{formData.bankName || 'N/A'}</strong>
                   </div>
-                  <div className="col-md-6">
+                  <div className="col-6 col-md-6">
                     <small className="text-muted d-block mb-1">Account Number</small>
-                    <strong>{formData.accountNumber || 'N/A'}</strong>
+                    <strong className="small">{formData.accountNumber || 'N/A'}</strong>
                   </div>
-                  <div className="col-md-6">
+                  <div className="col-6 col-md-6">
                     <small className="text-muted d-block mb-1">Account Name</small>
-                    <strong>{formData.accountName || 'N/A'}</strong>
+                    <strong className="small">{formData.accountName || 'N/A'}</strong>
                   </div>
                   <div className="col-12">
                     <small className="text-muted d-block mb-1">Platform Fee</small>
-                    <strong>{config?.paymentSettings?.platformFeePercentage || 5}%</strong>
+                    <strong className="small">{config?.paymentSettings?.platformFeePercentage || 5}%</strong>
                   </div>
                 </div>
               </div>

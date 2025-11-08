@@ -1,4 +1,4 @@
-// src/components/Admin/ManageStudents.js
+// src/components/Admin/ManageStudents.js - MOBILE RESPONSIVE VERSION
 
 import React, { useState, useEffect } from 'react';
 import { Users, Edit, Trash2, PlusCircle, Search, AlertTriangle, Download, Upload } from 'lucide-react';
@@ -6,7 +6,6 @@ import axios from 'axios';
 
 const { REACT_APP_API_URL } = process.env;
 
-// Confirmation Modal
 const ConfirmationModal = ({ isOpen, title, body, onConfirm, onCancel, isSaving }) => {
   if (!isOpen) return null;
   return (
@@ -14,17 +13,17 @@ const ConfirmationModal = ({ isOpen, title, body, onConfirm, onCancel, isSaving 
       <div className="modal-dialog modal-dialog-centered modal-sm">
         <div className="modal-content rounded-4 shadow-lg">
           <div className="modal-header bg-danger text-white">
-            <h5 className="modal-title d-flex align-items-center">
+            <h5 className="modal-title d-flex align-items-center fs-6">
               <AlertTriangle size={20} className="me-2" />{title}
             </h5>
             <button type="button" className="btn-close btn-close-white" onClick={onCancel}></button>
           </div>
-          <div className="modal-body"><p>{body}</p></div>
-          <div className="modal-footer">
-            <button type="button" className="btn btn-outline-secondary rounded-3" onClick={onCancel} disabled={isSaving}>
+          <div className="modal-body"><p className="small">{body}</p></div>
+          <div className="modal-footer flex-column flex-md-row gap-2">
+            <button type="button" className="btn btn-outline-secondary rounded-3 w-100 w-md-auto order-2 order-md-1" onClick={onCancel} disabled={isSaving}>
               Cancel
             </button>
-            <button type="button" className="btn btn-danger rounded-3" onClick={onConfirm} disabled={isSaving}>
+            <button type="button" className="btn btn-danger rounded-3 w-100 w-md-auto order-1 order-md-2" onClick={onConfirm} disabled={isSaving}>
               {isSaving ? 'Deleting...' : 'Confirm Delete'}
             </button>
           </div>
@@ -34,18 +33,17 @@ const ConfirmationModal = ({ isOpen, title, body, onConfirm, onCancel, isSaving 
   );
 };
 
-// Mobile Card Component
 const StudentCard = ({ student, onEdit, onDelete, loading }) => (
   <div className="card mb-3 shadow-sm rounded-4 border-start border-info border-4">
     <div className="card-body">
       <h6 className="fw-bold mb-1">{student.name}</h6>
-      <p className="mb-1 text-muted">Reg No: {student.regNo}</p>
+      <p className="mb-1 text-muted small">Reg No: {student.regNo}</p>
       <p className="mb-2">
         <span className="badge bg-info text-dark">{student.classId?.name || 'No Class'}</span>
       </p>
-      <div className="d-flex justify-content-end">
+      <div className="d-flex justify-content-end gap-2">
         <button 
-          className="btn btn-sm btn-outline-secondary me-2" 
+          className="btn btn-sm btn-outline-secondary" 
           onClick={() => onEdit(student)} 
           disabled={loading}
         >
@@ -105,27 +103,22 @@ const ManageStudents = () => {
     }
   };
 
-  // Filter students based on search
   const filteredStudents = students.filter(s =>
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.regNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.classId?.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Sort students by class name (JSS1, JSS2, SSS1, etc.) then by name
   const sortedStudents = [...filteredStudents].sort((a, b) => {
     const classA = a.classId?.name || '';
     const classB = b.classId?.name || '';
     
-    // Compare classes first
     if (classA < classB) return -1;
     if (classA > classB) return 1;
     
-    // If classes are the same, compare names
     return a.name.localeCompare(b.name);
   });
 
-  // Group students by class
   const studentsByClass = sortedStudents.reduce((acc, student) => {
     const className = student.classId?.name || 'Unassigned';
     acc[className] = acc[className] || [];
@@ -133,10 +126,8 @@ const ManageStudents = () => {
     return acc;
   }, {});
 
-  // Get sorted class names (JSS1, JSS2, JSS3, SSS1, SSS2, SSS3)
   const sortedClassNames = Object.keys(studentsByClass).sort();
 
-  // CRUD handlers
   const handleAddOrEdit = async (formData) => {
     try {
       setLoading(true);
@@ -218,7 +209,6 @@ const ManageStudents = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  // Student Form Component
   const StudentForm = ({ initialData, onSubmit, onCancel, isSaving }) => {
     const [formData, setFormData] = useState({
       _id: initialData?._id || '',
@@ -239,7 +229,7 @@ const ManageStudents = () => {
     return (
       <form onSubmit={handleSubmit}>
         <div className="mb-3">
-          <label className="form-label fw-semibold">Full Name *</label>
+          <label className="form-label fw-semibold small">Full Name *</label>
           <input
             type="text"
             className="form-control rounded-3"
@@ -250,7 +240,7 @@ const ManageStudents = () => {
           />
         </div>
         <div className="mb-3">
-          <label className="form-label fw-semibold">Registration Number *</label>
+          <label className="form-label fw-semibold small">Registration Number *</label>
           <input
             type="text"
             className="form-control rounded-3"
@@ -262,7 +252,7 @@ const ManageStudents = () => {
           <small className="text-muted">Must be unique</small>
         </div>
         <div className="mb-4">
-          <label className="form-label fw-semibold">Class *</label>
+          <label className="form-label fw-semibold small">Class *</label>
           <select
             className="form-select rounded-3"
             name="classId"
@@ -278,10 +268,10 @@ const ManageStudents = () => {
             ))}
           </select>
         </div>
-        <div className="d-flex justify-content-end gap-2">
+        <div className="d-flex flex-column flex-md-row justify-content-end gap-2">
           <button
             type="button"
-            className="btn btn-secondary rounded-3"
+            className="btn btn-secondary rounded-3 w-100 w-md-auto order-2 order-md-1"
             onClick={onCancel}
             disabled={isSaving}
           >
@@ -289,7 +279,7 @@ const ManageStudents = () => {
           </button>
           <button
             type="submit"
-            className="btn btn-primary rounded-3"
+            className="btn btn-primary rounded-3 w-100 w-md-auto order-1 order-md-2"
             disabled={isSaving}
           >
             {isSaving ? 'Saving...' : (initialData ? 'Update Student' : 'Add Student')}
@@ -300,29 +290,29 @@ const ManageStudents = () => {
   };
 
   return (
-    <div className="container-fluid py-4">
-      <div className="card shadow-lg rounded-4 p-4">
+    <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
+      <div className="card shadow-lg rounded-4 p-3 p-md-4">
         {/* Header & Add Button */}
-        <div className="d-block d-md-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 border-bottom pb-3 gap-3">
           <div>
-            <h4 className="d-flex align-items-center text-primary mb-2">
-              <Users size={28} className="me-2" /> Manage Students
+            <h4 className="d-flex align-items-center text-primary mb-2 fs-5 fs-md-4">
+              <Users size={24} className="me-2" /> Manage Students
             </h4>
-            <p className="text-muted mb-0">Total: {students.length} students</p>
+            <p className="text-muted mb-0 small">Total: {students.length} students</p>
           </div>
-          <div className="d-flex gap-2 mt-3 mt-md-0">
+          <div className="d-flex flex-column flex-md-row gap-2 w-100 w-md-auto">
             <button
-              className="btn btn-outline-success rounded-3 d-flex align-items-center"
+              className="btn btn-outline-success rounded-3 d-flex align-items-center justify-content-center"
               onClick={exportToCSV}
               disabled={students.length === 0}
             >
-              <Download size={18} className="me-2" /> Export CSV
+              <Download size={18} className="me-2" /> <span className="small">Export CSV</span>
             </button>
             <button
-              className="btn btn-primary rounded-3 d-flex align-items-center"
+              className="btn btn-primary rounded-3 d-flex align-items-center justify-content-center"
               onClick={() => setModalState({ isOpen: true, mode: 'add', currentStudent: null })}
             >
-              <PlusCircle size={20} className="me-2" /> Add Student
+              <PlusCircle size={20} className="me-2" /> <span className="small">Add Student</span>
             </button>
           </div>
         </div>
@@ -330,7 +320,7 @@ const ManageStudents = () => {
         {/* Message */}
         {message && (
           <div className={`alert ${message.includes('successfully') ? 'alert-success' : 'alert-danger'} rounded-3`}>
-            {message}
+            <small>{message}</small>
           </div>
         )}
 
@@ -360,7 +350,7 @@ const ManageStudents = () => {
           </div>
         ) : students.length === 0 ? (
           <div className="alert alert-info rounded-3">
-            <p className="mb-0">No students registered yet. Click "Add Student" to get started.</p>
+            <p className="mb-0 small">No students registered yet. Click "Add Student" to get started.</p>
           </div>
         ) : (
           <>
@@ -369,40 +359,42 @@ const ManageStudents = () => {
               {sortedClassNames.map(className => (
                 <div key={className} className="mb-4">
                   <div className="d-flex justify-content-between align-items-center mb-2">
-                    <h5 className="fw-bold text-primary mb-0">{className}</h5>
+                    <h5 className="fw-bold text-primary mb-0 fs-6">{className}</h5>
                     <span className="badge bg-primary">{studentsByClass[className].length} students</span>
                   </div>
                   <div className="table-responsive">
                     <table className="table table-hover align-middle">
                       <thead className="table-light">
                         <tr>
-                          <th>#</th>
-                          <th>Name</th>
-                          <th>Registration Number</th>
-                          <th className="text-center">Actions</th>
+                          <th className="small">#</th>
+                          <th className="small">Name</th>
+                          <th className="small">Registration Number</th>
+                          <th className="text-center small">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {studentsByClass[className].map((student, index) => (
                           <tr key={student._id}>
-                            <td>{index + 1}</td>
-                            <td className="fw-semibold">{student.name}</td>
-                            <td>{student.regNo}</td>
+                            <td className="small">{index + 1}</td>
+                            <td className="fw-semibold small">{student.name}</td>
+                            <td className="small">{student.regNo}</td>
                             <td className="text-center">
-                              <button
-                                className="btn btn-sm btn-outline-primary me-2 rounded-3"
-                                onClick={() => setModalState({ isOpen: true, mode: 'edit', currentStudent: student })}
-                                disabled={loading}
-                              >
-                                <Edit size={16} />
-                              </button>
-                              <button
-                                className="btn btn-sm btn-outline-danger rounded-3"
-                                onClick={() => handleDelete(student._id, student.name)}
-                                disabled={loading}
-                              >
-                                <Trash2 size={16} />
-                              </button>
+                              <div className="d-flex gap-2 justify-content-center">
+                                <button
+                                  className="btn btn-sm btn-outline-primary rounded-3"
+                                  onClick={() => setModalState({ isOpen: true, mode: 'edit', currentStudent: student })}
+                                  disabled={loading}
+                                >
+                                  <Edit size={16} />
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-outline-danger rounded-3"
+                                  onClick={() => handleDelete(student._id, student.name)}
+                                  disabled={loading}
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -442,7 +434,7 @@ const ManageStudents = () => {
             <div className="modal-dialog modal-dialog-centered">
               <div className="modal-content rounded-4 shadow-lg">
                 <div className="modal-header">
-                  <h5 className="modal-title">
+                  <h5 className="modal-title fs-6">
                     {modalState.mode === 'add' ? 'Add New Student' : 'Edit Student'}
                   </h5>
                   <button

@@ -1,5 +1,5 @@
-// src/components/Admin/AdminResultManagement.js - VISUAL TEMPLATE VERSION
-//route updat
+// src/components/Admin/AdminResultManagement.js - MOBILE RESPONSIVE VERSION
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
@@ -106,16 +106,16 @@ const AdminResultManagement = () => {
   };
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
       {!showTemplateBuilder ? (
-        <div className="card shadow-lg rounded-4 p-4 mb-4 border-0">
+        <div className="card shadow-lg rounded-4 p-3 p-md-4 mb-4 border-0">
           {/* Header */}
-          <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 border-bottom pb-3 gap-3">
             <div>
-              <h4 className="fw-bold text-primary d-flex align-items-center mb-2">
-                <FileText size={28} className="me-2" /> Result Management
+              <h4 className="fw-bold text-primary d-flex align-items-center mb-2 fs-5 fs-md-4">
+                <FileText size={24} className="me-2" /> Result Management
               </h4>
-              <p className="text-muted mb-0">Manage result templates and review student results</p>
+              <p className="text-muted mb-0 small">Manage result templates and review student results</p>
             </div>
           </div>
 
@@ -126,24 +126,24 @@ const AdminResultManagement = () => {
             </div>
           )}
 
-          {/* Tabs */}
-          <ul className="nav nav-pills mb-4 gap-2">
-            <li className="nav-item">
+          {/* Tabs - Mobile Optimized */}
+          <ul className="nav nav-pills mb-4 gap-2 flex-column flex-md-row">
+            <li className="nav-item w-100 w-md-auto">
               <button 
-                className={`nav-link rounded-3 ${activeTab === 'templates' ? 'active' : ''}`}
+                className={`nav-link rounded-3 w-100 d-flex align-items-center justify-content-center ${activeTab === 'templates' ? 'active' : ''}`}
                 onClick={() => setActiveTab('templates')}
               >
-                <FileText size={18} className="me-2" />
-                Result Templates
+                <FileText size={16} className="me-2" />
+                <span className="small">Templates</span>
               </button>
             </li>
-            <li className="nav-item">
+            <li className="nav-item w-100 w-md-auto">
               <button 
-                className={`nav-link rounded-3 ${activeTab === 'pending' ? 'active' : ''}`}
+                className={`nav-link rounded-3 w-100 d-flex align-items-center justify-content-center ${activeTab === 'pending' ? 'active' : ''}`}
                 onClick={() => setActiveTab('pending')}
               >
-                <Clock size={18} className="me-2" />
-                Pending Review
+                <Clock size={16} className="me-2" />
+                <span className="small">Pending</span>
                 {results.filter(r => r.status === 'submitted').length > 0 && (
                   <span className="badge bg-danger ms-2">
                     {results.filter(r => r.status === 'submitted').length}
@@ -151,13 +151,13 @@ const AdminResultManagement = () => {
                 )}
               </button>
             </li>
-            <li className="nav-item">
+            <li className="nav-item w-100 w-md-auto">
               <button 
-                className={`nav-link rounded-3 ${activeTab === 'all' ? 'active' : ''}`}
+                className={`nav-link rounded-3 w-100 d-flex align-items-center justify-content-center ${activeTab === 'all' ? 'active' : ''}`}
                 onClick={() => setActiveTab('all')}
               >
-                <CheckCircle size={18} className="me-2" />
-                All Results
+                <CheckCircle size={16} className="me-2" />
+                <span className="small">All Results</span>
               </button>
             </li>
           </ul>
@@ -231,10 +231,10 @@ const AdminResultManagement = () => {
 const TemplatesTab = ({ templates, loading, onCreateNew, onEdit, onDelete }) => {
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <h5 className="mb-0">Active Result Templates</h5>
         <button 
-          className="btn btn-primary rounded-3"
+          className="btn btn-primary rounded-3 w-100 w-md-auto"
           onClick={onCreateNew}
         >
           <Plus size={18} className="me-2" />
@@ -254,9 +254,9 @@ const TemplatesTab = ({ templates, loading, onCreateNew, onEdit, onDelete }) => 
               No templates created yet. Create a template to get started with result entry.
             </div>
           ) : (
-            <div className="row g-4">
+            <div className="row g-3 g-md-4">
               {templates.map(template => (
-                <div key={template._id} className="col-md-6 col-lg-4">
+                <div key={template._id} className="col-12 col-md-6 col-lg-4">
                   <div className="card border-0 shadow-sm rounded-4 h-100">
                     <div className="card-body">
                       <div className="d-flex justify-content-between align-items-start mb-3">
@@ -324,7 +324,6 @@ const PendingResultsTab = ({
 }) => {
   const [selectedResult, setSelectedResult] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [selectedResults, setSelectedResults] = useState([]);
   const [approvingAll, setApprovingAll] = useState(false);
 
   const pendingResults = results.filter(r => r.status === 'submitted');
@@ -358,9 +357,9 @@ const PendingResultsTab = ({
 
   return (
     <>
-      {/* Filters */}
-      <div className="row mb-4">
-        <div className="col-md-3">
+      {/* Filters - Mobile Optimized */}
+      <div className="row g-3 mb-4">
+        <div className="col-12 col-md-3">
           <select 
             className="form-select rounded-3" 
             value={selectedTerm} 
@@ -371,7 +370,7 @@ const PendingResultsTab = ({
             <option value="Third Term">Third Term</option>
           </select>
         </div>
-        <div className="col-md-3">
+        <div className="col-12 col-md-3">
           <input 
             type="text" 
             className="form-control rounded-3" 
@@ -380,10 +379,10 @@ const PendingResultsTab = ({
             onChange={(e) => setSelectedSession(e.target.value)}
           />
         </div>
-        <div className="col-md-6 text-end">
+        <div className="col-12 col-md-6 text-end">
           {pendingResults.length > 0 && (
             <button 
-              className="btn btn-success rounded-3"
+              className="btn btn-success rounded-3 w-100 w-md-auto"
               onClick={approveAll}
               disabled={approvingAll}
             >
@@ -419,27 +418,27 @@ const PendingResultsTab = ({
               <table className="table table-hover">
                 <thead className="table-light">
                   <tr>
-                    <th>Student</th>
-                    <th>Class</th>
-                    <th>Teacher</th>
-                    <th>Subjects</th>
-                    <th>Overall</th>
-                    <th>Grade</th>
-                    <th>Submitted</th>
-                    <th className="text-center">Actions</th>
+                    <th className="small">Student</th>
+                    <th className="small d-none d-md-table-cell">Class</th>
+                    <th className="small d-none d-lg-table-cell">Teacher</th>
+                    <th className="small d-none d-md-table-cell">Subjects</th>
+                    <th className="small">Overall</th>
+                    <th className="small">Grade</th>
+                    <th className="small d-none d-lg-table-cell">Submitted</th>
+                    <th className="text-center small">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {pendingResults.map(result => (
                     <tr key={result._id}>
                       <td>
-                        <div className="fw-semibold">{result.student.name}</div>
-                        <small className="text-muted">{result.student.regNo}</small>
+                        <div className="fw-semibold small">{result.student.name}</div>
+                        <small className="text-muted d-block d-md-none">{result.classId.name}</small>
                       </td>
-                      <td><span className="badge bg-info">{result.classId.name}</span></td>
-                      <td>{result.teacher.name}</td>
-                      <td>{result.subjects?.length || 0}</td>
-                      <td className="fw-bold">{result.overallTotal}</td>
+                      <td className="d-none d-md-table-cell"><span className="badge bg-info">{result.classId.name}</span></td>
+                      <td className="d-none d-lg-table-cell small">{result.teacher.name}</td>
+                      <td className="d-none d-md-table-cell">{result.subjects?.length || 0}</td>
+                      <td className="fw-bold small">{result.overallTotal}</td>
                       <td>
                         <span className={`badge bg-${
                           result.overallGrade === 'A' ? 'success' :
@@ -450,7 +449,7 @@ const PendingResultsTab = ({
                           {result.overallGrade}
                         </span>
                       </td>
-                      <td>
+                      <td className="d-none d-lg-table-cell">
                         <small>{new Date(result.submittedAt).toLocaleDateString()}</small>
                       </td>
                       <td>
@@ -462,8 +461,8 @@ const PendingResultsTab = ({
                               setShowReviewModal(true);
                             }}
                           >
-                            <Eye size={14} className="me-1" />
-                            Review
+                            <Eye size={14} className="d-none d-md-inline me-1" />
+                            <span className="small">Review</span>
                           </button>
                         </div>
                       </td>
@@ -541,9 +540,9 @@ const AllResultsTab = ({
 
   return (
     <>
-      {/* Filters */}
-      <div className="row mb-4">
-        <div className="col-md-2">
+      {/* Filters - Mobile Optimized */}
+      <div className="row g-3 mb-4">
+        <div className="col-12 col-md-3 col-lg-2">
           <select 
             className="form-select rounded-3" 
             value={selectedTerm} 
@@ -555,7 +554,7 @@ const AllResultsTab = ({
             <option value="Third Term">Third Term</option>
           </select>
         </div>
-        <div className="col-md-2">
+        <div className="col-12 col-md-3 col-lg-2">
           <input 
             type="text" 
             className="form-control rounded-3" 
@@ -564,7 +563,7 @@ const AllResultsTab = ({
             onChange={(e) => setSelectedSession(e.target.value)}
           />
         </div>
-        <div className="col-md-2">
+        <div className="col-12 col-md-3 col-lg-2">
           <select 
             className="form-select rounded-3"
             value={statusFilter}
@@ -578,10 +577,10 @@ const AllResultsTab = ({
             <option value="sent">Sent to Parents</option>
           </select>
         </div>
-        <div className="col-md-6 text-end">
+        <div className="col-12 col-md-3 col-lg-6 text-md-end">
           {selectedResults.length > 0 && (
             <button 
-              className="btn btn-success rounded-3"
+              className="btn btn-success rounded-3 w-100 w-md-auto"
               onClick={sendMultipleResults}
             >
               <Send size={18} className="me-2" />
@@ -614,14 +613,14 @@ const AllResultsTab = ({
                     }}
                   />
                 </th>
-                <th>Student</th>
-                <th>Class</th>
-                <th>Term</th>
-                <th>Session</th>
-                <th>Overall</th>
-                <th>Grade</th>
-                <th>Status</th>
-                <th>Teacher</th>
+                <th className="small">Student</th>
+                <th className="small d-none d-md-table-cell">Class</th>
+                <th className="small d-none d-lg-table-cell">Term</th>
+                <th className="small d-none d-lg-table-cell">Session</th>
+                <th className="small">Overall</th>
+                <th className="small">Grade</th>
+                <th className="small">Status</th>
+                <th className="small d-none d-lg-table-cell">Teacher</th>
               </tr>
             </thead>
             <tbody>
@@ -644,13 +643,16 @@ const AllResultsTab = ({
                     )}
                   </td>
                   <td>
-                    <div className="fw-semibold">{result.student.name}</div>
+                    <div className="fw-semibold small">{result.student.name}</div>
                     <small className="text-muted">{result.student.regNo}</small>
+                    <div className="d-md-none">
+                      <span className="badge bg-info mt-1">{result.classId.name}</span>
+                    </div>
                   </td>
-                  <td><span className="badge bg-info">{result.classId.name}</span></td>
-                  <td>{result.term}</td>
-                  <td>{result.session}</td>
-                  <td className="fw-bold">{result.overallTotal}</td>
+                  <td className="d-none d-md-table-cell"><span className="badge bg-info">{result.classId.name}</span></td>
+                  <td className="d-none d-lg-table-cell small">{result.term}</td>
+                  <td className="d-none d-lg-table-cell small">{result.session}</td>
+                  <td className="fw-bold small">{result.overallTotal}</td>
                   <td>
                     <span className={`badge bg-${
                       result.overallGrade === 'A' ? 'success' :
@@ -671,7 +673,7 @@ const AllResultsTab = ({
                       {result.status}
                     </span>
                   </td>
-                  <td>
+                  <td className="d-none d-lg-table-cell">
                     <small>{result.teacher.name}</small>
                   </td>
                 </tr>
@@ -753,22 +755,22 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
               <table className="table table-bordered table-sm">
                 <thead className="table-light">
                   <tr>
-                    <th>Subject</th>
-                    <th className="text-center">CA1</th>
-                    <th className="text-center">CA2</th>
-                    <th className="text-center">Exam</th>
-                    <th className="text-center">Total</th>
-                    <th className="text-center">Grade</th>
+                    <th className="small">Subject</th>
+                    <th className="text-center small">CA1</th>
+                    <th className="text-center small">CA2</th>
+                    <th className="text-center small">Exam</th>
+                    <th className="text-center small">Total</th>
+                    <th className="text-center small">Grade</th>
                   </tr>
                 </thead>
                 <tbody>
                   {result.subjects?.map((s, i) => (
                     <tr key={i}>
-                      <td className="fw-semibold">{s.subject}</td>
-                      <td className="text-center">{s.ca1}</td>
-                      <td className="text-center">{s.ca2}</td>
-                      <td className="text-center">{s.exam}</td>
-                      <td className="text-center fw-bold">{s.total}</td>
+                      <td className="fw-semibold small">{s.subject}</td>
+                      <td className="text-center small">{s.ca1}</td>
+                      <td className="text-center small">{s.ca2}</td>
+                      <td className="text-center small">{s.exam}</td>
+                      <td className="text-center fw-bold small">{s.total}</td>
                       <td className="text-center">
                         <span className={`badge bg-${
                           s.grade === 'A' ? 'success' :
@@ -782,8 +784,8 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
                     </tr>
                   ))}
                   <tr className="table-secondary">
-                    <td colSpan="4" className="fw-bold">Overall Performance</td>
-                    <td className="text-center fw-bold">{result.overallTotal}</td>
+                    <td colSpan="4" className="fw-bold small">Overall Performance</td>
+                    <td className="text-center fw-bold small">{result.overallTotal}</td>
                     <td className="text-center">
                       <span className={`badge bg-${
                         result.overallGrade === 'A' ? 'success' :
@@ -802,7 +804,7 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
             {/* Comments */}
             <h6 className="mb-3 fw-bold">Comments</h6>
             <div className="mb-3">
-              <label className="form-label">Teacher's Comment (Read-only)</label>
+              <label className="form-label small">Teacher's Comment (Read-only)</label>
               <textarea 
                 className="form-control bg-light"
                 rows="3"
@@ -812,7 +814,7 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
             </div>
 
             <div className="mb-3">
-              <label className="form-label">Principal's Comment</label>
+              <label className="form-label small">Principal's Comment</label>
               <textarea 
                 className="form-control"
                 rows="3"
@@ -822,12 +824,12 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
               ></textarea>
             </div>
           </div>
-          <div className="modal-footer">
-            <button className="btn btn-secondary rounded-3" onClick={onClose} disabled={processing}>
+          <div className="modal-footer flex-column flex-md-row gap-2">
+            <button className="btn btn-secondary rounded-3 w-100 w-md-auto order-3 order-md-1" onClick={onClose} disabled={processing}>
               Cancel
             </button>
             <button 
-              className="btn btn-danger rounded-3 me-2"
+              className="btn btn-danger rounded-3 w-100 w-md-auto order-2 order-md-2"
               onClick={handleReject}
               disabled={processing}
             >
@@ -835,7 +837,7 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
               Reject
             </button>
             <button 
-              className="btn btn-success rounded-3"
+              className="btn btn-success rounded-3 w-100 w-md-auto order-1 order-md-3"
               onClick={() => setShowApproveConfirm(true)}
               disabled={processing}
             >
@@ -864,39 +866,39 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
                     <h6 className="mb-3">Result Summary:</h6>
                     <div className="card bg-light">
                       <div className="card-body">
-                        <div className="row">
-                          <div className="col-6">
-                            <strong>Student:</strong> {result.student.name}
+                        <div className="row g-2">
+                          <div className="col-12 col-md-6">
+                            <strong className="small">Student:</strong> <span className="small">{result.student.name}</span>
                           </div>
-                          <div className="col-6">
-                            <strong>Class:</strong> {result.classId.name}
+                          <div className="col-12 col-md-6">
+                            <strong className="small">Class:</strong> <span className="small">{result.classId.name}</span>
                           </div>
-                          <div className="col-6">
-                            <strong>Overall Score:</strong> {result.overallTotal}
+                          <div className="col-12 col-md-6">
+                            <strong className="small">Overall Score:</strong> <span className="small">{result.overallTotal}</span>
                           </div>
-                          <div className="col-6">
-                            <strong>Grade:</strong> <span className="badge bg-success">{result.overallGrade}</span>
+                          <div className="col-12 col-md-6">
+                            <strong className="small">Grade:</strong> <span className="badge bg-success">{result.overallGrade}</span>
                           </div>
                           <div className="col-12 mt-2">
-                            <strong>Parent:</strong> {result.student.parentName || 'N/A'} 
-                            ({result.student.parentPhone || 'No phone number'})
+                            <strong className="small">Parent:</strong> <span className="small">{result.student.parentName || 'N/A'} 
+                            ({result.student.parentPhone || 'No phone number'})</span>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <p className="mt-3 mb-0">Are you sure you want to approve and send this result?</p>
+                    <p className="mt-3 mb-0 small">Are you sure you want to approve and send this result?</p>
                   </div>
-                  <div className="modal-footer">
+                  <div className="modal-footer flex-column flex-md-row gap-2">
                     <button 
-                      className="btn btn-secondary"
+                      className="btn btn-secondary w-100 w-md-auto order-2 order-md-1"
                       onClick={() => setShowApproveConfirm(false)}
                       disabled={processing}
                     >
                       Cancel
                     </button>
                     <button 
-                      className="btn btn-success"
+                      className="btn btn-success w-100 w-md-auto order-1 order-md-2"
                       onClick={handleApprove}
                       disabled={processing}
                     >
@@ -922,5 +924,5 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
     </div>
   );
 };
-// ==================== EXPORT ====================
+
 export default AdminResultManagement;

@@ -1,4 +1,4 @@
-// src/components/Admin/ManageCourses.js
+// src/components/Admin/ManageCourses.js - MOBILE RESPONSIVE VERSION
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { BookOpen, Users, Edit, Trash2, PlusCircle, Search, Eye, Download } from 'lucide-react';
@@ -18,7 +18,6 @@ const ManageCourses = () => {
   const token = localStorage.getItem('token');
   const API_BASE = `${REACT_APP_API_URL}/api/admin`;
 
-  // ---------- Fetch Data ----------
   const fetchCourses = async () => {
     try {
       setLoading(true);
@@ -62,14 +61,12 @@ const ManageCourses = () => {
            (c.teacher?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
     ), [courses, searchTerm]);
 
-  // Get teachers teaching each course
   const getTeachersForCourse = (courseName) => {
     return teachers.filter(teacher => 
       teacher.courses && teacher.courses.includes(courseName)
     );
   };
 
-  // Export to CSV
   const exportToCSV = () => {
     const csvContent = [
       ['Course Name', 'Teachers', 'Classes'],
@@ -89,7 +86,6 @@ const ManageCourses = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  // ---------- CRUD ----------
   const handleAddOrEdit = async (formData) => {
     try {
       setLoading(true);
@@ -126,25 +122,24 @@ const ManageCourses = () => {
     }
   };
 
-  // ---------- View Details Component ----------
   const CourseDetails = ({ course }) => {
     const teachersTeachingCourse = getTeachersForCourse(course.name);
     
     return (
       <div className="p-3">
         <div className="mb-3">
-          <strong className="text-primary">Course Name:</strong>
+          <strong className="text-primary small">Course Name:</strong>
           <p className="mb-0 fs-5">{course.name}</p>
         </div>
 
         <div className="mb-3">
-          <strong className="text-primary">Teachers Teaching This Course:</strong>
+          <strong className="text-primary small">Teachers Teaching This Course:</strong>
           {teachersTeachingCourse.length > 0 ? (
             <ul className="list-group mt-2">
               {teachersTeachingCourse.map(teacher => (
-                <li key={teacher._id} className="list-group-item d-flex justify-content-between align-items-center">
+                <li key={teacher._id} className="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
                   <div>
-                    <strong>{teacher.name}</strong>
+                    <strong className="small">{teacher.name}</strong>
                     <br />
                     <small className="text-muted">{teacher.email}</small>
                   </div>
@@ -152,7 +147,7 @@ const ManageCourses = () => {
                     {teacher.classes && teacher.classes.length > 0 && (
                       <div>
                         {teacher.classes.slice(0, 3).map(cls => (
-                          <span key={cls._id} className="badge bg-info text-dark me-1">
+                          <span key={cls._id} className="badge bg-info text-dark me-1 mb-1">
                             {cls.name}
                           </span>
                         ))}
@@ -166,12 +161,12 @@ const ManageCourses = () => {
               ))}
             </ul>
           ) : (
-            <p className="text-muted mt-2">No teachers assigned to this course yet.</p>
+            <p className="text-muted mt-2 small">No teachers assigned to this course yet.</p>
           )}
         </div>
 
         <div className="mb-3">
-          <strong className="text-primary">Applicable Classes:</strong>
+          <strong className="text-primary small">Applicable Classes:</strong>
           {course.classes && course.classes.length > 0 ? (
             <div className="mt-2">
               {course.classes.map(cls => (
@@ -181,20 +176,20 @@ const ManageCourses = () => {
               ))}
             </div>
           ) : (
-            <p className="text-muted mt-2">No classes assigned.</p>
+            <p className="text-muted mt-2 small">No classes assigned.</p>
           )}
         </div>
 
-        <div className="d-flex justify-content-end gap-2 mt-4">
+        <div className="d-flex flex-column flex-md-row justify-content-end gap-2 mt-4">
           <button 
-            className="btn btn-primary rounded-3"
+            className="btn btn-primary rounded-3 w-100 w-md-auto order-1"
             onClick={() => setModalState({ ...modalState, mode: 'edit' })}
           >
             <Edit size={16} className="me-1" />
             Edit Course
           </button>
           <button 
-            className="btn btn-outline-secondary rounded-3"
+            className="btn btn-outline-secondary rounded-3 w-100 w-md-auto order-2"
             onClick={closeModal}
           >
             Close
@@ -204,7 +199,6 @@ const ManageCourses = () => {
     );
   };
 
-  // ---------- Forms ----------
   const CourseForm = ({ initialData, onSubmit, onCancel, isSaving }) => {
     const [formData, setFormData] = useState({
       name: initialData?.name || '',
@@ -227,7 +221,7 @@ const ManageCourses = () => {
     return (
       <form onSubmit={handleSubmit}>
         <div className="mb-3">
-          <label className="form-label fw-semibold">Course Name *</label>
+          <label className="form-label fw-semibold small">Course Name *</label>
           <input 
             type="text" 
             className="form-control rounded-3" 
@@ -239,7 +233,7 @@ const ManageCourses = () => {
           />
         </div>
         <div className="mb-3">
-          <label className="form-label fw-semibold">Primary Assigned Teacher</label>
+          <label className="form-label fw-semibold small">Primary Assigned Teacher</label>
           <select className="form-select rounded-3" name="teacher" value={formData.teacher} onChange={handleChange}>
             <option value="">-- Select Teacher (Optional) --</option>
             {teachers.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
@@ -247,7 +241,7 @@ const ManageCourses = () => {
           <small className="text-muted">This is optional. Teachers can also be assigned during registration.</small>
         </div>
         <div className="mb-4">
-          <label className="form-label fw-semibold">Applicable Classes (Hold Ctrl/Cmd for multiple)</label>
+          <label className="form-label fw-semibold small">Applicable Classes (Hold Ctrl/Cmd for multiple)</label>
           <select 
             className="form-select rounded-3" 
             multiple 
@@ -259,11 +253,11 @@ const ManageCourses = () => {
           </select>
           <small className="text-muted">Selected: {formData.classes.length} class(es)</small>
         </div>
-        <div className="d-flex justify-content-end gap-2">
-          <button type="button" className="btn btn-outline-secondary rounded-3" onClick={onCancel}>
+        <div className="d-flex flex-column flex-md-row justify-content-end gap-2">
+          <button type="button" className="btn btn-outline-secondary rounded-3 w-100 w-md-auto order-2 order-md-1" onClick={onCancel}>
             Cancel
           </button>
-          <button type="submit" className="btn btn-primary rounded-3" disabled={isSaving}>
+          <button type="submit" className="btn btn-primary rounded-3 w-100 w-md-auto order-1 order-md-2" disabled={isSaving}>
             {isSaving ? 'Saving...' : (initialData ? 'Update Course' : 'Add Course')}
           </button>
         </div>
@@ -277,23 +271,23 @@ const ManageCourses = () => {
     return (
       <>
         <div className="alert alert-warning d-flex align-items-start rounded-3 mb-3">
-          <Trash2 size={20} className="me-2 mt-1" />
+          <Trash2 size={20} className="me-2 mt-1 flex-shrink-0" />
           <div>
-            <strong>Are you sure you want to delete "{course.name}"?</strong>
-            <p className="mb-0 mt-2">This action cannot be undone.</p>
+            <strong className="small">Are you sure you want to delete "{course.name}"?</strong>
+            <p className="mb-0 mt-2 small">This action cannot be undone.</p>
             {teachersTeachingCourse.length > 0 && (
-              <p className="mb-0 mt-2 text-danger">
+              <p className="mb-0 mt-2 text-danger small">
                 <strong>Warning:</strong> {teachersTeachingCourse.length} teacher(s) are currently teaching this course.
               </p>
             )}
           </div>
         </div>
-        <div className="d-flex justify-content-end gap-2">
-          <button className="btn btn-outline-secondary rounded-3" onClick={onCancel}>
+        <div className="d-flex flex-column flex-md-row justify-content-end gap-2">
+          <button className="btn btn-outline-secondary rounded-3 w-100 w-md-auto order-2 order-md-1" onClick={onCancel}>
             Cancel
           </button>
           <button 
-            className="btn btn-danger rounded-3" 
+            className="btn btn-danger rounded-3 w-100 w-md-auto order-1 order-md-2" 
             onClick={() => onConfirm(course._id, course.name)} 
             disabled={isDeleting}
           >
@@ -319,29 +313,29 @@ const ManageCourses = () => {
   const closeModal = () => setModalState({ isOpen: false, mode: 'add', currentCourse: null });
 
   return (
-    <div className="container-fluid py-4">
-      <div className="card shadow-lg rounded-4 p-4 mb-4 border-0">
+    <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
+      <div className="card shadow-lg rounded-4 p-3 p-md-4 mb-4 border-0">
         {/* Header */}
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 border-bottom pb-3">
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 border-bottom pb-3 gap-3">
           <div>
-            <h4 className="fw-bold text-primary d-flex align-items-center mb-2">
-              <BookOpen size={28} className="me-2" /> Manage Courses
+            <h4 className="fw-bold text-primary d-flex align-items-center mb-2 fs-5 fs-md-4">
+              <BookOpen size={24} className="me-2" /> Manage Courses
             </h4>
-            <p className="text-muted mb-0">Total: {courses.length} courses</p>
+            <p className="text-muted mb-0 small">Total: {courses.length} courses</p>
           </div>
-          <div className="d-flex gap-2 mt-3 mt-md-0">
+          <div className="d-flex flex-column flex-md-row gap-2 w-100 w-md-auto">
             <button 
-              className="btn btn-outline-success rounded-3 d-flex align-items-center"
+              className="btn btn-outline-success rounded-3 d-flex align-items-center justify-content-center"
               onClick={exportToCSV}
               disabled={courses.length === 0}
             >
-              <Download size={18} className="me-2" /> Export
+              <Download size={18} className="me-2" /> <span className="small">Export</span>
             </button>
             <button 
-              className="btn btn-primary rounded-3 d-flex align-items-center" 
+              className="btn btn-primary rounded-3 d-flex align-items-center justify-content-center" 
               onClick={openAddModal}
             >
-              <PlusCircle size={20} className="me-2" /> Add Course
+              <PlusCircle size={20} className="me-2" /> <span className="small">Add Course</span>
             </button>
           </div>
         </div>
@@ -349,44 +343,44 @@ const ManageCourses = () => {
         {/* Message */}
         {message && (
           <div className={`alert ${message.includes('successfully') ? 'alert-success' : 'alert-danger'} rounded-3`}>
-            {message}
+            <small>{message}</small>
           </div>
         )}
 
         {/* Stats Overview */}
         <div className="row g-3 mb-4">
-          <div className="col-md-4">
+          <div className="col-12 col-md-4">
             <div className="card bg-light border-0 shadow-sm rounded-4 p-3">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h6 className="text-muted mb-1">Total Courses</h6>
-                  <h3 className="fw-bold mb-0">{courses.length}</h3>
+                  <h6 className="text-muted mb-1 small">Total Courses</h6>
+                  <h3 className="fw-bold mb-0 fs-4 fs-md-3">{courses.length}</h3>
                 </div>
-                <BookOpen size={40} className="text-primary" />
+                <BookOpen size={32} className="text-primary d-none d-md-block" />
               </div>
             </div>
           </div>
-          <div className="col-md-4">
+          <div className="col-12 col-md-4">
             <div className="card bg-light border-0 shadow-sm rounded-4 p-3">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h6 className="text-muted mb-1">Total Teachers</h6>
-                  <h3 className="fw-bold mb-0">{teachers.length}</h3>
+                  <h6 className="text-muted mb-1 small">Total Teachers</h6>
+                  <h3 className="fw-bold mb-0 fs-4 fs-md-3">{teachers.length}</h3>
                 </div>
-                <Users size={40} className="text-success" />
+                <Users size={32} className="text-success d-none d-md-block" />
               </div>
             </div>
           </div>
-          <div className="col-md-4">
+          <div className="col-12 col-md-4">
             <div className="card bg-light border-0 shadow-sm rounded-4 p-3">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h6 className="text-muted mb-1">Courses with Teachers</h6>
-                  <h3 className="fw-bold mb-0">
+                  <h6 className="text-muted mb-1 small">Courses with Teachers</h6>
+                  <h3 className="fw-bold mb-0 fs-4 fs-md-3">
                     {courses.filter(c => getTeachersForCourse(c.name).length > 0).length}
                   </h3>
                 </div>
-                <Users size={40} className="text-info" />
+                <Users size={32} className="text-info d-none d-md-block" />
               </div>
             </div>
           </div>
@@ -394,7 +388,7 @@ const ManageCourses = () => {
 
         {/* Search */}
         <div className="row mb-4">
-          <div className="col-md-6">
+          <div className="col-12 col-md-6">
             <div className="input-group">
               <span className="input-group-text bg-light rounded-start-pill border-0">
                 <Search size={18} />
@@ -422,11 +416,11 @@ const ManageCourses = () => {
             <table className="table align-middle table-hover">
               <thead className="table-light">
                 <tr>
-                  <th>#</th>
-                  <th>Course Name</th>
-                  <th>Teachers</th>
-                  <th>Classes</th>
-                  <th className="text-center">Actions</th>
+                  <th className="small">#</th>
+                  <th className="small">Course Name</th>
+                  <th className="small d-none d-md-table-cell">Teachers</th>
+                  <th className="small d-none d-lg-table-cell">Classes</th>
+                  <th className="text-center small">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -435,9 +429,29 @@ const ManageCourses = () => {
                   
                   return (
                     <tr key={course._id}>
-                      <td>{index + 1}</td>
-                      <td className="fw-semibold">{course.name}</td>
-                      <td>
+                      <td className="small">{index + 1}</td>
+                      <td className="fw-semibold small">
+                        {course.name}
+                        <div className="d-md-none mt-1">
+                          {teachersTeachingCourse.length > 0 ? (
+                            <div>
+                              {teachersTeachingCourse.slice(0, 1).map(teacher => (
+                                <span key={teacher._id} className="badge bg-success me-1" style={{ fontSize: '0.7rem' }}>
+                                  {teacher.name}
+                                </span>
+                              ))}
+                              {teachersTeachingCourse.length > 1 && (
+                                <span className="badge bg-secondary" style={{ fontSize: '0.7rem' }}>
+                                  +{teachersTeachingCourse.length - 1}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted" style={{ fontSize: '0.75rem' }}>No teacher</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="d-none d-md-table-cell small">
                         {teachersTeachingCourse.length > 0 ? (
                           <div>
                             {teachersTeachingCourse.slice(0, 2).map(teacher => (
@@ -455,7 +469,7 @@ const ManageCourses = () => {
                           <span className="text-muted">Not assigned</span>
                         )}
                       </td>
-                      <td>
+                      <td className="d-none d-lg-table-cell small">
                         {course.classes && course.classes.length > 0 ? (
                           <div>
                             {course.classes.slice(0, 3).map(cls => (
@@ -474,33 +488,35 @@ const ManageCourses = () => {
                         )}
                       </td>
                       <td className="text-center">
-                        <button 
-                          className="btn btn-sm btn-outline-info me-1 rounded-3" 
-                          onClick={() => openViewModal(course)}
-                          title="View Details"
-                        >
-                          <Eye size={16} />
-                        </button>
-                        <button 
-                          className="btn btn-sm btn-outline-primary me-1 rounded-3" 
-                          onClick={() => openEditModal(course)}
-                          title="Edit"
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button 
-                          className="btn btn-sm btn-outline-danger rounded-3" 
-                          onClick={() => openDeleteModal(course)}
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <div className="d-flex gap-1 justify-content-center flex-wrap">
+                          <button 
+                            className="btn btn-sm btn-outline-info rounded-3" 
+                            onClick={() => openViewModal(course)}
+                            title="View Details"
+                          >
+                            <Eye size={14} />
+                          </button>
+                          <button 
+                            className="btn btn-sm btn-outline-primary rounded-3" 
+                            onClick={() => openEditModal(course)}
+                            title="Edit"
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button 
+                            className="btn btn-sm btn-outline-danger rounded-3" 
+                            onClick={() => openDeleteModal(course)}
+                            title="Delete"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
                 }) : (
                   <tr>
-                    <td colSpan="5" className="text-center text-muted py-4">
+                    <td colSpan="5" className="text-center text-muted py-4 small">
                       {searchTerm ? `No courses found matching "${searchTerm}"` : 'No courses available. Click "Add Course" to get started.'}
                     </td>
                   </tr>
@@ -517,7 +533,7 @@ const ManageCourses = () => {
           <div className="modal-dialog modal-dialog-centered modal-lg">
             <div className="modal-content rounded-4 shadow-lg border-0">
               <div className="modal-header">
-                <h5 className="modal-title fw-bold">
+                <h5 className="modal-title fw-bold fs-6">
                   {modalState.mode === 'add' && 'Add New Course'}
                   {modalState.mode === 'edit' && 'Edit Course'}
                   {modalState.mode === 'delete' && 'Delete Course'}

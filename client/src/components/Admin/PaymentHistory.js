@@ -1,4 +1,4 @@
-// src/components/Admin/PaymentHistory.js
+// src/components/Admin/PaymentHistory.js - MOBILE RESPONSIVE VERSION
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -24,10 +24,9 @@ const PaymentHistory = () => {
   const [stats, setStats] = useState({ total: 0, completed: 0, pending: 0, totalAmount: 0 });
   const [filteredPayments, setFilteredPayments] = useState([]);
   
-  // Filter states
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState('all'); // 'all', 'today', 'week', 'month'
+  const [dateFilter, setDateFilter] = useState('all');
 
   const token = localStorage.getItem('token');
 
@@ -58,12 +57,10 @@ const PaymentHistory = () => {
   const applyFilters = () => {
     let filtered = [...payments];
 
-    // Status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(p => p.status === statusFilter);
     }
 
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(p => 
         p.studentId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -72,7 +69,6 @@ const PaymentHistory = () => {
       );
     }
 
-    // Date filter
     if (dateFilter !== 'all') {
       const now = new Date();
       filtered = filtered.filter(p => {
@@ -140,7 +136,7 @@ const PaymentHistory = () => {
 
   if (loading) {
     return (
-      <div className="container-fluid py-4">
+      <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
         <div className="text-center py-5">
           <div className="spinner-border text-primary" role="status">
             <span className="visually-hidden">Loading...</span>
@@ -152,69 +148,69 @@ const PaymentHistory = () => {
   }
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
       {/* Header */}
       <div className="mb-4">
-        <h2 className="fw-bold text-primary d-flex align-items-center">
-          <DollarSign size={32} className="me-2" />
+        <h2 className="fw-bold text-primary d-flex align-items-center fs-4 fs-md-3">
+          <DollarSign size={28} className="me-2" />
           Payment History
         </h2>
-        <p className="text-muted">Track and manage all school fee payments</p>
+        <p className="text-muted small">Track and manage all school fee payments</p>
       </div>
 
       {/* Stats Cards */}
       <div className="row g-3 mb-4">
-        <div className="col-md-3">
+        <div className="col-6 col-md-3">
           <div className="card border-0 shadow-sm rounded-4 bg-primary text-white">
             <div className="card-body p-3">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
                   <small className="opacity-75">Total Payments</small>
-                  <h3 className="mb-0 mt-1">{stats.total}</h3>
+                  <h3 className="mb-0 mt-1 fs-4 fs-md-3">{stats.total}</h3>
                 </div>
-                <DollarSign size={40} className="opacity-50" />
+                <DollarSign size={32} className="opacity-50 d-none d-md-block" />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="col-md-3">
+        <div className="col-6 col-md-3">
           <div className="card border-0 shadow-sm rounded-4 bg-success text-white">
             <div className="card-body p-3">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
                   <small className="opacity-75">Completed</small>
-                  <h3 className="mb-0 mt-1">{stats.completed}</h3>
+                  <h3 className="mb-0 mt-1 fs-4 fs-md-3">{stats.completed}</h3>
                 </div>
-                <CheckCircle size={40} className="opacity-50" />
+                <CheckCircle size={32} className="opacity-50 d-none d-md-block" />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="col-md-3">
+        <div className="col-6 col-md-3">
           <div className="card border-0 shadow-sm rounded-4 bg-warning text-white">
             <div className="card-body p-3">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
                   <small className="opacity-75">Pending</small>
-                  <h3 className="mb-0 mt-1">{stats.pending}</h3>
+                  <h3 className="mb-0 mt-1 fs-4 fs-md-3">{stats.pending}</h3>
                 </div>
-                <Clock size={40} className="opacity-50" />
+                <Clock size={32} className="opacity-50 d-none d-md-block" />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="col-md-3">
+        <div className="col-6 col-md-3">
           <div className="card border-0 shadow-sm rounded-4 bg-info text-white">
             <div className="card-body p-3">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
                   <small className="opacity-75">Total Revenue</small>
-                  <h3 className="mb-0 mt-1">₦{stats.totalAmount.toLocaleString()}</h3>
+                  <h3 className="mb-0 mt-1 fs-5 fs-md-3">₦{(stats.totalAmount / 1000000).toFixed(1)}M</h3>
                 </div>
-                <TrendingUp size={40} className="opacity-50" />
+                <TrendingUp size={32} className="opacity-50 d-none d-md-block" />
               </div>
             </div>
           </div>
@@ -223,26 +219,26 @@ const PaymentHistory = () => {
 
       {/* Filters and Search */}
       <div className="card border-0 shadow-sm rounded-4 mb-4">
-        <div className="card-body p-4">
+        <div className="card-body p-3 p-md-4">
           <div className="row g-3">
             {/* Search */}
-            <div className="col-md-4">
-              <label className="form-label fw-semibold">
+            <div className="col-12 col-md-4">
+              <label className="form-label fw-semibold small">
                 <Search size={16} className="me-2" />
                 Search
               </label>
               <input
                 type="text"
                 className="form-control rounded-3"
-                placeholder="Student name, reg no, or reference..."
+                placeholder="Student name, reg no..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
 
             {/* Status Filter */}
-            <div className="col-md-3">
-              <label className="form-label fw-semibold">
+            <div className="col-6 col-md-3">
+              <label className="form-label fw-semibold small">
                 <Filter size={16} className="me-2" />
                 Status
               </label>
@@ -260,8 +256,8 @@ const PaymentHistory = () => {
             </div>
 
             {/* Date Filter */}
-            <div className="col-md-3">
-              <label className="form-label fw-semibold">
+            <div className="col-6 col-md-3">
+              <label className="form-label fw-semibold small">
                 <Calendar size={16} className="me-2" />
                 Date Range
               </label>
@@ -278,14 +274,15 @@ const PaymentHistory = () => {
             </div>
 
             {/* Export Button */}
-            <div className="col-md-2 d-flex align-items-end">
+            <div className="col-12 col-md-2 d-flex align-items-end">
               <button
                 className="btn btn-outline-primary rounded-3 w-100"
                 onClick={exportToCSV}
                 disabled={filteredPayments.length === 0}
               >
                 <Download size={16} className="me-2" />
-                Export
+                <span className="d-none d-md-inline">Export</span>
+                <span className="d-md-none">CSV</span>
               </button>
             </div>
           </div>
@@ -298,29 +295,29 @@ const PaymentHistory = () => {
           {filteredPayments.length === 0 ? (
             <div className="text-center py-5">
               <DollarSign size={48} className="text-muted mb-3" />
-              <p className="text-muted">No payments found matching your filters</p>
+              <p className="text-muted small">No payments found matching your filters</p>
             </div>
           ) : (
             <div className="table-responsive">
               <table className="table table-hover align-middle mb-0">
                 <thead className="table-light">
                   <tr>
-                    <th className="px-4">Date</th>
-                    <th>Student</th>
-                    <th>Reg No</th>
-                    <th>Amount</th>
-                    <th>Method</th>
-                    <th>Reference</th>
-                    <th>Status</th>
+                    <th className="px-3 px-md-4 small">Date</th>
+                    <th className="small">Student</th>
+                    <th className="d-none d-md-table-cell small">Reg No</th>
+                    <th className="small">Amount</th>
+                    <th className="d-none d-lg-table-cell small">Method</th>
+                    <th className="d-none d-lg-table-cell small">Reference</th>
+                    <th className="small">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredPayments.map((payment) => (
                     <tr key={payment._id}>
-                      <td className="px-4">
+                      <td className="px-3 px-md-4">
                         <small>{new Date(payment.createdAt).toLocaleDateString()}</small>
-                        <br />
-                        <small className="text-muted">
+                        <br className="d-none d-md-block" />
+                        <small className="text-muted d-none d-md-block">
                           {new Date(payment.createdAt).toLocaleTimeString([], { 
                             hour: '2-digit', 
                             minute: '2-digit' 
@@ -328,24 +325,27 @@ const PaymentHistory = () => {
                         </small>
                       </td>
                       <td>
-                        <div className="d-flex align-items-center">
-                          <User size={16} className="text-muted me-2" />
-                          <strong>{payment.studentId?.name || 'Unknown'}</strong>
+                        <div className="d-flex align-items-start flex-column">
+                          <User size={14} className="text-muted d-none d-md-inline me-1" />
+                          <strong className="small">{payment.studentId?.name || 'Unknown'}</strong>
+                          <span className="badge bg-light text-dark d-md-none mt-1" style={{ fontSize: '0.7rem' }}>
+                            {payment.studentId?.regNo || 'N/A'}
+                          </span>
                         </div>
                       </td>
-                      <td>
+                      <td className="d-none d-md-table-cell">
                         <span className="badge bg-light text-dark">{payment.studentId?.regNo || 'N/A'}</span>
                       </td>
                       <td>
-                        <strong className="text-success">₦{payment.amount.toLocaleString()}</strong>
+                        <strong className="text-success small">₦{payment.amount.toLocaleString()}</strong>
                       </td>
-                      <td>
+                      <td className="d-none d-lg-table-cell">
                         <div className="d-flex align-items-center">
                           <CreditCard size={14} className="text-muted me-2" />
                           <small className="text-capitalize">{payment.paymentMethod || 'Card'}</small>
                         </div>
                       </td>
-                      <td>
+                      <td className="d-none d-lg-table-cell">
                         <small className="font-monospace text-muted">
                           {payment.paystackReference ? (
                             payment.paystackReference.substring(0, 15) + '...'

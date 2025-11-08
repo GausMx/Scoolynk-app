@@ -1,4 +1,4 @@
-// src/components/Admin/Dashboard.js - UPDATED WITH REAL ROUTES
+// src/components/Admin/Dashboard.js - MOBILE RESPONSIVE VERSION
 
 import React, { useEffect, useState } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
@@ -10,7 +10,7 @@ import 'chart.js/auto';
 const { REACT_APP_API_URL } = process.env;
 
 const StatCard = ({ title, value, iconClass, bgClass, textClass, onClick }) => (
-  <div className="col-12 col-md-4">
+  <div className="col-12 col-md-6 col-lg-4">
     <div
       className={`card shadow-sm rounded-4 p-3 ${bgClass} hover:shadow-lg transition`}
       style={{ cursor: 'pointer' }}
@@ -18,7 +18,7 @@ const StatCard = ({ title, value, iconClass, bgClass, textClass, onClick }) => (
     >
       <div className="d-flex align-items-center justify-content-between">
         <div>
-          <h6 className={`fw-bold mb-1 ${textClass}`}>{title}</h6>
+          <h6 className={`fw-bold mb-1 ${textClass} small`}>{title}</h6>
           <p className="fs-4 fw-bold text-dark mb-0">{value}</p>
         </div>
         <i className={`${iconClass} fs-2 ${textClass}`}></i>
@@ -56,7 +56,6 @@ const Dashboard = () => {
     try {
       setLoading(true);
 
-      // ✅ Correct route: /api/admin (getAdminDashboard)
       const res = await axios.get(`${REACT_APP_API_URL}/api/admin`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -129,7 +128,7 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="container-fluid py-4">
+      <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
         <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
           <div className="text-center">
             <div className="spinner-border text-primary mb-3" style={{ width: '3rem', height: '3rem' }} role="status">
@@ -143,20 +142,20 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="container-fluid py-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
+    <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
-          <h2 className="fw-bold text-dark mb-1">School Admin Dashboard</h2>
-          <p className="text-muted mb-0">Welcome back! Here's what's happening in your school.</p>
+          <h2 className="fw-bold text-dark mb-1 fs-4 fs-md-3">School Admin Dashboard</h2>
+          <p className="text-muted mb-0 small">Welcome back! Here's what's happening in your school.</p>
         </div>
-        <button className="btn btn-outline-primary rounded-3" onClick={() => window.location.reload()}>
+        <button className="btn btn-outline-primary rounded-3 w-100 w-md-auto" onClick={() => window.location.reload()}>
           <i className="bi-arrow-clockwise me-2"></i>
-          Refresh
+          <span className="small">Refresh</span>
         </button>
       </div>
 
       {/* Overview Stats */}
-      <div className="row g-4 mb-4">
+      <div className="row g-3 g-md-4 mb-3 mb-md-4">
         <StatCard
           title="Total Students"
           value={stats.totalStudents}
@@ -184,29 +183,29 @@ const Dashboard = () => {
       </div>
 
       {/* Payments */}
-      <div className="row g-4 mb-4">
+      <div className="row g-3 g-md-4 mb-3 mb-md-4">
         <div className="col-12">
-          <div className="card shadow-sm rounded-4 p-4">
-            <h5 className="fw-bold mb-4">
+          <div className="card shadow-sm rounded-4 p-3 p-md-4">
+            <h5 className="fw-bold mb-3 mb-md-4 fs-6 fs-md-5">
               <i className="bi-cash-stack me-2 text-success"></i> Payment Overview
             </h5>
             <div className="row g-3">
-              <div className="col-md-4">
+              <div className="col-12 col-md-4">
                 <div className="border-start border-success border-4 ps-3">
                   <small className="text-muted d-block mb-1">Fully Paid</small>
-                  <h4 className="fw-bold text-success mb-0">{stats.fullPaid}</h4>
+                  <h4 className="fw-bold text-success mb-0 fs-5 fs-md-4">{stats.fullPaid}</h4>
                 </div>
               </div>
-              <div className="col-md-4">
+              <div className="col-12 col-md-4">
                 <div className="border-start border-warning border-4 ps-3">
                   <small className="text-muted d-block mb-1">Partial Payment</small>
-                  <h4 className="fw-bold text-warning mb-0">{stats.partialPaid}</h4>
+                  <h4 className="fw-bold text-warning mb-0 fs-5 fs-md-4">{stats.partialPaid}</h4>
                 </div>
               </div>
-              <div className="col-md-4">
+              <div className="col-12 col-md-4">
                 <div className="border-start border-danger border-4 ps-3">
                   <small className="text-muted d-block mb-1">Outstanding Fees</small>
-                  <h4 className="fw-bold text-danger mb-0">₦{stats.unpaidFees.toLocaleString()}</h4>
+                  <h4 className="fw-bold text-danger mb-0 fs-5 fs-md-4">₦{stats.unpaidFees.toLocaleString()}</h4>
                 </div>
               </div>
             </div>
@@ -215,35 +214,35 @@ const Dashboard = () => {
       </div>
 
       {/* Results */}
-      <div className="row g-4 mb-4">
+      <div className="row g-3 g-md-4 mb-3 mb-md-4">
         <div className="col-12">
-          <div className="card shadow-sm rounded-4 p-4">
-            <h5 className="fw-bold mb-4">
+          <div className="card shadow-sm rounded-4 p-3 p-md-4">
+            <h5 className="fw-bold mb-3 mb-md-4 fs-6 fs-md-5">
               <i className="bi-file-earmark-text me-2 text-primary"></i> Results Overview
             </h5>
             <div className="row g-3">
-              <div className="col-md-4">
+              <div className="col-12 col-md-4">
                 <div className="border-start border-warning border-4 ps-3">
                   <small className="text-muted d-block mb-1">Pending Review</small>
-                  <h4 className="fw-bold text-warning mb-0">{stats.pendingResults}</h4>
+                  <h4 className="fw-bold text-warning mb-0 fs-5 fs-md-4">{stats.pendingResults}</h4>
                   <button
-                    className="btn btn-sm btn-warning mt-2"
+                    className="btn btn-sm btn-warning mt-2 w-100 w-md-auto"
                     onClick={() => navigate('/admin/result-management')}
                   >
                     Review Now
                   </button>
                 </div>
               </div>
-              <div className="col-md-4">
+              <div className="col-12 col-md-4">
                 <div className="border-start border-success border-4 ps-3">
                   <small className="text-muted d-block mb-1">Approved</small>
-                  <h4 className="fw-bold text-success mb-0">{stats.approvedResults}</h4>
+                  <h4 className="fw-bold text-success mb-0 fs-5 fs-md-4">{stats.approvedResults}</h4>
                 </div>
               </div>
-              <div className="col-md-4">
+              <div className="col-12 col-md-4">
                 <div className="border-start border-danger border-4 ps-3">
                   <small className="text-muted d-block mb-1">Rejected</small>
-                  <h4 className="fw-bold text-danger mb-0">{stats.rejectedResults}</h4>
+                  <h4 className="fw-bold text-danger mb-0 fs-5 fs-md-4">{stats.rejectedResults}</h4>
                 </div>
               </div>
             </div>
@@ -252,19 +251,19 @@ const Dashboard = () => {
       </div>
 
       {/* Charts */}
-      <div className="row g-4 mb-4">
-        <div className="col-lg-6">
-          <div className="card shadow-sm rounded-4 p-4">
-            <h6 className="fw-bold mb-3">
+      <div className="row g-3 g-md-4 mb-3 mb-md-4">
+        <div className="col-12 col-lg-6">
+          <div className="card shadow-sm rounded-4 p-3 p-md-4">
+            <h6 className="fw-bold mb-3 small">
               <i className="bi-graph-up me-2 text-success"></i> Fees Collection Trend
             </h6>
             <Bar data={barData} options={{ responsive: true, maintainAspectRatio: true }} />
           </div>
         </div>
 
-        <div className="col-lg-6">
-          <div className="card shadow-sm rounded-4 p-4">
-            <h6 className="fw-bold mb-3">
+        <div className="col-12 col-lg-6">
+          <div className="card shadow-sm rounded-4 p-3 p-md-4">
+            <h6 className="fw-bold mb-3 small">
               <i className="bi-graph-up-arrow me-2 text-danger"></i> Results Submission Trend
             </h6>
             <Line data={sparklineData} options={{ responsive: true, maintainAspectRatio: true }} />
@@ -273,8 +272,8 @@ const Dashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="card shadow-sm rounded-4 p-4">
-        <h5 className="fw-bold mb-3">
+      <div className="card shadow-sm rounded-4 p-3 p-md-4 mb-3 mb-md-4">
+        <h5 className="fw-bold mb-3 fs-6 fs-md-5">
           <i className="bi-lightning-fill me-2 text-warning"></i> Quick Actions
         </h5>
         <div className="row g-3">
@@ -284,7 +283,7 @@ const Dashboard = () => {
               onClick={() => navigate('/admin/result-management')}
             >
               <i className="bi-file-earmark-check fs-4 d-block mb-2"></i>
-              <span className="fw-semibold">View Results</span>
+              <span className="fw-semibold small">View Results</span>
             </button>
           </div>
           <div className="col-6 col-md-3">
@@ -293,7 +292,7 @@ const Dashboard = () => {
               onClick={() => navigate('/admin/settings')}
             >
               <i className="bi-cash-stack fs-4 d-block mb-2"></i>
-              <span className="fw-semibold">Settings</span>
+              <span className="fw-semibold small">Settings</span>
             </button>
           </div>
           <div className="col-6 col-md-3">
@@ -302,7 +301,7 @@ const Dashboard = () => {
               onClick={() => navigate('/admin/manage-students')}
             >
               <i className="bi-people fs-4 d-block mb-2"></i>
-              <span className="fw-semibold">Manage Students</span>
+              <span className="fw-semibold small">Manage Students</span>
             </button>
           </div>
           <div className="col-6 col-md-3">
@@ -311,7 +310,7 @@ const Dashboard = () => {
               onClick={() => navigate('/admin/manage-teachers')}
             >
               <i className="bi-person-badge fs-4 d-block mb-2"></i>
-              <span className="fw-semibold">Manage Teachers</span>
+              <span className="fw-semibold small">Manage Teachers</span>
             </button>
           </div>
         </div>
@@ -319,17 +318,17 @@ const Dashboard = () => {
 
       {/* Alert */}
       {stats.pendingResults > 0 && (
-        <div className="alert alert-warning rounded-4 mt-4">
-          <div className="d-flex align-items-center">
-            <i className="bi-exclamation-triangle-fill fs-4 me-3"></i>
+        <div className="alert alert-warning rounded-4">
+          <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3">
+            <i className="bi-exclamation-triangle-fill fs-4"></i>
             <div className="flex-grow-1">
-              <h6 className="mb-1">Action Required!</h6>
-              <p className="mb-0">
+              <h6 className="mb-1 small">Action Required!</h6>
+              <p className="mb-0 small">
                 You have <strong>{stats.pendingResults}</strong> result(s) waiting for review.
               </p>
             </div>
             <button
-              className="btn btn-warning"
+              className="btn btn-warning w-100 w-md-auto"
               onClick={() => navigate('/admin/result-management')}
             >
               Review Now
