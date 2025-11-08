@@ -1,5 +1,3 @@
-// src/components/Teacher/MyClassWithResults.js - 3 TAB SYSTEM
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
@@ -296,13 +294,34 @@ const ResultsTab = ({
   const [modalMode, setModalMode] = useState('manual'); // 'manual' or 'scan'
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [editingResult, setEditingResult] = useState(null);
+  const [template, setTemplate] = useState(null);
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
+
+  useEffect(() => {
+    const fetchResultTemplate = async () => {
+      setLoadingTemplate(true);
+      try {
+        const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/results/template`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { term: selectedTerm, session: selectedSession }
+        });
+        setTemplate(res.data?.template || null);
+      } catch (err) {
+        setTemplate(null);
+        console.warn('Failed to fetch result template:', err);
+      } finally {
+        setLoadingTemplate(false);
+      }
+    };
+
+    fetchResultTemplate();
+  }, [selectedTerm, selectedSession, token]);
 
   const openManualEntry = (student) => {
     setSelectedStudent(student);
     setModalMode('manual');
     setShowModal(true);
     
-    // Check if result already exists
     const existing = results.find(r => r.student._id === student._id);
     setEditingResult(existing || null);
   };
@@ -312,6 +331,10 @@ const ResultsTab = ({
     setModalMode('scan');
     setShowModal(true);
   };
+
+  if (loading || loadingTemplate) {
+    return <div className="text-center py-5"><div className="spinner-border"></div></div>;
+  }
 
   return (
     <>
@@ -339,73 +362,67 @@ const ResultsTab = ({
         </div>
       </div>
 
-      {loading ? (
-        <div className="text-center py-5"><div className="spinner-border"></div></div>
-      ) : (
-        <>
-          {/* Students with Result Entry Options */}
-          <div className="row g-3">
-            {students.map(student => {
-              const existingResult = results.find(r => r.student._id === student._id);
-              
-              return (
-                <div key={student._id} className="col-md-6">
-                  <div className="card shadow-sm">
-                    <div className="card-body">
-                      <div className="d-flex justify-content-between align-items-start mb-2">
-                        <div>
-                          <h6 className="mb-0 fw-bold">{student.name}</h6>
-                          <small className="text-muted">{student.regNo} • {student.classId?.name}</small>
-                        </div>
-                        {existingResult && (
-                          <span className={`badge bg-${
-                            existingResult.status === 'draft' ? 'secondary' :
-                            existingResult.status === 'submitted' ? 'primary' :
-                            existingResult.status === 'approved' ? 'success' :
-                            existingResult.status === 'rejected' ? 'danger' : 'info'
-                          }`}>
-                            {existingResult.status}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {existingResult && (
-                        <div className="mb-2">
-                          <small className="text-muted">
-                            Overall: {existingResult.overallTotal} ({existingResult.overallAverage}%) - {existingResult.overallGrade}
-                          </small>
-                        </div>
-                      )}
-
-                      <div className="d-flex gap-2">
-                        <button 
-                          className="btn btn-sm btn-primary"
-                          onClick={() => openManualEntry(student)}
-                        >
-                          <Edit size={14} className="me-1" />
-                          {existingResult ? 'Edit Scores' : 'Enter Scores'}
-                        </button>
-                        <button 
-                          className="btn btn-sm btn-outline-secondary"
-                          onClick={() => openOCRScan(student)}
-                        >
-                          <Scan size={14} className="me-1" />
-                          Scan Scores
-                        </button>
-                      </div>
+      {/* Students with Result Entry Options */}
+      <div className="row g-3">
+        {students.map(student => {
+          const existingResult = results.find(r => r.student._id === student._id);
+          
+          return (
+            <div key={student._id} className="col-md-6">
+              <div className="card shadow-sm">
+                <div className="card-body">
+                  <div className="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <h6 className="mb-0 fw-bold">{student.name}</h6>
+                      <small className="text-muted">{student.regNo} • {student.classId?.name}</small>
                     </div>
+                    {existingResult && (
+                      <span className={`badge bg-${
+                        existingResult.status === 'draft' ? 'secondary' :
+                        existingResult.status === 'submitted' ? 'primary' :
+                        existingResult.status === 'approved' ? 'success' :
+                        existingResult.status === 'rejected' ? 'danger' : 'info'
+                      }`}>
+                        {existingResult.status}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {existingResult && (
+                    <div className="mb-2">
+                      <small className="text-muted">
+                        Overall: {existingResult.overallTotal} ({existingResult.overallAverage}%) - {existingResult.overallGrade}
+                      </small>
+                    </div>
+                  )}
+
+                  <div className="d-flex gap-2">
+                    <button 
+                      className="btn btn-sm btn-primary"
+                      onClick={() => openManualEntry(student)}
+                    >
+                      <Edit size={14} className="me-1" />
+                      {existingResult ? 'Edit Scores' : 'Enter Scores'}
+                    </button>
+                    <button 
+                      className="btn btn-sm btn-outline-secondary"
+                      onClick={() => openOCRScan(student)}
+                    >
+                      <Scan size={14} className="me-1" />
+                      Scan Scores
+                    </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-
-          {students.length === 0 && (
-            <div className="alert alert-warning">
-              No students found. Add students first before entering results.
+              </div>
             </div>
-          )}
-        </>
+          );
+        })}
+      </div>
+
+      {students.length === 0 && (
+        <div className="alert alert-warning">
+          No students found. Add students first before entering results.
+        </div>
       )}
 
       {/* Result Entry/Edit Modal */}
@@ -416,6 +433,7 @@ const ResultsTab = ({
           existingResult={editingResult}
           term={selectedTerm}
           session={selectedSession}
+          template={template}
           onClose={() => {
             setShowModal(false);
             setSelectedStudent(null);
@@ -602,10 +620,6 @@ const HistoryTab = ({
     </>
   );
 };
-
-// Import the real ResultEntryModal component
-// NOTE: Make sure ResultEntryModal.js exists in the same directory
-// If you haven't created it yet, you need to create it from artifact #8
 
 const ViewResultModal = ({ result, onClose }) => {
   return (
