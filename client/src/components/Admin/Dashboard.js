@@ -228,7 +228,7 @@ const Dashboard = () => {
                   <h4 className="fw-bold text-warning mb-0">{stats.pendingResults}</h4>
                   <button
                     className="btn btn-sm btn-warning mt-2"
-                    onClick={() => navigate('/admin/results/submitted')}
+                    onClick={() => navigate('/admin/result-management/pending')}
                   >
                     Review Now
                   </button>
