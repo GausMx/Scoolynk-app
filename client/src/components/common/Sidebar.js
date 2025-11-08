@@ -57,7 +57,6 @@ const Sidebar = ({ user, role }) => {
       label: cls.name,
     })),
     { path: "/teacher/teacher-profile", label: "My Profile" },
-    { path: "/teacher/template-entry", label: "Template Entry" },
   ];
 
   const links =

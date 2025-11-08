@@ -1,22 +1,25 @@
-// src/components/Admin/AdminResultManagement.js - COMPLETE ADMIN RESULT SYSTEM
+// src/components/Admin/AdminResultManagement.js - VISUAL TEMPLATE VERSION
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
-  FileText, Upload, Eye, Check, X, Send, Filter,
-  Download, AlertCircle, CheckCircle, XCircle, Clock
+  FileText, Eye, Check, Send, Filter, Plus, Edit2,
+  AlertCircle, CheckCircle, Clock, Trash2
 } from 'lucide-react';
+import VisualTemplateBuilder from './VisualTemplateBuilder';
 
 const { REACT_APP_API_URL } = process.env;
 
 const AdminResultManagement = () => {
-  const [activeTab, setActiveTab] = useState('templates'); // templates, pending, all
+  const [activeTab, setActiveTab] = useState('templates');
   const [templates, setTemplates] = useState([]);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState({ type: '', text: '' });
   const [selectedTerm, setSelectedTerm] = useState('First Term');
   const [selectedSession, setSelectedSession] = useState('2024/2025');
+  const [showTemplateBuilder, setShowTemplateBuilder] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState(null);
   
   const token = localStorage.getItem('token');
 
@@ -30,16 +33,21 @@ const AdminResultManagement = () => {
     }
   }, [activeTab, selectedTerm, selectedSession]);
 
+  const showMessage = (type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+  };
+
   const fetchTemplates = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${REACT_APP_API_URL}/api/admin/results/templates`, {
+      const res = await axios.get(`${REACT_APP_API_URL}/api/admin/templates`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTemplates(res.data.templates || []);
     } catch (err) {
       console.error('Failed to fetch templates:', err);
-      setMessage('Failed to load templates.');
+      showMessage('error', 'Failed to load templates.');
     } finally {
       setLoading(false);
     }
@@ -58,7 +66,7 @@ const AdminResultManagement = () => {
       setResults(res.data.results || []);
     } catch (err) {
       console.error('Failed to fetch pending results:', err);
-      setMessage('Failed to load pending results.');
+      showMessage('error', 'Failed to load pending results.');
     } finally {
       setLoading(false);
     }
@@ -77,127 +85,160 @@ const AdminResultManagement = () => {
       setResults(res.data.results || []);
     } catch (err) {
       console.error('Failed to fetch results:', err);
-      setMessage('Failed to load results.');
+      showMessage('error', 'Failed to load results.');
     } finally {
       setLoading(false);
     }
   };
 
+  const deleteTemplate = async (templateId) => {
+    if (!window.confirm('Are you sure you want to deactivate this template?')) return;
+
+    try {
+      await axios.delete(`${REACT_APP_API_URL}/api/admin/templates/${templateId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      showMessage('success', 'Template deactivated successfully');
+      fetchTemplates();
+    } catch (err) {
+      showMessage('error', 'Failed to deactivate template');
+    }
+  };
+
   return (
     <div className="container-fluid py-4">
-      <div className="card shadow-lg rounded-4 p-4 mb-4 border-0">
-        {/* Header */}
-        <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-          <div>
-            <h4 className="fw-bold text-primary d-flex align-items-center mb-2">
-              <FileText size={28} className="me-2" /> Result Management
-            </h4>
-            <p className="text-muted mb-0">Manage result templates and review student results</p>
+      {!showTemplateBuilder ? (
+        <div className="card shadow-lg rounded-4 p-4 mb-4 border-0">
+          {/* Header */}
+          <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+            <div>
+              <h4 className="fw-bold text-primary d-flex align-items-center mb-2">
+                <FileText size={28} className="me-2" /> Result Management
+              </h4>
+              <p className="text-muted mb-0">Manage result templates and review student results</p>
+            </div>
           </div>
+
+          {message.text && (
+            <div className={`alert alert-${message.type === 'success' ? 'success' : 'danger'} alert-dismissible`}>
+              {message.text}
+              <button type="button" className="btn-close" onClick={() => setMessage({ type: '', text: '' })}></button>
+            </div>
+          )}
+
+          {/* Tabs */}
+          <ul className="nav nav-pills mb-4 gap-2">
+            <li className="nav-item">
+              <button 
+                className={`nav-link rounded-3 ${activeTab === 'templates' ? 'active' : ''}`}
+                onClick={() => setActiveTab('templates')}
+              >
+                <FileText size={18} className="me-2" />
+                Result Templates
+              </button>
+            </li>
+            <li className="nav-item">
+              <button 
+                className={`nav-link rounded-3 ${activeTab === 'pending' ? 'active' : ''}`}
+                onClick={() => setActiveTab('pending')}
+              >
+                <Clock size={18} className="me-2" />
+                Pending Review
+                {results.filter(r => r.status === 'submitted').length > 0 && (
+                  <span className="badge bg-danger ms-2">
+                    {results.filter(r => r.status === 'submitted').length}
+                  </span>
+                )}
+              </button>
+            </li>
+            <li className="nav-item">
+              <button 
+                className={`nav-link rounded-3 ${activeTab === 'all' ? 'active' : ''}`}
+                onClick={() => setActiveTab('all')}
+              >
+                <CheckCircle size={18} className="me-2" />
+                All Results
+              </button>
+            </li>
+          </ul>
+
+          {/* Tab Content */}
+          {activeTab === 'templates' && (
+            <TemplatesTab 
+              templates={templates}
+              loading={loading}
+              onCreateNew={() => {
+                setEditingTemplate(null);
+                setShowTemplateBuilder(true);
+              }}
+              onEdit={(template) => {
+                setEditingTemplate(template);
+                setShowTemplateBuilder(true);
+              }}
+              onDelete={deleteTemplate}
+            />
+          )}
+
+          {activeTab === 'pending' && (
+            <PendingResultsTab 
+              results={results}
+              loading={loading}
+              selectedTerm={selectedTerm}
+              setSelectedTerm={setSelectedTerm}
+              selectedSession={selectedSession}
+              setSelectedSession={setSelectedSession}
+              token={token}
+              onReviewSuccess={() => {
+                showMessage('success', 'Result reviewed successfully!');
+                fetchPendingResults();
+              }}
+            />
+          )}
+
+          {activeTab === 'all' && (
+            <AllResultsTab 
+              results={results}
+              loading={loading}
+              selectedTerm={selectedTerm}
+              setSelectedTerm={setSelectedTerm}
+              selectedSession={selectedSession}
+              setSelectedSession={setSelectedSession}
+              token={token}
+              onActionSuccess={() => {
+                showMessage('success', 'Action completed successfully!');
+                fetchAllResults();
+              }}
+            />
+          )}
         </div>
-
-        {message && (
-          <div className={`alert ${message.includes('success') ? 'alert-success' : 'alert-danger'} alert-dismissible`}>
-            {message}
-            <button type="button" className="btn-close" onClick={() => setMessage('')}></button>
-          </div>
-        )}
-
-        {/* Tabs */}
-        <ul className="nav nav-tabs mb-4">
-          <li className="nav-item">
-            <button 
-              className={`nav-link ${activeTab === 'templates' ? 'active' : ''}`}
-              onClick={() => setActiveTab('templates')}
-            >
-              <Upload size={18} className="me-2" />
-              Result Templates
-            </button>
-          </li>
-          <li className="nav-item">
-            <button 
-              className={`nav-link ${activeTab === 'pending' ? 'active' : ''}`}
-              onClick={() => setActiveTab('pending')}
-            >
-              <Clock size={18} className="me-2" />
-              Pending Review
-              {results.filter(r => r.status === 'submitted').length > 0 && (
-                <span className="badge bg-danger ms-2">
-                  {results.filter(r => r.status === 'submitted').length}
-                </span>
-              )}
-            </button>
-          </li>
-          <li className="nav-item">
-            <button 
-              className={`nav-link ${activeTab === 'all' ? 'active' : ''}`}
-              onClick={() => setActiveTab('all')}
-            >
-              <FileText size={18} className="me-2" />
-              All Results
-            </button>
-          </li>
-        </ul>
-
-        {/* Tab Content */}
-        {activeTab === 'templates' && (
-          <TemplatesTab 
-            templates={templates}
-            loading={loading}
-            token={token}
-            onSuccess={() => {
-              setMessage('Template uploaded successfully!');
-              fetchTemplates();
-            }}
-          />
-        )}
-
-        {activeTab === 'pending' && (
-          <PendingResultsTab 
-            results={results}
-            loading={loading}
-            selectedTerm={selectedTerm}
-            setSelectedTerm={setSelectedTerm}
-            selectedSession={selectedSession}
-            setSelectedSession={setSelectedSession}
-            token={token}
-            onReviewSuccess={() => {
-              setMessage('Result reviewed successfully!');
-              fetchPendingResults();
-            }}
-          />
-        )}
-
-        {activeTab === 'all' && (
-          <AllResultsTab 
-            results={results}
-            loading={loading}
-            selectedTerm={selectedTerm}
-            setSelectedTerm={setSelectedTerm}
-            selectedSession={selectedSession}
-            setSelectedSession={setSelectedSession}
-            token={token}
-          />
-        )}
-      </div>
+      ) : (
+        <VisualTemplateBuilder
+          schoolId={JSON.parse(localStorage.getItem('user'))?.schoolId}
+          token={token}
+          existingTemplate={editingTemplate}
+          onClose={() => {
+            setShowTemplateBuilder(false);
+            setEditingTemplate(null);
+            fetchTemplates();
+          }}
+        />
+      )}
     </div>
   );
 };
 
 // ==================== TEMPLATES TAB ====================
-const TemplatesTab = ({ templates, loading, token, onSuccess }) => {
-  const [showUploadModal, setShowUploadModal] = useState(false);
-
+const TemplatesTab = ({ templates, loading, onCreateNew, onEdit, onDelete }) => {
   return (
     <>
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h5 className="mb-0">Result Templates</h5>
+        <h5 className="mb-0">Active Result Templates</h5>
         <button 
-          className="btn btn-primary"
-          onClick={() => setShowUploadModal(true)}
+          className="btn btn-primary rounded-3"
+          onClick={onCreateNew}
         >
-          <Upload size={18} className="me-2" />
-          Upload New Template
+          <Plus size={18} className="me-2" />
+          Create New Template
         </button>
       </div>
 
@@ -208,42 +249,55 @@ const TemplatesTab = ({ templates, loading, token, onSuccess }) => {
       ) : (
         <>
           {templates.length === 0 ? (
-            <div className="alert alert-info">
+            <div className="alert alert-info rounded-3">
               <AlertCircle size={20} className="me-2" />
-              No templates uploaded yet. Upload a result template to get started.
+              No templates created yet. Create a template to get started with result entry.
             </div>
           ) : (
-            <div className="row g-3">
+            <div className="row g-4">
               {templates.map(template => (
-                <div key={template._id} className="col-md-6">
-                  <div className="card">
+                <div key={template._id} className="col-md-6 col-lg-4">
+                  <div className="card border-0 shadow-sm rounded-4 h-100">
                     <div className="card-body">
-                      <div className="d-flex justify-content-between align-items-start mb-2">
-                        <div>
-                          <h6 className="mb-1">{template.name}</h6>
+                      <div className="d-flex justify-content-between align-items-start mb-3">
+                        <div className="flex-grow-1">
+                          <h6 className="mb-1 fw-bold">{template.name}</h6>
                           <small className="text-muted">
                             {template.term} - {template.session}
                           </small>
                         </div>
-                        <span className={`badge bg-${template.isActive ? 'success' : 'secondary'}`}>
+                        <span className={`badge ${template.isActive ? 'bg-success' : 'bg-secondary'}`}>
                           {template.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </div>
                       
-                      {template.templateImage && (
-                        <div className="border rounded p-2 mb-2">
-                          <img 
-                            src={template.templateImage} 
-                            alt="Template preview" 
-                            className="img-fluid"
-                            style={{ maxHeight: '200px', width: '100%', objectFit: 'contain' }}
-                          />
+                      <div className="border-top pt-3 mt-3">
+                        <div className="text-muted small mb-3">
+                          <div className="d-flex justify-content-between mb-1">
+                            <span>Created by:</span>
+                            <span className="fw-semibold">{template.createdBy?.name || 'N/A'}</span>
+                          </div>
+                          <div className="d-flex justify-content-between">
+                            <span>Date:</span>
+                            <span className="fw-semibold">{new Date(template.createdAt).toLocaleDateString()}</span>
+                          </div>
                         </div>
-                      )}
-                      
-                      <div className="text-muted small">
-                        <div>Created by: {template.createdBy?.name || 'N/A'}</div>
-                        <div>Date: {new Date(template.createdAt).toLocaleDateString()}</div>
+
+                        <div className="d-flex gap-2">
+                          <button 
+                            className="btn btn-sm btn-outline-primary rounded-3 flex-grow-1"
+                            onClick={() => onEdit(template)}
+                          >
+                            <Edit2 size={14} className="me-1" />
+                            Edit
+                          </button>
+                          <button 
+                            className="btn btn-sm btn-outline-danger rounded-3"
+                            onClick={() => onDelete(template._id)}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -252,17 +306,6 @@ const TemplatesTab = ({ templates, loading, token, onSuccess }) => {
             </div>
           )}
         </>
-      )}
-
-      {showUploadModal && (
-        <UploadTemplateModal 
-          token={token}
-          onClose={() => setShowUploadModal(false)}
-          onSuccess={() => {
-            setShowUploadModal(false);
-            onSuccess();
-          }}
-        />
       )}
     </>
   );
@@ -281,8 +324,37 @@ const PendingResultsTab = ({
 }) => {
   const [selectedResult, setSelectedResult] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedResults, setSelectedResults] = useState([]);
+  const [approvingAll, setApprovingAll] = useState(false);
 
   const pendingResults = results.filter(r => r.status === 'submitted');
+
+  const approveAll = async () => {
+    if (pendingResults.length === 0) return;
+
+    if (!window.confirm(`Approve all ${pendingResults.length} results? They will be sent to parents via SMS.`)) {
+      return;
+    }
+
+    try {
+      setApprovingAll(true);
+      
+      for (const result of pendingResults) {
+        await axios.put(
+          `${REACT_APP_API_URL}/api/admin/results/${result._id}/review`,
+          { action: 'approve' },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      }
+
+      alert(`Successfully approved ${pendingResults.length} results!`);
+      onReviewSuccess();
+    } catch (err) {
+      alert('Failed to approve all results: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setApprovingAll(false);
+    }
+  };
 
   return (
     <>
@@ -290,7 +362,7 @@ const PendingResultsTab = ({
       <div className="row mb-4">
         <div className="col-md-3">
           <select 
-            className="form-select" 
+            className="form-select rounded-3" 
             value={selectedTerm} 
             onChange={(e) => setSelectedTerm(e.target.value)}
           >
@@ -302,11 +374,32 @@ const PendingResultsTab = ({
         <div className="col-md-3">
           <input 
             type="text" 
-            className="form-control" 
+            className="form-control rounded-3" 
             placeholder="Session (e.g., 2024/2025)"
             value={selectedSession}
             onChange={(e) => setSelectedSession(e.target.value)}
           />
+        </div>
+        <div className="col-md-6 text-end">
+          {pendingResults.length > 0 && (
+            <button 
+              className="btn btn-success rounded-3"
+              onClick={approveAll}
+              disabled={approvingAll}
+            >
+              {approvingAll ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2"></span>
+                  Approving...
+                </>
+              ) : (
+                <>
+                  <Check size={18} className="me-2" />
+                  Approve All ({pendingResults.length})
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -317,9 +410,9 @@ const PendingResultsTab = ({
       ) : (
         <>
           {pendingResults.length === 0 ? (
-            <div className="alert alert-info">
+            <div className="alert alert-success rounded-3">
               <CheckCircle size={20} className="me-2" />
-              No pending results to review.
+              No pending results to review. All caught up!
             </div>
           ) : (
             <div className="table-responsive">
@@ -329,10 +422,11 @@ const PendingResultsTab = ({
                     <th>Student</th>
                     <th>Class</th>
                     <th>Teacher</th>
+                    <th>Subjects</th>
                     <th>Overall</th>
                     <th>Grade</th>
                     <th>Submitted</th>
-                    <th>Actions</th>
+                    <th className="text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -342,9 +436,10 @@ const PendingResultsTab = ({
                         <div className="fw-semibold">{result.student.name}</div>
                         <small className="text-muted">{result.student.regNo}</small>
                       </td>
-                      <td>{result.classId.name}</td>
+                      <td><span className="badge bg-info">{result.classId.name}</span></td>
                       <td>{result.teacher.name}</td>
-                      <td>{result.overallTotal}</td>
+                      <td>{result.subjects?.length || 0}</td>
+                      <td className="fw-bold">{result.overallTotal}</td>
                       <td>
                         <span className={`badge bg-${
                           result.overallGrade === 'A' ? 'success' :
@@ -359,16 +454,18 @@ const PendingResultsTab = ({
                         <small>{new Date(result.submittedAt).toLocaleDateString()}</small>
                       </td>
                       <td>
-                        <button 
-                          className="btn btn-sm btn-primary"
-                          onClick={() => {
-                            setSelectedResult(result);
-                            setShowReviewModal(true);
-                          }}
-                        >
-                          <Eye size={14} className="me-1" />
-                          Review
-                        </button>
+                        <div className="d-flex gap-2 justify-content-center">
+                          <button 
+                            className="btn btn-sm btn-primary rounded-3"
+                            onClick={() => {
+                              setSelectedResult(result);
+                              setShowReviewModal(true);
+                            }}
+                          >
+                            <Eye size={14} className="me-1" />
+                            Review
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -406,7 +503,8 @@ const AllResultsTab = ({
   setSelectedTerm, 
   selectedSession, 
   setSelectedSession,
-  token 
+  token,
+  onActionSuccess
 }) => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedResults, setSelectedResults] = useState([]);
@@ -435,7 +533,7 @@ const AllResultsTab = ({
       );
       alert(res.data.message);
       setSelectedResults([]);
-      window.location.reload();
+      onActionSuccess();
     } catch (err) {
       alert('Failed to send results: ' + (err.response?.data?.message || err.message));
     }
@@ -447,7 +545,7 @@ const AllResultsTab = ({
       <div className="row mb-4">
         <div className="col-md-2">
           <select 
-            className="form-select" 
+            className="form-select rounded-3" 
             value={selectedTerm} 
             onChange={(e) => setSelectedTerm(e.target.value)}
           >
@@ -460,7 +558,7 @@ const AllResultsTab = ({
         <div className="col-md-2">
           <input 
             type="text" 
-            className="form-control" 
+            className="form-control rounded-3" 
             placeholder="Session"
             value={selectedSession}
             onChange={(e) => setSelectedSession(e.target.value)}
@@ -468,7 +566,7 @@ const AllResultsTab = ({
         </div>
         <div className="col-md-2">
           <select 
-            className="form-select"
+            className="form-select rounded-3"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -477,13 +575,13 @@ const AllResultsTab = ({
             <option value="submitted">Submitted</option>
             <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>
-            <option value="sent">Sent</option>
+            <option value="sent">Sent to Parents</option>
           </select>
         </div>
         <div className="col-md-6 text-end">
           {selectedResults.length > 0 && (
             <button 
-              className="btn btn-success"
+              className="btn btn-success rounded-3"
               onClick={sendMultipleResults}
             >
               <Send size={18} className="me-2" />
@@ -502,9 +600,10 @@ const AllResultsTab = ({
           <table className="table table-hover">
             <thead className="table-light">
               <tr>
-                <th>
+                <th style={{ width: '40px' }}>
                   <input 
                     type="checkbox"
+                    className="form-check-input"
                     checked={selectedResults.length === approvedResults.length && approvedResults.length > 0}
                     onChange={(e) => {
                       if (e.target.checked) {
@@ -532,6 +631,7 @@ const AllResultsTab = ({
                     {result.status === 'approved' && (
                       <input 
                         type="checkbox"
+                        className="form-check-input"
                         checked={selectedResults.includes(result._id)}
                         onChange={(e) => {
                           if (e.target.checked) {
@@ -547,10 +647,10 @@ const AllResultsTab = ({
                     <div className="fw-semibold">{result.student.name}</div>
                     <small className="text-muted">{result.student.regNo}</small>
                   </td>
-                  <td>{result.classId.name}</td>
+                  <td><span className="badge bg-info">{result.classId.name}</span></td>
                   <td>{result.term}</td>
                   <td>{result.session}</td>
-                  <td>{result.overallTotal}</td>
+                  <td className="fw-bold">{result.overallTotal}</td>
                   <td>
                     <span className={`badge bg-${
                       result.overallGrade === 'A' ? 'success' :
@@ -584,219 +684,48 @@ const AllResultsTab = ({
   );
 };
 
-// Modals placeholders - these will be detailed in next artifacts
-const UploadTemplateModal = ({ token, onClose, onSuccess }) => {
-  const [templateImage, setTemplateImage] = useState(null);
-  const [name, setName] = useState('');
-  const [term, setTerm] = useState('First Term');
-  const [session, setSession] = useState('2024/2025');
-  const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState(null);
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Check file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Image size must be less than 5MB');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setTemplateImage(reader.result);
-        setPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!templateImage) {
-      alert('Please select a template image');
-      return;
-    }
-
-    if (!name.trim()) {
-      alert('Please enter a template name');
-      return;
-    }
-
-    try {
-      setUploading(true);
-      const response = await axios.post(
-        `${REACT_APP_API_URL}/api/admin/results/template`,
-        { 
-          base64Image: templateImage, 
-          name: name.trim(), 
-          term, 
-          session 
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      alert('Template uploaded successfully! Teachers can now use it for result entry.');
-      onSuccess();
-    } catch (err) {
-      console.error('Upload error:', err);
-      alert('Failed to upload template: ' + (err.response?.data?.message || err.message));
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  return (
-    <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1060 }}>
-      <div className="modal-dialog modal-xl modal-dialog-scrollable">
-        <div className="modal-content">
-          <div className="modal-header bg-primary text-white">
-            <h5 className="modal-title">
-              <Upload size={20} className="me-2" />
-              Upload Result Template
-            </h5>
-            <button type="button" className="btn-close btn-close-white" onClick={onClose}></button>
-          </div>
-          <div className="modal-body">
-            <div className="alert alert-info">
-              <AlertCircle size={18} className="me-2" />
-              <strong>Instructions:</strong> Upload a scanned/photo of your school's result template. 
-              This will be displayed to teachers when entering student results. Teachers can fill scores directly on this template.
-            </div>
-
-            <div className="row">
-              <div className="col-md-5">
-                <div className="mb-3">
-                  <label className="form-label fw-bold">Template Name *</label>
-                  <input 
-                    type="text"
-                    className="form-control"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g., JSS Result Template 2024/2025"
-                  />
-                  <small className="text-muted">Give this template a descriptive name</small>
-                </div>
-                
-                <div className="row mb-3">
-                  <div className="col-md-6">
-                    <label className="form-label fw-bold">Term *</label>
-                    <select className="form-select" value={term} onChange={(e) => setTerm(e.target.value)}>
-                      <option value="First Term">First Term</option>
-                      <option value="Second Term">Second Term</option>
-                      <option value="Third Term">Third Term</option>
-                    </select>
-                  </div>
-                  <div className="col-md-6">
-                    <label className="form-label fw-bold">Session *</label>
-                    <input 
-                      type="text"
-                      className="form-control"
-                      value={session}
-                      onChange={(e) => setSession(e.target.value)}
-                      placeholder="2024/2025"
-                    />
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label fw-bold">Upload Template Image *</label>
-                  <input 
-                    type="file"
-                    className="form-control"
-                    accept="image/*,application/pdf"
-                    onChange={handleImageUpload}
-                  />
-                  <small className="text-muted">
-                    Accepted formats: JPG, PNG, PDF (Max 5MB)<br/>
-                    For best results: Use high-quality scan/photo with good lighting
-                  </small>
-                </div>
-
-                <div className="alert alert-warning">
-                  <strong>Tips for best results:</strong>
-                  <ul className="mb-0 mt-2">
-                    <li>Ensure the template is clearly visible</li>
-                    <li>Include all sections: header, student info, subjects, comments</li>
-                    <li>Make sure text is readable</li>
-                    <li>Avoid shadows and glare</li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="col-md-7">
-                <label className="form-label fw-bold">Preview</label>
-                {preview ? (
-                  <div className="border rounded p-2 bg-light" style={{ maxHeight: '600px', overflow: 'auto' }}>
-                    <img 
-                      src={preview} 
-                      alt="Template preview" 
-                      className="img-fluid w-100"
-                      style={{ maxHeight: '580px', objectFit: 'contain' }}
-                    />
-                  </div>
-                ) : (
-                  <div 
-                    className="border rounded p-5 bg-light text-center" 
-                    style={{ minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <div className="text-muted">
-                      <Upload size={64} className="mb-3 opacity-50" />
-                      <p>Upload an image to see preview</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="modal-footer">
-            <button 
-              className="btn btn-secondary" 
-              onClick={onClose}
-              disabled={uploading}
-            >
-              Cancel
-            </button>
-            <button 
-              className="btn btn-primary"
-              onClick={handleUpload}
-              disabled={uploading || !templateImage || !name.trim()}
-            >
-              {uploading ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-2"></span>
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload size={18} className="me-2" />
-                  Upload Template
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
+// ==================== REVIEW MODAL ====================
 const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
-  const [action, setAction] = useState('approve');
-  const [comments, setComments] = useState(result.comments || {});
-  const [affectiveTraits, setAffectiveTraits] = useState(result.affectiveTraits || {});
+  const [comments, setComments] = useState({
+    teacher: result.comments?.teacher || '',
+    principal: result.comments?.principal || ''
+  });
   const [processing, setProcessing] = useState(false);
+  const [showApproveConfirm, setShowApproveConfirm] = useState(false);
 
-  const handleReview = async () => {
+  const handleApprove = async () => {
     try {
       setProcessing(true);
       await axios.put(
         `${REACT_APP_API_URL}/api/admin/results/${result._id}/review`,
-        { action, comments, affectiveTraits },
+        { action: 'approve', comments },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      alert('Result approved! It will be sent to parents via SMS.');
       onSuccess();
     } catch (err) {
-      alert('Failed to review result: ' + (err.response?.data?.message || err.message));
+      alert('Failed to approve result: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setProcessing(false);
+      setShowApproveConfirm(false);
+    }
+  };
+
+  const handleReject = async () => {
+    const reason = window.prompt('Reason for rejection:');
+    if (!reason) return;
+
+    try {
+      setProcessing(true);
+      await axios.put(
+        `${REACT_APP_API_URL}/api/admin/results/${result._id}/review`,
+        { action: 'reject', rejectionReason: reason },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert('Result rejected and sent back to teacher.');
+      onSuccess();
+    } catch (err) {
+      alert('Failed to reject result: ' + (err.response?.data?.message || err.message));
     } finally {
       setProcessing(false);
     }
@@ -806,47 +735,82 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
     <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1060 }}>
       <div className="modal-dialog modal-xl modal-dialog-scrollable">
         <div className="modal-content">
-          <div className="modal-header">
-            <h5 className="modal-title">Review Result - {result.student.name}</h5>
-            <button type="button" className="btn-close" onClick={onClose}></button>
+          <div className="modal-header bg-primary text-white">
+            <div>
+              <h5 className="modal-title mb-0">Review Result</h5>
+              <small>{result.student.name} - {result.classId.name}</small>
+            </div>
+            <button type="button" className="btn-close btn-close-white" onClick={onClose}></button>
           </div>
           <div className="modal-body">
-            {/* Display result details and allow editing non-score fields */}
-            <div className="alert alert-info">
-              <strong>Note:</strong> You can edit affective traits, fees, attendance, and comments, but NOT the subject scores.
+            <div className="alert alert-info rounded-3">
+              <strong>Note:</strong> Review the result details below. You can add/edit the principal's comment before approving.
             </div>
             
             {/* Subjects (read-only) */}
-            <h6 className="mb-3">Subjects & Scores (Read-Only)</h6>
+            <h6 className="mb-3 fw-bold">Subject Scores</h6>
             <div className="table-responsive mb-4">
-              <table className="table table-bordered">
+              <table className="table table-bordered table-sm">
                 <thead className="table-light">
                   <tr>
                     <th>Subject</th>
-                    <th>CA1</th>
-                    <th>CA2</th>
-                    <th>Exam</th>
-                    <th>Total</th>
-                    <th>Grade</th>
+                    <th className="text-center">CA1</th>
+                    <th className="text-center">CA2</th>
+                    <th className="text-center">Exam</th>
+                    <th className="text-center">Total</th>
+                    <th className="text-center">Grade</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {result.subjects.map((s, i) => (
+                  {result.subjects?.map((s, i) => (
                     <tr key={i}>
-                      <td>{s.subject}</td>
-                      <td>{s.ca1}</td>
-                      <td>{s.ca2}</td>
-                      <td>{s.exam}</td>
-                      <td>{s.total}</td>
-                      <td><span className="badge bg-success">{s.grade}</span></td>
+                      <td className="fw-semibold">{s.subject}</td>
+                      <td className="text-center">{s.ca1}</td>
+                      <td className="text-center">{s.ca2}</td>
+                      <td className="text-center">{s.exam}</td>
+                      <td className="text-center fw-bold">{s.total}</td>
+                      <td className="text-center">
+                        <span className={`badge bg-${
+                          s.grade === 'A' ? 'success' :
+                          s.grade === 'B' ? 'primary' :
+                          s.grade === 'C' ? 'info' :
+                          s.grade === 'D' ? 'warning' : 'danger'
+                        }`}>
+                          {s.grade}
+                        </span>
+                      </td>
                     </tr>
                   ))}
+                  <tr className="table-secondary">
+                    <td colSpan="4" className="fw-bold">Overall Performance</td>
+                    <td className="text-center fw-bold">{result.overallTotal}</td>
+                    <td className="text-center">
+                      <span className={`badge bg-${
+                        result.overallGrade === 'A' ? 'success' :
+                        result.overallGrade === 'B' ? 'primary' :
+                        result.overallGrade === 'C' ? 'info' :
+                        result.overallGrade === 'D' ? 'warning' : 'danger'
+                      }`}>
+                        {result.overallGrade}
+                      </span>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
 
-            {/* Comments (editable) */}
-            <h6 className="mb-3">Comments</h6>
+            {/* Comments */}
+            <h6 className="mb-3 fw-bold">Comments</h6>
+            <div className="mb-3">
+              <label className="form-label">Teacher's Comment (Read-only)</label>
+              <textarea 
+                className="form-control bg-light"
+                rows="3"
+                value={comments.teacher}
+                readOnly
+              ></textarea>
+            </div>
+
             <div className="mb-3">
               <label className="form-label">Principal's Comment</label>
               <textarea 
@@ -854,28 +818,105 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
                 rows="3"
                 value={comments.principal || ''}
                 onChange={(e) => setComments({ ...comments, principal: e.target.value })}
+                placeholder="Add principal's comment here..."
               ></textarea>
             </div>
           </div>
           <div className="modal-footer">
-            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button 
-              className="btn btn-danger me-2"
-              onClick={() => { setAction('reject'); handleReview(); }}
-              disabled={processing}
-            >
-              <X size={18} className="me-2" />
-              Reject
+            <button className="btn btn-secondary rounded-3" onClick={onClose} disabled={processing}>
+              Cancel
             </button>
             <button 
-              className="btn btn-success"
-              onClick={() => { setAction('approve'); handleReview(); }}
+              className="btn btn-danger rounded-3 me-2"
+              onClick={handleReject}
               disabled={processing}
             >
               <Check size={18} className="me-2" />
-              Approve
+              Reject
+            </button>
+            <button 
+              className="btn btn-success rounded-3"
+              onClick={() => setShowApproveConfirm(true)}
+              disabled={processing}
+            >
+              <Check size={18} className="me-2" />
+              Approve & Send to Parent
             </button>
           </div>
+
+          {/* Approve Confirmation Modal */}
+          {showApproveConfirm && (
+            <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 1070 }}>
+              <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content">
+                  <div className="modal-header bg-success text-white">
+                    <h5 className="modal-title">
+                      <Check size={20} className="me-2" />
+                      Confirm Approval
+                    </h5>
+                  </div>
+                  <div className="modal-body">
+                    <div className="alert alert-warning">
+                      <AlertCircle size={20} className="me-2" />
+                      <strong>Important:</strong> Once approved, this result will be automatically sent to the parent via SMS.
+                    </div>
+                    
+                    <h6 className="mb-3">Result Summary:</h6>
+                    <div className="card bg-light">
+                      <div className="card-body">
+                        <div className="row">
+                          <div className="col-6">
+                            <strong>Student:</strong> {result.student.name}
+                          </div>
+                          <div className="col-6">
+                            <strong>Class:</strong> {result.classId.name}
+                          </div>
+                          <div className="col-6">
+                            <strong>Overall Score:</strong> {result.overallTotal}
+                          </div>
+                          <div className="col-6">
+                            <strong>Grade:</strong> <span className="badge bg-success">{result.overallGrade}</span>
+                          </div>
+                          <div className="col-12 mt-2">
+                            <strong>Parent:</strong> {result.student.parentName || 'N/A'} 
+                            ({result.student.parentPhone || 'No phone number'})
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="mt-3 mb-0">Are you sure you want to approve and send this result?</p>
+                  </div>
+                  <div className="modal-footer">
+                    <button 
+                      className="btn btn-secondary"
+                      onClick={() => setShowApproveConfirm(false)}
+                      disabled={processing}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      className="btn btn-success"
+                      onClick={handleApprove}
+                      disabled={processing}
+                    >
+                      {processing ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2"></span>
+                          Approving...
+                        </>
+                      ) : (
+                        <>
+                          <Check size={18} className="me-2" />
+                          Yes, Approve & Send
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
