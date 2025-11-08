@@ -41,6 +41,7 @@ const VisualTemplateBuilder = ({
   onClose, 
   existingTemplate = null 
 }) => {
+  const token = token || localStorage.getItem('token'); 
   const [templateName, setTemplateName] = useState(existingTemplate?.name || '');
   const [term, setTerm] = useState(existingTemplate?.term || 'First Term');
   const [session, setSession] = useState(existingTemplate?.session || '');
