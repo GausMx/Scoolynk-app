@@ -281,7 +281,7 @@ const Dashboard = () => {
           <div className="col-6 col-md-3">
             <button
               className="btn btn-outline-primary w-100 rounded-3 py-3"
-              onClick={() => navigate('/admin/results')}
+              onClick={() => navigate('/admin/result-management')}
             >
               <i className="bi-file-earmark-check fs-4 d-block mb-2"></i>
               <span className="fw-semibold">View Results</span>
