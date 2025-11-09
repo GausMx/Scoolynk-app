@@ -1,11 +1,10 @@
-// src/components/Admin/Dashboard.js - MOBILE RESPONSIVE VERSION
-
 import React, { useEffect, useState } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'chart.js/auto';
+import Loading from '../common/Loading' // Import the new Loading component
 
 const { REACT_APP_API_URL } = process.env;
 
@@ -30,6 +29,7 @@ const StatCard = ({ title, value, iconClass, bgClass, textClass, onClick }) => (
 const Dashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [loadingPercent, setLoadingPercent] = useState(0); // You can update this if you want dynamic percentage
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalTeachers: 0,
@@ -55,10 +55,13 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      setLoadingPercent(10);
 
       const res = await axios.get(`${REACT_APP_API_URL}/api/admin`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      setLoadingPercent(70);
 
       const data = res.data;
 
@@ -77,6 +80,8 @@ const Dashboard = () => {
         resultsTrend: data.resultsTrend || [0, 0, 0, 0, 0, 0],
         recentActivity: data.recentActivity || [],
       });
+
+      setLoadingPercent(100);
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
       setStats({
@@ -94,6 +99,7 @@ const Dashboard = () => {
         resultsTrend: [0, 0, 0, 0, 0, 0],
         recentActivity: [],
       });
+      setLoadingPercent(100);
     } finally {
       setLoading(false);
     }
@@ -127,18 +133,7 @@ const Dashboard = () => {
   };
 
   if (loading) {
-    return (
-      <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
-        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
-          <div className="text-center">
-            <div className="spinner-border text-primary mb-3" style={{ width: '3rem', height: '3rem' }} role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
-            <p className="text-muted">Loading dashboard data...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <Loading percentage={loadingPercent} />;
   }
 
   return (
