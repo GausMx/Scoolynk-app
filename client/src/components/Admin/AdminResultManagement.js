@@ -854,7 +854,7 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
                   <div className="modal-header bg-success text-white">
                     <h5 className="modal-title">
                       <Check size={20} className="me-2" />
-                      Confirm Approval
+                      Confirm Approval &amp; Send
                     </h5>
                   </div>
                   <div className="modal-body">
