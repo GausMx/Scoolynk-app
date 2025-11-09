@@ -7,6 +7,7 @@ import {
   AlertCircle, CheckCircle, Clock, Trash2
 } from 'lucide-react';
 import VisualTemplateBuilder from './VisualTemplateBuilder';
+import Loading from '../common/Loading';
 
 const { REACT_APP_API_URL } = process.env;
 
@@ -243,9 +244,7 @@ const TemplatesTab = ({ templates, loading, onCreateNew, onEdit, onDelete }) => 
       </div>
 
       {loading ? (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary"></div>
-        </div>
+        <Loading percentage={100} />
       ) : (
         <>
           {templates.length === 0 ? (
@@ -403,9 +402,7 @@ const PendingResultsTab = ({
       </div>
 
       {loading ? (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary"></div>
-        </div>
+        <Loading percentage={100} />
       ) : (
         <>
           {pendingResults.length === 0 ? (
@@ -591,9 +588,7 @@ const AllResultsTab = ({
       </div>
 
       {loading ? (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary"></div>
-        </div>
+        <Loading percentage={100} />
       ) : (
         <div className="table-responsive">
           <table className="table table-hover">

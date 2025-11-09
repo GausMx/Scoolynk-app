@@ -15,6 +15,7 @@ import {
   User,
   CreditCard
 } from 'lucide-react';
+import Loading from '../common/Loading';
 
 const { REACT_APP_API_URL } = process.env;
 

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { BookOpen, Edit, Trash2, PlusCircle, Users, DollarSign, Eye, Download, TrendingUp } from 'lucide-react';
+import Loading from '../common/Loading';
 
 const { REACT_APP_API_URL } = process.env;
 
