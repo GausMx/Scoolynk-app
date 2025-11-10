@@ -1,4 +1,4 @@
-// src/components/Admin/AdminResultManagement.js - MOBILE RESPONSIVE VERSION
+// src/components/Admin/AdminResultManagement.js - MOBILE RESPONSIVE VERSION UPDATED
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -249,16 +249,16 @@ const TemplatesTab = ({ templates, loading, onCreateNew, onEdit, onDelete }) => 
       ) : (
         <>
           {templates.length === 0 ? (
-            <div className="alert alert-info rounded-3">
-              <AlertCircle size={20} className="me-2" />
-              No templates created yet. Create a template to get started with result entry.
+            <div className="alert alert-info rounded-3 d-flex align-items-center">
+              <AlertCircle size={20} className="me-2 flex-shrink-0" />
+              <span>No templates created yet. Create a template to get started with result entry.</span>
             </div>
           ) : (
             <div className="row g-3 g-md-4">
               {templates.map(template => (
                 <div key={template._id} className="col-12 col-md-6 col-lg-4">
                   <div className="card border-0 shadow-sm rounded-4 h-100">
-                    <div className="card-body">
+                    <div className="card-body d-flex flex-column">
                       <div className="d-flex justify-content-between align-items-start mb-3">
                         <div className="flex-grow-1">
                           <h6 className="mb-1 fw-bold">{template.name}</h6>
@@ -271,7 +271,7 @@ const TemplatesTab = ({ templates, loading, onCreateNew, onEdit, onDelete }) => 
                         </span>
                       </div>
                       
-                      <div className="border-top pt-3 mt-3">
+                      <div className="border-top pt-3 mt-auto">
                         <div className="text-muted small mb-3">
                           <div className="d-flex justify-content-between mb-1">
                             <span>Created by:</span>
@@ -287,6 +287,7 @@ const TemplatesTab = ({ templates, loading, onCreateNew, onEdit, onDelete }) => 
                           <button 
                             className="btn btn-sm btn-outline-primary rounded-3 flex-grow-1"
                             onClick={() => onEdit(template)}
+                            aria-label={`Edit template ${template.name}`}
                           >
                             <Edit2 size={14} className="me-1" />
                             Edit
@@ -294,6 +295,7 @@ const TemplatesTab = ({ templates, loading, onCreateNew, onEdit, onDelete }) => 
                           <button 
                             className="btn btn-sm btn-outline-danger rounded-3"
                             onClick={() => onDelete(template._id)}
+                            aria-label={`Deactivate template ${template.name}`}
                           >
                             <Trash2 size={14} />
                           </button>
@@ -385,10 +387,11 @@ const PendingResultsTab = ({
               className="btn btn-success rounded-3 w-100 w-md-auto"
               onClick={approveAll}
               disabled={approvingAll}
+              aria-label={`Approve all ${pendingResults.length} pending results`}
             >
               {approvingAll ? (
                 <>
-                  <span className="spinner-border spinner-border-sm me-2"></span>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                   Approving...
                 </>
               ) : (
@@ -403,15 +406,15 @@ const PendingResultsTab = ({
       </div>
 
       {loading ? (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary"></div>
+        <div className="text-center py-5" aria-live="polite" aria-busy="true">
+          <div className="spinner-border text-primary" role="status"></div>
         </div>
       ) : (
         <>
           {pendingResults.length === 0 ? (
-            <div className="alert alert-success rounded-3">
-              <CheckCircle size={20} className="me-2" />
-              No pending results to review. All caught up!
+            <div className="alert alert-success rounded-3 d-flex align-items-center">
+              <CheckCircle size={20} className="me-2 flex-shrink-0" />
+              <span>No pending results to review. All caught up!</span>
             </div>
           ) : (
             <div className="table-responsive">
@@ -460,6 +463,7 @@ const PendingResultsTab = ({
                               setSelectedResult(result);
                               setShowReviewModal(true);
                             }}
+                            aria-label={`Review result for ${result.student.name}`}
                           >
                             <Eye size={14} className="d-none d-md-inline me-1" />
                             <span className="small">Review</span>
@@ -582,6 +586,7 @@ const AllResultsTab = ({
             <button 
               className="btn btn-success rounded-3 w-100 w-md-auto"
               onClick={sendMultipleResults}
+              aria-label={`Send ${selectedResults.length} results to parents`}
             >
               <Send size={18} className="me-2" />
               Send {selectedResults.length} to Parents
@@ -591,8 +596,8 @@ const AllResultsTab = ({
       </div>
 
       {loading ? (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary"></div>
+        <div className="text-center py-5" aria-live="polite" aria-busy="true">
+          <div className="spinner-border text-primary" role="status"></div>
         </div>
       ) : (
         <div className="table-responsive">
@@ -603,6 +608,7 @@ const AllResultsTab = ({
                   <input 
                     type="checkbox"
                     className="form-check-input"
+                    aria-label="Select all approved results"
                     checked={selectedResults.length === approvedResults.length && approvedResults.length > 0}
                     onChange={(e) => {
                       if (e.target.checked) {
@@ -631,6 +637,7 @@ const AllResultsTab = ({
                       <input 
                         type="checkbox"
                         className="form-check-input"
+                        aria-label={`Select result for ${result.student.name}`}
                         checked={selectedResults.includes(result._id)}
                         onChange={(e) => {
                           if (e.target.checked) {
@@ -810,6 +817,7 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
                 rows="3"
                 value={comments.teacher}
                 readOnly
+                aria-readonly="true"
               ></textarea>
             </div>
 
@@ -821,6 +829,7 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
                 value={comments.principal || ''}
                 onChange={(e) => setComments({ ...comments, principal: e.target.value })}
                 placeholder="Add principal's comment here..."
+                aria-label="Principal's comment"
               ></textarea>
             </div>
           </div>
@@ -852,14 +861,14 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
               <div className="modal-dialog modal-dialog-centered">
                 <div className="modal-content">
                   <div className="modal-header bg-success text-white">
-                    <h5 className="modal-title">
+                    <h5 className="modal-title d-flex align-items-center">
                       <Check size={20} className="me-2" />
                       Confirm Approval &amp; Send
                     </h5>
                   </div>
                   <div className="modal-body">
-                    <div className="alert alert-warning">
-                      <AlertCircle size={20} className="me-2" />
+                    <div className="alert alert-warning d-flex align-items-center">
+                      <AlertCircle size={20} className="me-2 flex-shrink-0" />
                       <strong>Important:</strong> Once approved, this result will be automatically sent to the parent via SMS.
                     </div>
                     
@@ -904,7 +913,7 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
                     >
                       {processing ? (
                         <>
-                          <span className="spinner-border spinner-border-sm me-2"></span>
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                           Approving...
                         </>
                       ) : (
