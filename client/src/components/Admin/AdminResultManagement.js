@@ -1,4 +1,4 @@
-// src/components/Admin/AdminResultManagement.js - MOBILE RESPONSIVE VERSION UPDATED
+// src/components/Admin/AdminResultManagement.js - MOBILE RESPONSIVE VERSION
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -7,6 +7,7 @@ import {
   AlertCircle, CheckCircle, Clock, Trash2
 } from 'lucide-react';
 import VisualTemplateBuilder from './VisualTemplateBuilder';
+import Loading from '../common/Loading';
 
 const { REACT_APP_API_URL } = process.env;
 
@@ -243,22 +244,20 @@ const TemplatesTab = ({ templates, loading, onCreateNew, onEdit, onDelete }) => 
       </div>
 
       {loading ? (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary"></div>
-        </div>
+        <Loading percentage={100} />
       ) : (
         <>
           {templates.length === 0 ? (
-            <div className="alert alert-info rounded-3 d-flex align-items-center">
-              <AlertCircle size={20} className="me-2 flex-shrink-0" />
-              <span>No templates created yet. Create a template to get started with result entry.</span>
+            <div className="alert alert-info rounded-3">
+              <AlertCircle size={20} className="me-2" />
+              No templates created yet. Create a template to get started with result entry.
             </div>
           ) : (
             <div className="row g-3 g-md-4">
               {templates.map(template => (
                 <div key={template._id} className="col-12 col-md-6 col-lg-4">
                   <div className="card border-0 shadow-sm rounded-4 h-100">
-                    <div className="card-body d-flex flex-column">
+                    <div className="card-body">
                       <div className="d-flex justify-content-between align-items-start mb-3">
                         <div className="flex-grow-1">
                           <h6 className="mb-1 fw-bold">{template.name}</h6>
@@ -271,7 +270,7 @@ const TemplatesTab = ({ templates, loading, onCreateNew, onEdit, onDelete }) => 
                         </span>
                       </div>
                       
-                      <div className="border-top pt-3 mt-auto">
+                      <div className="border-top pt-3 mt-3">
                         <div className="text-muted small mb-3">
                           <div className="d-flex justify-content-between mb-1">
                             <span>Created by:</span>
@@ -287,7 +286,6 @@ const TemplatesTab = ({ templates, loading, onCreateNew, onEdit, onDelete }) => 
                           <button 
                             className="btn btn-sm btn-outline-primary rounded-3 flex-grow-1"
                             onClick={() => onEdit(template)}
-                            aria-label={`Edit template ${template.name}`}
                           >
                             <Edit2 size={14} className="me-1" />
                             Edit
@@ -295,7 +293,6 @@ const TemplatesTab = ({ templates, loading, onCreateNew, onEdit, onDelete }) => 
                           <button 
                             className="btn btn-sm btn-outline-danger rounded-3"
                             onClick={() => onDelete(template._id)}
-                            aria-label={`Deactivate template ${template.name}`}
                           >
                             <Trash2 size={14} />
                           </button>
@@ -333,7 +330,7 @@ const PendingResultsTab = ({
   const approveAll = async () => {
     if (pendingResults.length === 0) return;
 
-    if (!window.confirm(`Approve all ${pendingResults.length} results? They will be sent to parents via SMS.`)) {
+    if (!window.confirm(`Approve all ${pendingResults.length} results? They will be approved and sent to parents via SMS.`)) {
       return;
     }
 
@@ -348,7 +345,7 @@ const PendingResultsTab = ({
         );
       }
 
-      alert(`Successfully approved ${pendingResults.length} results!`);
+      alert(`Successfully approved ${pendingResults.length} results and sent them to parents!`);
       onReviewSuccess();
     } catch (err) {
       alert('Failed to approve all results: ' + (err.response?.data?.message || err.message));
@@ -387,11 +384,10 @@ const PendingResultsTab = ({
               className="btn btn-success rounded-3 w-100 w-md-auto"
               onClick={approveAll}
               disabled={approvingAll}
-              aria-label={`Approve all ${pendingResults.length} pending results`}
             >
               {approvingAll ? (
                 <>
-                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  <span className="spinner-border spinner-border-sm me-2"></span>
                   Approving...
                 </>
               ) : (
@@ -406,15 +402,13 @@ const PendingResultsTab = ({
       </div>
 
       {loading ? (
-        <div className="text-center py-5" aria-live="polite" aria-busy="true">
-          <div className="spinner-border text-primary" role="status"></div>
-        </div>
+        <Loading percentage={100} />
       ) : (
         <>
           {pendingResults.length === 0 ? (
-            <div className="alert alert-success rounded-3 d-flex align-items-center">
-              <CheckCircle size={20} className="me-2 flex-shrink-0" />
-              <span>No pending results to review. All caught up!</span>
+            <div className="alert alert-success rounded-3">
+              <CheckCircle size={20} className="me-2" />
+              No pending results to review. All caught up!
             </div>
           ) : (
             <div className="table-responsive">
@@ -463,7 +457,6 @@ const PendingResultsTab = ({
                               setSelectedResult(result);
                               setShowReviewModal(true);
                             }}
-                            aria-label={`Review result for ${result.student.name}`}
                           >
                             <Eye size={14} className="d-none d-md-inline me-1" />
                             <span className="small">Review</span>
@@ -511,6 +504,8 @@ const AllResultsTab = ({
 }) => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedResults, setSelectedResults] = useState([]);
+  const [previewResult, setPreviewResult] = useState(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const filteredResults = results.filter(r => 
     statusFilter === 'all' || r.status === statusFilter
@@ -586,7 +581,6 @@ const AllResultsTab = ({
             <button 
               className="btn btn-success rounded-3 w-100 w-md-auto"
               onClick={sendMultipleResults}
-              aria-label={`Send ${selectedResults.length} results to parents`}
             >
               <Send size={18} className="me-2" />
               Send {selectedResults.length} to Parents
@@ -596,9 +590,7 @@ const AllResultsTab = ({
       </div>
 
       {loading ? (
-        <div className="text-center py-5" aria-live="polite" aria-busy="true">
-          <div className="spinner-border text-primary" role="status"></div>
-        </div>
+        <Loading percentage={100} />
       ) : (
         <div className="table-responsive">
           <table className="table table-hover">
@@ -608,7 +600,6 @@ const AllResultsTab = ({
                   <input 
                     type="checkbox"
                     className="form-check-input"
-                    aria-label="Select all approved results"
                     checked={selectedResults.length === approvedResults.length && approvedResults.length > 0}
                     onChange={(e) => {
                       if (e.target.checked) {
@@ -637,7 +628,6 @@ const AllResultsTab = ({
                       <input 
                         type="checkbox"
                         className="form-check-input"
-                        aria-label={`Select result for ${result.student.name}`}
                         checked={selectedResults.includes(result._id)}
                         onChange={(e) => {
                           if (e.target.checked) {
@@ -817,7 +807,6 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
                 rows="3"
                 value={comments.teacher}
                 readOnly
-                aria-readonly="true"
               ></textarea>
             </div>
 
@@ -829,7 +818,6 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
                 value={comments.principal || ''}
                 onChange={(e) => setComments({ ...comments, principal: e.target.value })}
                 placeholder="Add principal's comment here..."
-                aria-label="Principal's comment"
               ></textarea>
             </div>
           </div>
@@ -861,14 +849,14 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
               <div className="modal-dialog modal-dialog-centered">
                 <div className="modal-content">
                   <div className="modal-header bg-success text-white">
-                    <h5 className="modal-title d-flex align-items-center">
+                    <h5 className="modal-title">
                       <Check size={20} className="me-2" />
-                      Confirm Approval &amp; Send
+                      Confirm Approval
                     </h5>
                   </div>
                   <div className="modal-body">
-                    <div className="alert alert-warning d-flex align-items-center">
-                      <AlertCircle size={20} className="me-2 flex-shrink-0" />
+                    <div className="alert alert-warning">
+                      <AlertCircle size={20} className="me-2" />
                       <strong>Important:</strong> Once approved, this result will be automatically sent to the parent via SMS.
                     </div>
                     
@@ -913,7 +901,7 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
                     >
                       {processing ? (
                         <>
-                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                          <span className="spinner-border spinner-border-sm me-2"></span>
                           Approving...
                         </>
                       ) : (
@@ -928,6 +916,163 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
               </div>
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== PREVIEW MODAL (Read-only) ====================
+const PreviewResultModal = ({ result, onClose }) => {
+  return (
+    <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1060 }}>
+      <div className="modal-dialog modal-xl modal-dialog-scrollable">
+        <div className="modal-content">
+          <div className="modal-header bg-info text-white">
+            <div>
+              <h5 className="modal-title mb-0">
+                <Eye size={20} className="me-2" />
+                Result Preview (Sent to Parent)
+              </h5>
+              <small>{result.student.name} - {result.classId.name}</small>
+            </div>
+            <button type="button" className="btn-close btn-close-white" onClick={onClose}></button>
+          </div>
+          <div className="modal-body">
+            <div className="alert alert-success rounded-3 d-flex align-items-center">
+              <CheckCircle size={20} className="me-2 flex-shrink-0" />
+              <div>
+                <strong>Result Sent Successfully!</strong>
+                <p className="mb-0 small mt-1">
+                  This result was approved and sent to {result.student.parentName || 'parent'} 
+                  ({result.student.parentPhone || 'N/A'}) via SMS.
+                </p>
+              </div>
+            </div>
+            
+            {/* Student Info */}
+            <div className="card bg-light mb-3">
+              <div className="card-body">
+                <div className="row g-2">
+                  <div className="col-6 col-md-3">
+                    <small className="text-muted d-block">Student</small>
+                    <strong className="small">{result.student.name}</strong>
+                  </div>
+                  <div className="col-6 col-md-3">
+                    <small className="text-muted d-block">Reg No</small>
+                    <strong className="small">{result.student.regNo}</strong>
+                  </div>
+                  <div className="col-6 col-md-3">
+                    <small className="text-muted d-block">Class</small>
+                    <strong className="small">{result.classId.name}</strong>
+                  </div>
+                  <div className="col-6 col-md-3">
+                    <small className="text-muted d-block">Term</small>
+                    <strong className="small">{result.term} - {result.session}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Subject Scores */}
+            <h6 className="mb-3 fw-bold">Subject Scores</h6>
+            <div className="table-responsive mb-4">
+              <table className="table table-bordered table-sm">
+                <thead className="table-light">
+                  <tr>
+                    <th className="small">Subject</th>
+                    <th className="text-center small">CA1</th>
+                    <th className="text-center small">CA2</th>
+                    <th className="text-center small">Exam</th>
+                    <th className="text-center small">Total</th>
+                    <th className="text-center small">Grade</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.subjects?.map((s, i) => (
+                    <tr key={i}>
+                      <td className="fw-semibold small">{s.subject}</td>
+                      <td className="text-center small">{s.ca1}</td>
+                      <td className="text-center small">{s.ca2}</td>
+                      <td className="text-center small">{s.exam}</td>
+                      <td className="text-center fw-bold small">{s.total}</td>
+                      <td className="text-center">
+                        <span className={`badge bg-${
+                          s.grade === 'A' ? 'success' :
+                          s.grade === 'B' ? 'primary' :
+                          s.grade === 'C' ? 'info' :
+                          s.grade === 'D' ? 'warning' : 'danger'
+                        }`}>
+                          {s.grade}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="table-secondary">
+                    <td colSpan="4" className="fw-bold small">Overall Performance</td>
+                    <td className="text-center fw-bold small">{result.overallTotal}</td>
+                    <td className="text-center">
+                      <span className={`badge bg-${
+                        result.overallGrade === 'A' ? 'success' :
+                        result.overallGrade === 'B' ? 'primary' :
+                        result.overallGrade === 'C' ? 'info' :
+                        result.overallGrade === 'D' ? 'warning' : 'danger'
+                      }`}>
+                        {result.overallGrade}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Comments */}
+            <h6 className="mb-3 fw-bold">Comments</h6>
+            {result.comments?.teacher && (
+              <div className="mb-3">
+                <label className="form-label small fw-semibold">Teacher's Comment</label>
+                <div className="card bg-light">
+                  <div className="card-body">
+                    <p className="mb-0 small">{result.comments.teacher}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {result.comments?.principal && (
+              <div className="mb-3">
+                <label className="form-label small fw-semibold">Principal's Comment</label>
+                <div className="card bg-light">
+                  <div className="card-body">
+                    <p className="mb-0 small">{result.comments.principal}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Approval Info */}
+            {result.approvedAt && (
+              <div className="card border-success mt-3">
+                <div className="card-body">
+                  <div className="row g-2">
+                    <div className="col-12 col-md-6">
+                      <small className="text-muted d-block">Approved By</small>
+                      <strong className="small">{result.approvedBy?.name || 'Admin'}</strong>
+                    </div>
+                    <div className="col-12 col-md-6">
+                      <small className="text-muted d-block">Approved On</small>
+                      <strong className="small">{new Date(result.approvedAt).toLocaleString()}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="modal-footer">
+            <button className="btn btn-secondary rounded-3 w-100 w-md-auto" onClick={onClose}>
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>
