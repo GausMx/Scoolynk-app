@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { BookOpen, Edit, Trash2, PlusCircle, Users, DollarSign, Eye, Download, TrendingUp } from 'lucide-react';
+import { BookOpen, Edit, Trash2, PlusCircle, Users, Eye, Download, TrendingUp } from 'lucide-react';
 import Loading from '../common/Loading';
 
 const { REACT_APP_API_URL } = process.env;
@@ -10,6 +10,7 @@ const { REACT_APP_API_URL } = process.env;
 const ManageClasses = () => {
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
+  const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [modalState, setModalState] = useState({ isOpen: false, mode: 'add', currentClass: null });
@@ -20,29 +21,35 @@ const ManageClasses = () => {
   const fetchClasses = async () => {
     try {
       setLoading(true);
-      const [classRes, studentRes, courseRes] = await Promise.all([
+      const [classRes, studentRes, courseRes, teacherRes] = await Promise.all([
         axios.get(`${API_BASE}/classes`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_BASE}/students`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_BASE}/courses`, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API_BASE}/courses`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE}/teachers`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
 
       const classList = classRes.data.classes || [];
       const studentList = studentRes.data.students || [];
       const courseList = courseRes.data.courses || [];
+      const teacherList = teacherRes.data.teachers || [];
 
       const enrichedClasses = classList.map(cls => {
         const classStudents = studentList.filter(s => s.classId?._id === cls._id);
         const classCourses = courseList.filter(c => c.classes?.some(cl => cl._id === cls._id));
-        
+        // Find teachers assigned as classTeacherFor this class
+        const classTeachers = teacherList.filter(t => t.classTeacherFor?.some(c => c._id === cls._id));
+
         return {
           ...cls,
           studentCount: classStudents.length,
-          courses: classCourses
+          courses: classCourses,
+          classTeachers
         };
       });
 
       setClasses(enrichedClasses);
       setStudents(studentList);
+      setTeachers(teacherList);
     } catch (err) {
       console.error(err);
       setMessage('Failed to load classes');
@@ -65,11 +72,17 @@ const ManageClasses = () => {
     try {
       setLoading(true);
       setMessage('');
+      // Prepare payload for API: exclude fee, include classTeacherFor as array of teacher IDs
+      const payload = {
+        name: formData.name,
+        classTeacherFor: formData.classTeacherFor || []
+      };
+
       if (modalState.mode === 'add') {
-        await axios.post(`${API_BASE}/classes`, formData, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.post(`${API_BASE}/classes`, payload, { headers: { Authorization: `Bearer ${token}` } });
         setMessage(`Class '${formData.name}' added successfully`);
       } else {
-        await axios.put(`${API_BASE}/classes/${formData._id}`, formData, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.put(`${API_BASE}/classes/${formData._id}`, payload, { headers: { Authorization: `Bearer ${token}` } });
         setMessage(`Class '${formData.name}' updated successfully`);
       }
       await fetchClasses();
@@ -99,10 +112,10 @@ const ManageClasses = () => {
 
   const exportToCSV = () => {
     const csvContent = [
-      ['Class Name', 'Fee (₦)', 'Students', 'Courses'],
+      ['Class Name', 'Class Teacher(s)', 'Students', 'Courses'],
       ...classes.map(c => [
         c.name,
-        c.fee,
+        c.classTeachers.map(t => t.name).join('; '),
         c.studentCount,
         c.courses?.length || 0
       ])
@@ -125,8 +138,12 @@ const ManageClasses = () => {
           <p className="fs-5 mb-0">{cls.name}</p>
         </div>
         <div className="col-12 col-md-6">
-          <strong className="text-primary small">Class Fee:</strong>
-          <p className="fs-5 mb-0">₦{cls.fee?.toLocaleString()}</p>
+          <strong className="text-primary small">Class Teacher(s):</strong>
+          <p className="fs-5 mb-0">
+            {cls.classTeachers && cls.classTeachers.length > 0
+              ? cls.classTeachers.map(t => t.name).join(', ')
+              : 'No class teachers assigned'}
+          </p>
         </div>
       </div>
 
@@ -180,13 +197,23 @@ const ManageClasses = () => {
   const ClassForm = ({ initialData, onSubmit, onCancel, isSaving }) => {
     const [formData, setFormData] = useState({
       name: initialData?.name || '',
-      fee: initialData?.fee || 0,
+      classTeacherFor: initialData?.classTeachers?.map(t => t._id) || []
     });
 
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+    const handleTeacherSelect = (e) => {
+      const options = e.target.options;
+      const selected = [];
+      for (let i = 0; i < options.length; i++) {
+        if (options[i].selected) selected.push(options[i].value);
+      }
+      setFormData({ ...formData, classTeacherFor: selected });
+    };
+
     const handleSubmit = (e) => {
       e.preventDefault();
-      onSubmit({ ...initialData, ...formData, fee: parseFloat(formData.fee) || 0 });
+      onSubmit({ ...initialData, ...formData });
     };
 
     return (
@@ -204,17 +231,25 @@ const ManageClasses = () => {
           />
         </div>
         <div className="mb-4">
-          <label className="form-label fw-semibold small">Class Fee (₦) *</label>
-          <input 
-            type="number" 
-            name="fee" 
-            value={formData.fee} 
-            onChange={handleChange} 
-            className="form-control rounded-3" 
-            min="0"
-            placeholder="0"
-            required 
-          />
+          <label className="form-label fw-semibold small">Class Teacher(s) *</label>
+          <select
+            multiple
+            name="classTeacherFor"
+            value={formData.classTeacherFor}
+            onChange={handleTeacherSelect}
+            className="form-select rounded-3"
+            required
+            size={Math.min(teachers.length, 5)}
+          >
+            {teachers.map(teacher => (
+              <option key={teacher._id} value={teacher._id}>
+                {teacher.name}
+              </option>
+            ))}
+          </select>
+          <small className="form-text text-muted">
+            Hold Ctrl (Cmd on Mac) to select multiple teachers.
+          </small>
         </div>
         <div className="d-flex flex-column flex-md-row justify-content-end gap-2">
           <button type="button" className="btn btn-secondary rounded-3 w-100 w-md-auto order-2 order-md-1" onClick={onCancel} disabled={isSaving}>
@@ -262,7 +297,8 @@ const ManageClasses = () => {
   };
 
   const totalStudents = classes.reduce((sum, cls) => sum + cls.studentCount, 0);
-  const totalRevenue = classes.reduce((sum, cls) => sum + (cls.fee * cls.studentCount), 0);
+  // Total revenue not applicable as fee removed; keep 0
+  const totalRevenue = 0;
   const avgStudentsPerClass = classes.length > 0 ? (totalStudents / classes.length).toFixed(1) : 0;
 
   return (
@@ -337,9 +373,8 @@ const ManageClasses = () => {
               <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
                 <div className="mb-2 mb-md-0">
                   <h6 className="mb-1 small">Total Revenue</h6>
-                  <h3 className="mb-0 fs-4 fs-md-3">₦{(totalRevenue / 1000000).toFixed(1)}M</h3>
+                  <h3 className="mb-0 fs-4 fs-md-3">N/A</h3>
                 </div>
-                <DollarSign size={32} className="d-none d-md-block" />
               </div>
             </div>
           </div>
@@ -359,7 +394,7 @@ const ManageClasses = () => {
                 <tr>
                   <th className="small">#</th>
                   <th className="small">Class Name</th>
-                  <th className="small d-none d-md-table-cell">Fee (₦)</th>
+                  <th className="small">Class Teacher(s)</th>
                   <th className="small">Students</th>
                   <th className="small d-none d-lg-table-cell">Courses</th>
                   <th className="text-center small">Actions</th>
@@ -369,13 +404,12 @@ const ManageClasses = () => {
                 {classes.length > 0 ? classes.map((cls, index) => (
                   <tr key={cls._id}>
                     <td className="small">{index + 1}</td>
-                    <td className="fw-semibold small">
-                      {cls.name}
-                      <div className="d-md-none text-muted" style={{ fontSize: '0.75rem' }}>
-                        ₦{cls.fee?.toLocaleString()}
-                      </div>
+                    <td className="fw-semibold small">{cls.name}</td>
+                    <td className="small" style={{ whiteSpace: 'normal' }}>
+                      {cls.classTeachers && cls.classTeachers.length > 0
+                        ? cls.classTeachers.map(t => t.name).join(', ')
+                        : <span className="text-muted">No class teachers assigned</span>}
                     </td>
-                    <td className="d-none d-md-table-cell small">₦{cls.fee?.toLocaleString()}</td>
                     <td>
                       <span className="badge bg-success">{cls.studentCount}</span>
                     </td>
