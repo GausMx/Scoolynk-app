@@ -621,7 +621,8 @@ export const updateAdminSettings = async (req, res) => {
           return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
         }
 
-        const admin = await User.findById(adminId);
+        // ✅ FIXED: Must explicitly select password field
+        const admin = await User.findById(adminId).select('+password');
         if (!admin) return res.status(404).json({ message: 'Admin user not found.' });
 
         // Verify current password
