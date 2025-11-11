@@ -1,8 +1,8 @@
-// src/components/Admin/Settings.js - COMPLETE FINAL VERSION
+// src/components/Admin/Settings.js - WITH SMS ERROR HANDLING
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Settings as SettingsIcon, User, Lock, CreditCard, Eye, EyeOff, Copy, Check, Send, Users, DollarSign } from 'lucide-react';
+import { Settings as SettingsIcon, User, Lock, CreditCard, Eye, EyeOff, Copy, Check, Send, Users, DollarSign, AlertTriangle, ExternalLink } from 'lucide-react';
 
 // Import the payment link modal
 import SendPaymentLinkModal from './SendPaymentLinkModal';
@@ -53,6 +53,9 @@ const Settings = () => {
 
   // State for payment link modal
   const [selectedStudentForPayment, setSelectedStudentForPayment] = useState(null);
+
+  // SMS error state
+  const [smsError, setSmsError] = useState({ error: '', errorCode: '' });
 
   // School code state
   const [schoolCode, setSchoolCode] = useState('');
@@ -224,15 +227,27 @@ const Settings = () => {
   const sendPaymentReminders = async (category) => {
     try {
       setSendingMessages(true);
+      setSmsError({ error: '', errorCode: '' }); // Clear previous errors
+      
       await axios.post(
-        `${REACT_APP_API_URL}/api/admin/payments/reminders`,
+        `${REACT_APP_API_URL}/api/admin/payments/send-reminders`,
         { category },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       showMessage('success', `Payment reminders sent to ${category} parents!`);
     } catch (err) {
       console.error('Failed to send reminders:', err);
-      showMessage('error', err.response?.data?.message || 'Failed to send reminders');
+      const errorData = err.response?.data;
+      
+      showMessage('error', errorData?.message || 'Failed to send reminders');
+      
+      // Store SMS error details
+      if (errorData?.errorCode) {
+        setSmsError({ 
+          error: errorData.message, 
+          errorCode: errorData.errorCode 
+        });
+      }
     } finally {
       setSendingMessages(false);
     }
@@ -602,6 +617,41 @@ const Settings = () => {
   // Payments Section WITH BULK SEND FEATURE
   const renderPaymentsSection = () => {
     
+    // SMS Balance Warning Component
+    const SMSBalanceWarning = () => {
+      if (!smsError.error || smsError.errorCode !== 'INSUFFICIENT_BALANCE') return null;
+
+      return (
+        <div className="alert alert-warning border-0 shadow-sm rounded-4 mb-4">
+          <div className="d-flex align-items-start">
+            <AlertTriangle size={24} className="text-warning me-3 mt-1 flex-shrink-0" />
+            <div className="flex-grow-1">
+              <h5 className="alert-heading mb-2">SMS Service Needs Attention</h5>
+              <p className="mb-3">{smsError.error}</p>
+              
+              <div className="bg-light rounded-3 p-3 mb-3">
+                <h6 className="mb-2">How to Top Up Your SMS Balance:</h6>
+                <ol className="mb-0 ps-3 small">
+                  <li>Go to <a href="https://termii.com" target="_blank" rel="noopener noreferrer" className="fw-semibold">Termii.com <ExternalLink size={14} className="ms-1" /></a></li>
+                  <li>Log in to your account</li>
+                  <li>Navigate to "Wallet" or "Top Up"</li>
+                  <li>Add credits to your account</li>
+                  <li>Return here and try sending SMS again</li>
+                </ol>
+              </div>
+
+              <div className="alert alert-info mb-0">
+                <small>
+                  <strong>Tip:</strong> Each SMS costs approximately ₦2-4. We recommend maintaining a balance 
+                  of at least ₦10,000 for smooth operations.
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+    
     // NEW: Send bulk payment links to ALL students with balance
     const sendBulkPaymentLinks = async () => {
       if (!window.confirm('Send payment links to ALL students with outstanding balance? This may take a few minutes.')) {
@@ -610,6 +660,8 @@ const Settings = () => {
 
       try {
         setSendingMessages(true);
+        setSmsError({ error: '', errorCode: '' }); // Clear previous errors
+        
         const res = await axios.post(
           `${REACT_APP_API_URL}/api/payments/send-bulk`,
           {},
@@ -619,7 +671,18 @@ const Settings = () => {
         showMessage('success', res.data.message);
         fetchPaymentData();
       } catch (err) {
-        showMessage('error', err.response?.data?.message || 'Failed to send bulk payment links');
+        console.error('Failed to send bulk payment links:', err);
+        const errorData = err.response?.data;
+        
+        showMessage('error', errorData?.message || 'Failed to send bulk payment links');
+        
+        // Store SMS error details
+        if (errorData?.errorCode) {
+          setSmsError({ 
+            error: errorData.message, 
+            errorCode: errorData.errorCode 
+          });
+        }
       } finally {
         setSendingMessages(false);
       }
@@ -705,6 +768,9 @@ const Settings = () => {
 
     return (
       <div>
+        {/* SMS Balance Warning */}
+        <SMSBalanceWarning />
+        
         {/* NEW: Bulk Send Payment Links Banner */}
         <div className="card border-0 shadow-sm rounded-4 mb-4 bg-gradient" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
           <div className="card-body p-4 text-white">
