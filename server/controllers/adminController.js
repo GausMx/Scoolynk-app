@@ -611,6 +611,12 @@ export const updateAdminSettings = async (req, res) => {
 
       case 'security': {
         const { currentPassword, newPassword, confirmPassword } = data;
+        
+        console.log('[UpdateAdminSettings - Security] Request received');
+        console.log('[UpdateAdminSettings - Security] Has currentPassword:', !!currentPassword);
+        console.log('[UpdateAdminSettings - Security] Has newPassword:', !!newPassword);
+        console.log('[UpdateAdminSettings - Security] Has confirmPassword:', !!confirmPassword);
+        
         if (!currentPassword || !newPassword || !confirmPassword) {
           return res.status(400).json({ message: 'All password fields are required.' });
         }
@@ -622,19 +628,38 @@ export const updateAdminSettings = async (req, res) => {
         }
 
         // ✅ FIXED: Must explicitly select password field
+        console.log('[UpdateAdminSettings - Security] Fetching admin with ID:', adminId);
         const admin = await User.findById(adminId).select('+password');
-        if (!admin) return res.status(404).json({ message: 'Admin user not found.' });
+        
+        if (!admin) {
+          console.error('[UpdateAdminSettings - Security] Admin not found');
+          return res.status(404).json({ message: 'Admin user not found.' });
+        }
+        
+        console.log('[UpdateAdminSettings - Security] Admin found:', admin.email);
+        console.log('[UpdateAdminSettings - Security] Has password field:', !!admin.password);
+        console.log('[UpdateAdminSettings - Security] Password field type:', typeof admin.password);
+        
+        if (!admin.password) {
+          console.error('[UpdateAdminSettings - Security] Admin password field is null/undefined');
+          return res.status(500).json({ message: 'Admin password data is missing. Please contact support.' });
+        }
 
         // Verify current password
+        console.log('[UpdateAdminSettings - Security] Comparing passwords...');
         const isMatch = await bcrypt.compare(currentPassword, admin.password);
+        console.log('[UpdateAdminSettings - Security] Password match:', isMatch);
+        
         if (!isMatch) {
           return res.status(401).json({ message: 'Current password is incorrect.' });
         }
         
         // Hash and update new password
+        console.log('[UpdateAdminSettings - Security] Hashing new password...');
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         await User.findByIdAndUpdate(adminId, { password: hashedPassword });
 
+        console.log('[UpdateAdminSettings - Security] Password updated successfully');
         return res.json({ message: 'Password updated successfully.' });
       }
 
@@ -854,6 +879,6 @@ export const updateStudentPayment = async (req, res) => {
 
   } catch (err) {
     console.error('[UpdateStudentPayment]', err);
-      res.status(500).json({ message: 'Failed to update payment information.' });
-    }
-  };
+    res.status(500).json({ message: 'Failed to update payment information.' });
+  }
+};
