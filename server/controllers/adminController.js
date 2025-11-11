@@ -607,8 +607,15 @@ export const updateAdminSettings = async (req, res) => {
           return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
         }
 
-        const admin = await User.findById(adminId);
+        // ✅ FIXED: Explicitly select the password field
+        const admin = await User.findById(adminId).select('+password');
         if (!admin) return res.status(404).json({ message: 'Admin user not found.' });
+
+        // Check if password field exists
+        if (!admin.password) {
+          console.error('[UpdateAdminSettings] Admin password field is missing');
+          return res.status(500).json({ message: 'Password data not found. Please contact support.' });
+        }
 
         // Verify current password
         const isMatch = await bcrypt.compare(currentPassword, admin.password);
