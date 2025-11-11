@@ -6,12 +6,15 @@ import { Settings as SettingsIcon, User, Lock, CreditCard, Eye, EyeOff, Copy, Ch
 
 // Import the payment link modal
 import SendPaymentLinkModal from './SendPaymentLinkModal';
+import Loading from '../common/Loading';
 
 const { REACT_APP_API_URL } = process.env;
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingPercent, setLoadingPercent] = useState(0);
   const [message, setMessage] = useState({ type: '', text: '' });
   
   // Profile state
@@ -69,10 +72,14 @@ const Settings = () => {
 
   const fetchSettings = async () => {
     try {
-      setLoading(true);
+      setInitialLoading(true);
+      setLoadingPercent(10);
+      
       const res = await axios.get(`${REACT_APP_API_URL}/api/admin/settings`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      setLoadingPercent(50);
 
       const { admin, school } = res.data;
       
@@ -87,11 +94,14 @@ const Settings = () => {
       setFees({
         defaultFee: school.defaultFee || 0
       });
+      
+      setLoadingPercent(100);
     } catch (err) {
       console.error('Failed to fetch settings:', err);
       showMessage('error', 'Failed to load settings');
+      setLoadingPercent(100);
     } finally {
-      setLoading(false);
+      setTimeout(() => setInitialLoading(false), 300);
     }
   };
 
@@ -215,7 +225,7 @@ const Settings = () => {
     try {
       setSendingMessages(true);
       await axios.post(
-        `${REACT_APP_API_URL}/api/admin/payments/send-reminders`,
+        `${REACT_APP_API_URL}/api/admin/payments/reminders`,
         { category },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -778,76 +788,82 @@ const Settings = () => {
   };
 
   return (
-<div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
-      <div className="mb-4">
-<h2 className="fw-bold text-primary d-flex align-items-center fs-4 fs-md-3">
-          <SettingsIcon size={32} className="me-2" />
-          Settings
-        </h2>
-        <p className="text-muted small">Manage your school configuration and preferences</p>
-      </div>
+    <>
+      {initialLoading ? (
+        <Loading percentage={loadingPercent} />
+      ) : (
+        <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
+          <div className="mb-4">
+            <h2 className="fw-bold text-primary d-flex align-items-center fs-4 fs-md-3">
+              <SettingsIcon size={32} className="me-2" />
+              Settings
+            </h2>
+            <p className="text-muted small">Manage your school configuration and preferences</p>
+          </div>
 
-      {message.text && (
-        <div className={`alert alert-${message.type === 'success' ? 'success' : 'danger'} rounded-3 alert-dismissible fade show`} role="alert">
-          {message.text}
-          <button type="button" className="btn-close" onClick={() => setMessage({ type: '', text: '' })}></button>
+          {message.text && (
+            <div className={`alert alert-${message.type === 'success' ? 'success' : 'danger'} rounded-3 alert-dismissible fade show`} role="alert">
+              {message.text}
+              <button type="button" className="btn-close" onClick={() => setMessage({ type: '', text: '' })}></button>
+            </div>
+          )}
+
+          <ul className="nav nav-pills mb-4 gap-2 flex-column flex-md-row">
+            <li className="nav-item">
+              <button
+                className={`nav-link rounded-3 w-100 w-md-auto ${activeTab === 'profile' ? 'active' : ''}`}
+                onClick={() => setActiveTab('profile')}
+              >
+                <User size={18} className="me-2" />
+                Profile
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
+                className={`nav-link rounded-3 w-100 w-md-auto ${activeTab === 'security' ? 'active' : ''}`}
+                onClick={() => setActiveTab('security')}
+              >
+                <Lock size={18} className="me-2" />
+                Security
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
+                className={`nav-link rounded-3 w-100 w-md-auto ${activeTab === 'fees' ? 'active' : ''}`}
+                onClick={() => setActiveTab('fees')}
+              >
+                <CreditCard size={18} className="me-2" />
+                Fees
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
+                className={`nav-link rounded-3 w-100 w-md-auto ${activeTab === 'payments' ? 'active' : ''}`}
+                onClick={() => setActiveTab('payments')}
+              >
+                <DollarSign size={18} className="me-2" />
+                Payments
+              </button>
+            </li>
+          </ul>
+
+          <div className="tab-content">
+            {activeTab === 'profile' && renderProfileSection()}
+            {activeTab === 'security' && renderSecuritySection()}
+            {activeTab === 'fees' && renderFeesSection()}
+            {activeTab === 'payments' && renderPaymentsSection()}
+          </div>
+
+          {selectedStudentForPayment && (
+            <SendPaymentLinkModal
+              student={selectedStudentForPayment}
+              onClose={handlePaymentModalClose}
+              onSuccess={handlePaymentLinkSuccess}
+            />
+          )}
         </div>
       )}
-
-<ul className="nav nav-pills mb-4 gap-2 flex-column flex-md-row">
-        <li className="nav-item">
-          <button
-            className={`nav-link rounded-3 w-100 w-md-auto ${activeTab === 'profile' ? 'active' : ''}`}
-            onClick={() => setActiveTab('profile')}
-          >
-            <User size={18} className="me-2" />
-            Profile
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link rounded-3 w-100 w-md-auto ${activeTab === 'security' ? 'active' : ''}`}
-            onClick={() => setActiveTab('security')}
-          >
-            <Lock size={18} className="me-2" />
-            Security
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link rounded-3 w-100 w-md-auto ${activeTab === 'fees' ? 'active' : ''}`}
-            onClick={() => setActiveTab('fees')}
-          >
-            <CreditCard size={18} className="me-2" />
-            Fees
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link rounded-3 w-100 w-md-auto ${activeTab === 'payments' ? 'active' : ''}`}
-            onClick={() => setActiveTab('payments')}
-          >
-            <DollarSign size={18} className="me-2" />
-            Payments
-          </button>
-        </li>
-      </ul>
-
-      <div className="tab-content">
-        {activeTab === 'profile' && renderProfileSection()}
-        {activeTab === 'security' && renderSecuritySection()}
-        {activeTab === 'fees' && renderFeesSection()}
-        {activeTab === 'payments' && renderPaymentsSection()}
-      </div>
-
-      {selectedStudentForPayment && (
-        <SendPaymentLinkModal
-          student={selectedStudentForPayment}
-          onClose={handlePaymentModalClose}
-          onSuccess={handlePaymentLinkSuccess}
-        />
-      )}
-    </div>
+    </>
   );
 };
 
