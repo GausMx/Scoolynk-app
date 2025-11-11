@@ -534,7 +534,8 @@ export const getAdminSettings = async (req, res) => {
       return res.status(400).json({ message: 'Invalid user data' });
     }
     
-    const admin = await User.findById(adminId).select('-password');
+    // ✅ FIXED: User model uses passwordHash, exclude it normally
+    const admin = await User.findById(adminId).select('-passwordHash');
     console.log('[GetAdminSettings] Admin found:', !!admin);
     
     if (!admin) {
@@ -613,9 +614,6 @@ export const updateAdminSettings = async (req, res) => {
         const { currentPassword, newPassword, confirmPassword } = data;
         
         console.log('[UpdateAdminSettings - Security] Request received');
-        console.log('[UpdateAdminSettings - Security] Has currentPassword:', !!currentPassword);
-        console.log('[UpdateAdminSettings - Security] Has newPassword:', !!newPassword);
-        console.log('[UpdateAdminSettings - Security] Has confirmPassword:', !!confirmPassword);
         
         if (!currentPassword || !newPassword || !confirmPassword) {
           return res.status(400).json({ message: 'All password fields are required.' });
@@ -627,9 +625,9 @@ export const updateAdminSettings = async (req, res) => {
           return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
         }
 
-        // ✅ FIXED: Must explicitly select password field
+        // ✅ FIXED: User model uses passwordHash, not password
         console.log('[UpdateAdminSettings - Security] Fetching admin with ID:', adminId);
-        const admin = await User.findById(adminId).select('+password');
+        const admin = await User.findById(adminId);
         
         if (!admin) {
           console.error('[UpdateAdminSettings - Security] Admin not found');
@@ -637,27 +635,20 @@ export const updateAdminSettings = async (req, res) => {
         }
         
         console.log('[UpdateAdminSettings - Security] Admin found:', admin.email);
-        console.log('[UpdateAdminSettings - Security] Has password field:', !!admin.password);
-        console.log('[UpdateAdminSettings - Security] Password field type:', typeof admin.password);
-        
-        if (!admin.password) {
-          console.error('[UpdateAdminSettings - Security] Admin password field is null/undefined');
-          return res.status(500).json({ message: 'Admin password data is missing. Please contact support.' });
-        }
 
-        // Verify current password
-        console.log('[UpdateAdminSettings - Security] Comparing passwords...');
-        const isMatch = await bcrypt.compare(currentPassword, admin.password);
-        console.log('[UpdateAdminSettings - Security] Password match:', isMatch);
+        // ✅ Verify current password using the matchPassword method
+        console.log('[UpdateAdminSettings - Security] Verifying current password...');
+        const isMatch = await admin.matchPassword(currentPassword);
         
         if (!isMatch) {
+          console.log('[UpdateAdminSettings - Security] Password mismatch');
           return res.status(401).json({ message: 'Current password is incorrect.' });
         }
         
-        // Hash and update new password
+        // ✅ Hash and update new password using passwordHash field
         console.log('[UpdateAdminSettings - Security] Hashing new password...');
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await User.findByIdAndUpdate(adminId, { password: hashedPassword });
+        const hashedPassword = await User.hashPassword(newPassword);
+        await User.findByIdAndUpdate(adminId, { passwordHash: hashedPassword });
 
         console.log('[UpdateAdminSettings - Security] Password updated successfully');
         return res.json({ message: 'Password updated successfully.' });
