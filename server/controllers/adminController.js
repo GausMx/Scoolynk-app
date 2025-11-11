@@ -854,6 +854,6 @@ export const updateStudentPayment = async (req, res) => {
 
   } catch (err) {
     console.error('[UpdateStudentPayment]', err);
-    res.status(500).json({ message: 'Failed to update payment information.' });
-  }
-};
+      res.status(500).json({ message: 'Failed to update payment information.' });
+    }
+  };
