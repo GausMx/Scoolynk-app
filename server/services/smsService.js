@@ -1,4 +1,4 @@
-// server/services/smsService.js - FIXED WITH BETTER ERROR HANDLING
+// server/services/smsService.js - WITH USER-FRIENDLY ERROR MESSAGES
 
 import axios from 'axios';
 
@@ -9,15 +9,12 @@ const { TERMII_API_KEY, TERMII_SENDER_ID } = process.env;
  * Format phone number to Nigerian format
  */
 const formatPhoneNumber = (phone) => {
-  // Remove all non-numeric characters
   let cleaned = phone.replace(/\D/g, '');
   
-  // If starts with 0, replace with 234 (Nigeria)
   if (cleaned.startsWith('0')) {
     cleaned = '234' + cleaned.substring(1);
   }
   
-  // If doesn't start with country code, add 234
   if (!cleaned.startsWith('234')) {
     cleaned = '234' + cleaned;
   }
@@ -30,15 +27,23 @@ const formatPhoneNumber = (phone) => {
  */
 const sendSMS = async (to, message) => {
   try {
-    // Validate API key and sender ID
+    // Validate configuration
     if (!TERMII_API_KEY) {
-      console.error('❌ TERMII_API_KEY is not set in environment variables');
-      return { success: false, error: 'SMS service not configured' };
+      console.error('❌ TERMII_API_KEY not configured');
+      return { 
+        success: false, 
+        error: 'SMS service not configured. Please contact administrator.',
+        errorCode: 'NO_API_KEY'
+      };
     }
 
     if (!TERMII_SENDER_ID) {
-      console.error('❌ TERMII_SENDER_ID is not set in environment variables');
-      return { success: false, error: 'SMS sender ID not configured' };
+      console.error('❌ TERMII_SENDER_ID not configured');
+      return { 
+        success: false, 
+        error: 'SMS sender ID not configured. Please contact administrator.',
+        errorCode: 'NO_SENDER_ID'
+      };
     }
 
     const formattedPhone = formatPhoneNumber(to);
@@ -55,51 +60,78 @@ const sendSMS = async (to, message) => {
     console.log('[SMS Service] Sending SMS');
     console.log('[SMS Service] To:', formattedPhone);
     console.log('[SMS Service] From:', TERMII_SENDER_ID);
-    console.log('[SMS Service] Message length:', message.length);
-    console.log('[SMS Service] API Key (first 10 chars):', TERMII_API_KEY?.substring(0, 10) + '...');
 
     const response = await axios.post(TERMII_API_URL, payload, {
       headers: { 'Content-Type': 'application/json' },
     });
 
-    console.log('[SMS Service] Response:', response.data);
+    console.log('[SMS Service] ✅ Response:', response.data);
 
     if (response.data && (response.data.code === 'ok' || response.data.message_id)) {
       console.log(`✅ SMS sent successfully to ${formattedPhone}`);
-      return { success: true, data: response.data };
+      return { 
+        success: true, 
+        data: response.data,
+        messageId: response.data.message_id
+      };
     } else {
-      console.error(`❌ Failed to send SMS:`, response.data);
-      return { success: false, error: response.data };
+      console.error(`❌ Unexpected response:`, response.data);
+      return { 
+        success: false, 
+        error: 'SMS delivery failed',
+        details: response.data 
+      };
     }
   } catch (error) {
     console.error('❌ Termii SMS Error:', error.message);
     
-    // Log detailed error information
     if (error.response) {
+      const errorData = error.response.data;
       console.error('❌ Error Status:', error.response.status);
-      console.error('❌ Error Data:', JSON.stringify(error.response.data, null, 2));
-      console.error('❌ Error Headers:', error.response.headers);
+      console.error('❌ Error Data:', JSON.stringify(errorData, null, 2));
+      
+      // Parse user-friendly error messages
+      let userMessage = 'Failed to send SMS';
+      let errorCode = 'SMS_ERROR';
+      
+      if (errorData.message) {
+        const msg = errorData.message.toLowerCase();
+        
+        if (msg.includes('insufficient balance')) {
+          userMessage = 'SMS service has insufficient balance. Please contact school administrator to top up.';
+          errorCode = 'INSUFFICIENT_BALANCE';
+        } else if (msg.includes('invalid api key')) {
+          userMessage = 'SMS service authentication failed. Please contact administrator.';
+          errorCode = 'INVALID_API_KEY';
+        } else if (msg.includes('invalid sender')) {
+          userMessage = 'SMS sender ID not approved. Please contact administrator.';
+          errorCode = 'INVALID_SENDER';
+        } else if (msg.includes('invalid phone')) {
+          userMessage = 'Invalid phone number format.';
+          errorCode = 'INVALID_PHONE';
+        } else {
+          userMessage = errorData.message;
+        }
+      }
       
       return { 
         success: false, 
-        error: error.response.data?.message || error.response.data || error.message 
+        error: userMessage,
+        errorCode,
+        technicalDetails: errorData
       };
     }
     
-    return { success: false, error: error.message };
+    return { 
+      success: false, 
+      error: 'Network error while sending SMS. Please try again.',
+      errorCode: 'NETWORK_ERROR'
+    };
   }
 };
 
 /**
  * Send payment link SMS
- * @param {Object} options - Payment link options
- * @param {string} options.parentPhone - Parent's phone number
- * @param {string} options.parentName - Parent's name
- * @param {string} options.studentName - Student's name
- * @param {number} options.amount - Payment amount
- * @param {string} options.paymentLink - Payment URL
- * @param {string} options.schoolName - School name
- * @param {Date} options.dueDate - Due date (optional)
  */
 const sendPaymentLink = async (options) => {
   try {
@@ -114,13 +146,7 @@ const sendPaymentLink = async (options) => {
     } = options;
 
     if (!parentPhone || !studentName || !amount || !paymentLink || !schoolName) {
-      console.error('[SMS Service] Missing required parameters:', {
-        hasParentPhone: !!parentPhone,
-        hasStudentName: !!studentName,
-        hasAmount: !!amount,
-        hasPaymentLink: !!paymentLink,
-        hasSchoolName: !!schoolName
-      });
+      console.error('[SMS Service] Missing required parameters');
       throw new Error('Missing required parameters for payment link SMS');
     }
 
@@ -141,12 +167,15 @@ const sendPaymentLink = async (options) => {
     console.log('[SMS Service] Sending payment link');
     console.log('[SMS Service] Student:', studentName);
     console.log('[SMS Service] Amount:', formattedAmount);
-    console.log('[SMS Service] Phone:', parentPhone);
 
     return await sendSMS(parentPhone, message);
   } catch (error) {
     console.error('[SMS Service] Error sending payment link:', error);
-    return { success: false, error: error.message };
+    return { 
+      success: false, 
+      error: error.message,
+      errorCode: 'PAYMENT_LINK_ERROR'
+    };
   }
 };
 
@@ -159,7 +188,6 @@ const sendBulkMessages = async (messages) => {
     
     const results = [];
     
-    // Send messages sequentially to avoid rate limits
     for (const msg of messages) {
       const result = await sendSMS(msg.to, msg.message);
       results.push({
@@ -167,11 +195,13 @@ const sendBulkMessages = async (messages) => {
         ...result
       });
       
-      // Small delay between messages to avoid rate limiting
+      // Delay between messages
       await new Promise(resolve => setTimeout(resolve, 500));
     }
     
-    console.log('[SMS Service] Bulk send complete');
+    const successCount = results.filter(r => r.success).length;
+    console.log(`[SMS Service] Bulk send complete: ${successCount}/${messages.length} successful`);
+    
     return results;
   } catch (error) {
     console.error('[SMS Service] Bulk send error:', error);
@@ -194,7 +224,11 @@ const sendResultNotification = async (phoneNumber, studentName, className, term,
     return await sendSMS(phoneNumber, message);
   } catch (error) {
     console.error('[SMS Service] Error sending result notification:', error);
-    return { success: false, error: error.message };
+    return { 
+      success: false, 
+      error: error.message,
+      errorCode: 'RESULT_NOTIFICATION_ERROR'
+    };
   }
 };
 
