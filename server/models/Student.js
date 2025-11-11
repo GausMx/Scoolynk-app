@@ -1,4 +1,4 @@
-// server/models/Student.js - COMPLETE FILE
+// server/models/Student.js - COMPLETE WITH PAYMENT FIELDS
 
 import mongoose from 'mongoose';
 
@@ -11,7 +11,6 @@ const studentSchema = new mongoose.Schema({
   regNo: {
     type: String,
     required: true,
-    unique: true,
     trim: true
   },
   classId: {
@@ -46,6 +45,23 @@ const studentSchema = new mongoose.Schema({
     lowercase: true,
     default: ''
   },
+  // Payment link fields (for Paystack integration)
+  paymentToken: {
+    type: String,
+    unique: true,
+    sparse: true, // Allows multiple null values
+  },
+  paystackReference: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
+  paymentLinkSentAt: {
+    type: Date,
+  },
+  lastPaymentAt: {
+    type: Date,
+  },
   // Additional fields
   dateOfBirth: {
     type: Date
@@ -68,10 +84,14 @@ const studentSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes for faster queries
+// ✅ Compound index for regNo + schoolId (unique per school)
+studentSchema.index({ regNo: 1, schoolId: 1 }, { unique: true });
+
+// ✅ Other indexes for faster queries
 studentSchema.index({ schoolId: 1, classId: 1 });
-studentSchema.index({ schoolId: 1, regNo: 1 });
 studentSchema.index({ schoolId: 1, name: 1 });
+studentSchema.index({ paymentToken: 1 });
+studentSchema.index({ paystackReference: 1 });
 
 // Virtual for payment status
 studentSchema.virtual('paymentStatus').get(function() {

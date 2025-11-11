@@ -529,17 +529,27 @@ export const getAdminSettings = async (req, res) => {
     console.log('[GetAdminSettings] Admin ID:', adminId);
     console.log('[GetAdminSettings] School ID:', req.user.schoolId);
     
+    if (!adminId || !req.user.schoolId) {
+      console.error('[GetAdminSettings] Missing user data in request');
+      return res.status(400).json({ message: 'Invalid user data' });
+    }
+    
     const admin = await User.findById(adminId).select('-password');
     console.log('[GetAdminSettings] Admin found:', !!admin);
+    
+    if (!admin) {
+      console.error('[GetAdminSettings] Admin not found for ID:', adminId);
+      return res.status(404).json({ message: 'Admin user not found.' });
+    }
     
     const school = await School.findById(req.user.schoolId).select(
       'name address phone motto classes subjects gradingSystem termStart termEnd defaultFee lateFee schoolCode'
     );
     console.log('[GetAdminSettings] School found:', !!school);
 
-    if (!admin || !school) {
-      console.error('[GetAdminSettings] Missing data - admin:', !!admin, 'school:', !!school);
-      return res.status(404).json({ message: 'Settings not found.' });
+    if (!school) {
+      console.error('[GetAdminSettings] School not found for ID:', req.user.schoolId);
+      return res.status(404).json({ message: 'School not found.' });
     }
 
     const responseData = {
@@ -553,7 +563,7 @@ export const getAdminSettings = async (req, res) => {
         phone: school.phone,
         motto: school.motto,
         schoolCode: school.schoolCode,
-        defaultFee: school.defaultFee,
+        defaultFee: school.defaultFee || 0,
         classes: school.classes,
         subjects: school.subjects,
         gradingSystem: school.gradingSystem,
@@ -565,8 +575,12 @@ export const getAdminSettings = async (req, res) => {
     console.log('[GetAdminSettings] Sending response');
     res.json(responseData);
   } catch (err) {
-    console.error('[GetAdminSettings] Error:', err);
-    res.status(500).json({ message: 'Failed to load settings.' });
+    console.error('[GetAdminSettings] Error:', err.message);
+    console.error('[GetAdminSettings] Stack:', err.stack);
+    res.status(500).json({ 
+      message: 'Failed to load settings.',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
@@ -607,15 +621,8 @@ export const updateAdminSettings = async (req, res) => {
           return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
         }
 
-        // ✅ FIXED: Explicitly select the password field
-        const admin = await User.findById(adminId).select('+password');
+        const admin = await User.findById(adminId);
         if (!admin) return res.status(404).json({ message: 'Admin user not found.' });
-
-        // Check if password field exists
-        if (!admin.password) {
-          console.error('[UpdateAdminSettings] Admin password field is missing');
-          return res.status(500).json({ message: 'Password data not found. Please contact support.' });
-        }
 
         // Verify current password
         const isMatch = await bcrypt.compare(currentPassword, admin.password);
