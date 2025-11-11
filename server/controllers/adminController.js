@@ -7,7 +7,7 @@ import Result from '../models/Result.js';
 import Class from '../models/Class.js';
 import Course from '../models/Course.js';
 import Student from '../models/Student.js';
-import SMSService from '../services/smsService.js'; // ✅ FIXED
+import SMSService from '../services/smsService.js';
 
 // -------------------------
 // Get all students in admin's school
@@ -30,7 +30,7 @@ export const getStudents = async (req, res) => {
 // -------------------------
 export const createStudent = async (req, res) => {
   try {
-    const { name, regNo, classId, parentPhone, parentName, parentEmail, amountPaid } = req.body; // ✅ FIXED
+    const { name, regNo, classId, parentPhone, parentName, parentEmail, amountPaid } = req.body;
 
     if (!name || !regNo || !classId) {
       return res.status(400).json({ message: 'Name, registration number, and class are required.' });
@@ -53,7 +53,7 @@ export const createStudent = async (req, res) => {
       regNo,
       classId,
       schoolId: req.user.schoolId,
-      parentPhone: parentPhone || '', // ✅ FIXED
+      parentPhone: parentPhone || '',
       parentName: parentName || '',
       parentEmail: parentEmail || '',
       amountPaid: amountPaid || 0
@@ -84,7 +84,7 @@ export const createStudent = async (req, res) => {
 export const updateStudent = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, regNo, classId, parentPhone, parentName, parentEmail, amountPaid } = req.body; // ✅ FIXED
+    const { name, regNo, classId, parentPhone, parentName, parentEmail, amountPaid } = req.body;
 
     // Find student
     const student = await Student.findOne({ _id: id, schoolId: req.user.schoolId });
@@ -126,7 +126,7 @@ export const updateStudent = async (req, res) => {
     student.name = name || student.name;
     student.regNo = regNo || student.regNo;
     student.classId = classId || student.classId;
-    student.parentPhone = parentPhone !== undefined ? parentPhone : student.parentPhone; // ✅ FIXED
+    student.parentPhone = parentPhone !== undefined ? parentPhone : student.parentPhone;
     student.parentName = parentName !== undefined ? parentName : student.parentName;
     student.parentEmail = parentEmail !== undefined ? parentEmail : student.parentEmail;
     student.amountPaid = amountPaid !== undefined ? amountPaid : student.amountPaid;
@@ -441,9 +441,6 @@ export const reviewResult = async (req, res) => {
 };
 
 // -------------------------
-// Admin dashboard
-// -------------------------
-// -------------------------
 // Admin dashboard (Real Data)
 // -------------------------
 export const getAdminDashboard = async (req, res) => {
@@ -508,7 +505,6 @@ export const getAdminDashboard = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch dashboard data.' });
   }
 };
-
 
 // -------------------------
 // Get school code
@@ -607,15 +603,20 @@ export const updateAdminSettings = async (req, res) => {
         if (newPassword !== confirmPassword) {
           return res.status(400).json({ message: 'New passwords do not match.' });
         }
+        if (newPassword.length < 6) {
+          return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
+        }
 
-        const admin = await User.findById(adminId).select('+password');
+        const admin = await User.findById(adminId);
         if (!admin) return res.status(404).json({ message: 'Admin user not found.' });
 
+        // Verify current password
         const isMatch = await bcrypt.compare(currentPassword, admin.password);
         if (!isMatch) {
           return res.status(401).json({ message: 'Current password is incorrect.' });
         }
         
+        // Hash and update new password
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         await User.findByIdAndUpdate(adminId, { password: hashedPassword });
 
@@ -690,7 +691,7 @@ export const getPaymentStatus = async (req, res) => {
 };
 
 // -------------------------
-// Send Payment Reminders - ✅ CORRECTED
+// Send Payment Reminders
 // -------------------------
 export const sendPaymentReminders = async (req, res) => {
   try {
@@ -725,12 +726,11 @@ export const sendPaymentReminders = async (req, res) => {
         shouldInclude = true;
       }
 
-      // ✅ FIXED: Use parentPhone consistently
       if (shouldInclude && student.parentPhone) {
         targetStudents.push({
           name: student.name,
-          parentName: student.parentName, // ✅ ADDED
-          parentPhone: student.parentPhone, // ✅ FIXED
+          parentName: student.parentName,
+          parentPhone: student.parentPhone,
           classFee,
           amountPaid,
           balance: classFee - amountPaid,
@@ -779,7 +779,6 @@ export const sendPaymentReminders = async (req, res) => {
       };
     });
 
-    // ✅ FIXED: Use SMS service
     try {
       const results = await SMSService.sendBulkMessages(messages);
       
@@ -804,11 +803,11 @@ export const sendPaymentReminders = async (req, res) => {
 };
 
 // -------------------------
-// Update Student Payment - ✅ CORRECTED
+// Update Student Payment
 // -------------------------
 export const updateStudentPayment = async (req, res) => {
   try {
-    const { studentId, amountPaid, parentPhone } = req.body; // ✅ FIXED
+    const { studentId, amountPaid, parentPhone } = req.body;
 
     if (!studentId || amountPaid == null) {
       return res.status(400).json({ message: 'Student ID and amount paid are required.' });
@@ -825,7 +824,7 @@ export const updateStudentPayment = async (req, res) => {
 
     student.amountPaid = amountPaid;
     if (parentPhone) {
-      student.parentPhone = parentPhone; // ✅ FIXED
+      student.parentPhone = parentPhone;
     }
 
     await student.save();

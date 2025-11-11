@@ -117,7 +117,8 @@ router.delete('/students/:id', protect, requireRole('admin'), deleteStudent);
 
 // ========== PAYMENT MANAGEMENT ==========
 router.get('/payments/status', protect, requireRole('admin'), getPaymentStatus);
-router.post('/payments/reminders', protect, requireRole('admin'), sendPaymentReminders);
+// ✅ FIXED: Changed from /payments/reminders to /payments/send-reminders
+router.post('/payments/send-reminders', protect, requireRole('admin'), sendPaymentReminders);
 router.put('/students/:id/payment', protect, requireRole('admin'), updateStudentPayment);
 
 export default router;
