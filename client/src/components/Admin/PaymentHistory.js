@@ -1,4 +1,4 @@
-// src/components/Admin/PaymentHistory.js - ONLY INITIATED PAYMENTS
+// src/components/Admin/PaymentHistory.js - WITH LOADING ANIMATION
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -16,11 +16,13 @@ import {
   CreditCard,
   Info
 } from 'lucide-react';
+import Loading from '../common/Loading';
 
 const { REACT_APP_API_URL } = process.env;
 
 const PaymentHistory = () => {
   const [loading, setLoading] = useState(true);
+  const [loadingPercent, setLoadingPercent] = useState(0);
   const [payments, setPayments] = useState([]);
   const [stats, setStats] = useState({ total: 0, completed: 0, pending: 0, totalAmount: 0 });
   const [filteredPayments, setFilteredPayments] = useState([]);

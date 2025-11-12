@@ -1,13 +1,16 @@
-// src/components/Admin/PaymentSetup.js - MOBILE RESPONSIVE VERSION
+// src/components/Admin/PaymentSetup.js - WITH LOADING ANIMATION
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Building, Check, AlertCircle } from 'lucide-react';
+import Loading from '../common/Loading';
 
 const { REACT_APP_API_URL } = process.env;
 
 const PaymentSetup = () => {
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingPercent, setLoadingPercent] = useState(0);
   const [banks, setBanks] = useState([]);
   const [isConfigured, setIsConfigured] = useState(false);
   const [config, setConfig] = useState(null);
@@ -23,18 +26,44 @@ const PaymentSetup = () => {
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    fetchBanks();
-    checkConfiguration();
+    fetchInitialData();
   }, []);
 
-  const fetchBanks = async () => {
+  const fetchInitialData = async () => {
     try {
-      const res = await axios.get(`${REACT_APP_API_URL}/api/subaccount/banks`, {
+      setInitialLoading(true);
+      setLoadingPercent(10);
+
+      // Fetch banks
+      const banksRes = await axios.get(`${REACT_APP_API_URL}/api/subaccount/banks`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setBanks(res.data.banks);
+      setBanks(banksRes.data.banks);
+      
+      setLoadingPercent(50);
+
+      // Check configuration
+      const configRes = await axios.get(`${REACT_APP_API_URL}/api/subaccount/config`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIsConfigured(configRes.data.isConfigured);
+      setConfig(configRes.data);
+      
+      if (configRes.data.isConfigured && configRes.data.bankDetails) {
+        setFormData({
+          accountNumber: configRes.data.bankDetails.accountNumber || '',
+          accountName: configRes.data.bankDetails.accountName || '',
+          bankCode: configRes.data.bankDetails.bankCode || '',
+          bankName: configRes.data.bankDetails.bankName || ''
+        });
+      }
+
+      setLoadingPercent(100);
     } catch (err) {
-      console.error('Failed to fetch banks:', err);
+      console.error('Failed to fetch initial data:', err);
+      setLoadingPercent(100);
+    } finally {
+      setTimeout(() => setInitialLoading(false), 300);
     }
   };
 
@@ -114,6 +143,10 @@ const PaymentSetup = () => {
     setTimeout(() => setMessage({ type: '', text: '' }), 5000);
   };
 
+  if (initialLoading) {
+    return <Loading percentage={loadingPercent} />;
+  }
+
   return (
     <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
       <div className="mb-4">
@@ -125,8 +158,9 @@ const PaymentSetup = () => {
       </div>
 
       {message.text && (
-        <div className={`alert alert-${message.type === 'success' ? 'success' : 'danger'} rounded-3`}>
+        <div className={`alert alert-${message.type === 'success' ? 'success' : 'danger'} rounded-3 alert-dismissible fade show`}>
           <small>{message.text}</small>
+          <button type="button" className="btn-close" onClick={() => setMessage({ type: '', text: '' })}></button>
         </div>
       )}
 
@@ -246,7 +280,14 @@ const PaymentSetup = () => {
                         onClick={verifyAccount}
                         disabled={loading || !formData.bankCode || formData.accountNumber.length !== 10}
                       >
-                        {loading ? 'Verifying...' : 'Verify'}
+                        {loading ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2"></span>
+                            Verifying...
+                          </>
+                        ) : (
+                          'Verify'
+                        )}
                       </button>
                     </div>
                   )}
@@ -283,7 +324,14 @@ const PaymentSetup = () => {
                     className="btn btn-success w-100 rounded-3"
                     disabled={loading || !formData.accountName}
                   >
-                    {loading ? 'Processing...' : 'Configure Account'}
+                    {loading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2"></span>
+                        Processing...
+                      </>
+                    ) : (
+                      'Configure Account'
+                    )}
                   </button>
                 )}
 
