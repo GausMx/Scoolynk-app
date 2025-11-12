@@ -1,4 +1,4 @@
-// src/components/Admin/PaymentHistory.js - MOBILE RESPONSIVE VERSION
+// src/components/Admin/PaymentHistory.js - ONLY INITIATED PAYMENTS
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -13,9 +13,9 @@ import {
   Download,
   Calendar,
   User,
-  CreditCard
+  CreditCard,
+  Info
 } from 'lucide-react';
-import Loading from '../common/Loading';
 
 const { REACT_APP_API_URL } = process.env;
 
@@ -156,7 +156,21 @@ const PaymentHistory = () => {
           <DollarSign size={28} className="me-2" />
           Payment History
         </h2>
-        <p className="text-muted small">Track and manage all school fee payments</p>
+        <p className="text-muted small">Track all initiated payment transactions</p>
+      </div>
+
+      {/* Info Alert */}
+      <div className="alert alert-info border-0 rounded-4 mb-4">
+        <div className="d-flex align-items-start">
+          <Info size={20} className="me-2 mt-1 flex-shrink-0" />
+          <div>
+            <small>
+              <strong>Note:</strong> This page shows only payments that have been initiated through Paystack 
+              (when parents click the payment link and start the checkout process). Payment links that have 
+              been sent but not yet clicked will not appear here.
+            </small>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -166,7 +180,7 @@ const PaymentHistory = () => {
             <div className="card-body p-3">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <small className="opacity-75">Total Payments</small>
+                  <small className="opacity-75">Total Transactions</small>
                   <h3 className="mb-0 mt-1 fs-4 fs-md-3">{stats.total}</h3>
                 </div>
                 <DollarSign size={32} className="opacity-50 d-none d-md-block" />
@@ -209,7 +223,7 @@ const PaymentHistory = () => {
               <div className="d-flex justify-content-between align-items-center">
                 <div>
                   <small className="opacity-75">Total Revenue</small>
-                  <h3 className="mb-0 mt-1 fs-5 fs-md-3">₦{(stats.totalAmount / 1000000).toFixed(1)}M</h3>
+                  <h3 className="mb-0 mt-1 fs-5 fs-md-4">₦{(stats.totalAmount / 1000).toFixed(1)}K</h3>
                 </div>
                 <TrendingUp size={32} className="opacity-50 d-none d-md-block" />
               </div>
@@ -231,7 +245,7 @@ const PaymentHistory = () => {
               <input
                 type="text"
                 className="form-control rounded-3"
-                placeholder="Student name, reg no..."
+                placeholder="Student name, reg no, reference..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -296,14 +310,17 @@ const PaymentHistory = () => {
           {filteredPayments.length === 0 ? (
             <div className="text-center py-5">
               <DollarSign size={48} className="text-muted mb-3" />
-              <p className="text-muted small">No payments found matching your filters</p>
+              <h5 className="text-muted">No Payment Transactions Yet</h5>
+              <p className="text-muted small">
+                Payment transactions will appear here once parents click payment links and initiate checkout.
+              </p>
             </div>
           ) : (
             <div className="table-responsive">
               <table className="table table-hover align-middle mb-0">
                 <thead className="table-light">
                   <tr>
-                    <th className="px-3 px-md-4 small">Date</th>
+                    <th className="px-3 px-md-4 small">Date & Time</th>
                     <th className="small">Student</th>
                     <th className="d-none d-md-table-cell small">Reg No</th>
                     <th className="small">Amount</th>
@@ -316,9 +333,9 @@ const PaymentHistory = () => {
                   {filteredPayments.map((payment) => (
                     <tr key={payment._id}>
                       <td className="px-3 px-md-4">
-                        <small>{new Date(payment.createdAt).toLocaleDateString()}</small>
-                        <br className="d-none d-md-block" />
-                        <small className="text-muted d-none d-md-block">
+                        <small className="fw-semibold">{new Date(payment.createdAt).toLocaleDateString()}</small>
+                        <br />
+                        <small className="text-muted">
                           {new Date(payment.createdAt).toLocaleTimeString([], { 
                             hour: '2-digit', 
                             minute: '2-digit' 
@@ -327,7 +344,6 @@ const PaymentHistory = () => {
                       </td>
                       <td>
                         <div className="d-flex align-items-start flex-column">
-                          <User size={14} className="text-muted d-none d-md-inline me-1" />
                           <strong className="small">{payment.studentId?.name || 'Unknown'}</strong>
                           <span className="badge bg-light text-dark d-md-none mt-1" style={{ fontSize: '0.7rem' }}>
                             {payment.studentId?.regNo || 'N/A'}
@@ -349,9 +365,11 @@ const PaymentHistory = () => {
                       <td className="d-none d-lg-table-cell">
                         <small className="font-monospace text-muted">
                           {payment.paystackReference ? (
-                            payment.paystackReference.substring(0, 15) + '...'
+                            <span title={payment.paystackReference}>
+                              {payment.paystackReference.substring(0, 12)}...
+                            </span>
                           ) : (
-                            'Pending'
+                            'N/A'
                           )}
                         </small>
                       </td>
@@ -370,7 +388,7 @@ const PaymentHistory = () => {
         {filteredPayments.length > 0 && (
           <div className="card-footer bg-light border-0 p-3">
             <small className="text-muted">
-              Showing {filteredPayments.length} of {payments.length} total payments
+              Showing {filteredPayments.length} of {payments.length} total transactions
             </small>
           </div>
         )}
