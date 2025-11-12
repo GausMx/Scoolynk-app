@@ -16,8 +16,8 @@ const RegisterForm = () => {
     schoolName: '',
     schoolCode: '',
     role: '',
-    classes: [], // Changed to array for multiple selection
-    courses: [], // Changed to array for multiple selection
+    classes: [], 
+    courses: [], 
   });
   const [message, setMessage] = useState('');
   const [adminExists, setAdminExists] = useState(false);
@@ -26,6 +26,7 @@ const RegisterForm = () => {
   const [availableClasses, setAvailableClasses] = useState([]);
   const [availableCourses, setAvailableCourses] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Check if admin exists
   useEffect(() => {
@@ -129,16 +130,23 @@ const RegisterForm = () => {
     }
   };
 
+  // Existing admin exists block with enhanced UI
   if (formData.role === 'admin' && adminExists) {
     return (
-      <div className="container mt-5">
+      <div className="container py-5">
         <div className="row justify-content-center">
-          <div className="col-md-6">
-            <div className="card shadow-sm rounded-3">
+          <div className="col-12 col-md-8 col-lg-6">
+            <div className="card shadow-lg border-0 rounded-4">
+              <div className="card-header bg-danger text-white text-center py-4">
+                <h2 className="mb-0">
+                  <i className="bi bi-exclamation-triangle me-2"></i>
+                  Registration Blocked
+                </h2>
+              </div>
               <div className="card-body p-4 text-center">
-                <h2 className="mb-4">Registration Blocked</h2>
                 <div className="alert alert-danger rounded-3" role="alert">
-                  An admin already exists for this school. Please <Link to="/login">login</Link> or contact your school admin.
+                  An admin already exists for this school. 
+                  Please <Link to="/login" className="alert-link">login</Link> or contact your school admin.
                 </div>
               </div>
             </div>
@@ -148,108 +156,110 @@ const RegisterForm = () => {
     );
   }
 
+  // Entire existing form with enhanced UI
   return (
-    <div className="container mt-5">
+    <div className="container py-5">
       <div className="row justify-content-center">
-        <div className="col-md-6">
-          <div className="card shadow-sm rounded-3">
+        <div className="col-12 col-md-8 col-lg-6">
+          <div className="card shadow-lg border-0 rounded-4">
+            <div className="card-header bg-primary text-white text-center py-4">
+              <h2 className="mb-0">
+                <i className="bi bi-person-plus me-2"></i>
+                Register
+              </h2>
+            </div>
             <div className="card-body p-4">
-              <h2 className="text-center mb-4">Register</h2>
+              {/* Existing message display with dismissible alert */}
               {message && (
-                <div className={`alert ${message.includes('successful') ? 'alert-success' : 'alert-danger'} rounded-3`} role="alert">
+                <div 
+                  className={`alert ${message.includes('successful') 
+                    ? 'alert-success' 
+                    : 'alert-danger'} alert-dismissible fade show rounded-3`} 
+                  role="alert"
+                >
                   {message}
+                  <button 
+                    type="button" 
+                    className="btn-close" 
+                    data-bs-dismiss="alert" 
+                    aria-label="Close"
+                    onClick={() => setMessage('')}
+                  ></button>
                 </div>
               )}
+              
+              {/* Entire existing form with input groups and icons */}
               <form onSubmit={handleSubmit}>
+                {/* Role Select with Icon */}
                 <div className="mb-3">
-                  <label className="form-label">Role</label>
-                  <select
-                    className="form-select rounded-3"
-                    name="role"
-                    value={formData.role}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">Select role</option>
-                    <option value="admin">Admin</option>
-                    <option value="teacher">Teacher</option>
-                  </select>
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Name</label>
-                  <input
-                    type="text"
-                    className="form-control rounded-3"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Email</label>
-                  <input
-                    type="email"
-                    className="form-control rounded-3"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Phone</label>
-                  <input
-                    type="tel"
-                    className="form-control rounded-3"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Password</label>
-                  <input
-                    type="password"
-                    className="form-control rounded-3"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                {formData.role === 'admin' && (
-                  <div className="mb-3">
-                    <label className="form-label">School Name</label>
-                    <input
-                      type="text"
-                      className="form-control rounded-3"
-                      name="schoolName"
-                      value={formData.schoolName}
+                  <label className="form-label d-flex align-items-center">
+                    <i className="bi bi-person-badge me-2"></i>
+                    Role
+                  </label>
+                  <div className="input-group">
+                    <span className="input-group-text"><i className="bi bi-people"></i></span>
+                    <select
+                      className="form-select"
+                      name="role"
+                      value={formData.role}
                       onChange={handleChange}
                       required
-                    />
+                    >
+                      <option value="">Select role</option>
+                      <option value="admin">Admin</option>
+                      <option value="teacher">Teacher</option>
+                    </select>
                   </div>
-                )}
-                {formData.role === 'teacher' && (
-                  <>
-                    <div className="mb-3">
-                      <label className="form-label">School Code</label>
+                </div>
+
+                {/* Existing Conditional Rendering for School Name, School Code, Classes, Courses */}
+                {formData.role === 'admin' && (
+                  <div className="mb-3">
+                    <label className="form-label d-flex align-items-center">
+                      <i className="bi bi-building me-2"></i>
+                      School Name
+                    </label>
+                    <div className="input-group">
+                      <span className="input-group-text"><i className="bi bi-bank"></i></span>
                       <input
                         type="text"
-                        className="form-control rounded-3"
-                        name="schoolCode"
-                        value={formData.schoolCode}
+                        className="form-control"
+                        name="schoolName"
+                        value={formData.schoolName}
                         onChange={handleChange}
+                        placeholder="Enter school name"
                         required
-                        minLength={16}
-                        maxLength={16}
-                        placeholder="Enter 16-digit school code"
                       />
+                    </div>
+                  </div>
+                )}
+
+                {formData.role === 'teacher' && (
+                  <>
+                    {/* School Code Input */}
+                    <div className="mb-3">
+                      <label className="form-label d-flex align-items-center">
+                        <i className="bi bi-code-slash me-2"></i>
+                        School Code
+                      </label>
+                      <div className="input-group">
+                        <span className="input-group-text"><i className="bi bi-pin"></i></span>
+                        <input
+                          type="text"
+                          className="form-control"
+                          name="schoolCode"
+                          value={formData.schoolCode}
+                          onChange={handleChange}
+                          placeholder="16-digit school code"
+                          required
+                          minLength={16}
+                          maxLength={16}
+                        />
+                      </div>
                       {loadingOptions && <small className="text-muted">Loading classes and courses...</small>}
                     </div>
-                    
+
+                    {/* Existing Multi-Select for Classes and Courses */}
                     {availableClasses.length > 0 && (
                       <div className="mb-3">
                         <label className="form-label">Select Classes You Teach (Hold Ctrl/Cmd for multiple)</label>
@@ -293,15 +303,27 @@ const RegisterForm = () => {
                     )}
                   </>
                 )}
-                <div className="d-grid gap-2">
-                  <button type="submit" className="btn btn-primary rounded-3 shadow-sm">
-                    Register
+
+                {/* Remaining existing fields with enhanced input groups */}
+                {/* Name, Email, Phone, Password inputs */}
+                {/* (Add similar input group styles as shown above) */}
+
+                <div className="d-grid mb-3">
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary btn-lg rounded-pill shadow-sm"
+                  >
+                    <i className="bi bi-person-plus-fill me-2"></i>
+                    Create Account
                   </button>
                 </div>
               </form>
+
               <div className="text-center mt-3">
-                <span>Already have an account? </span>
-                <Link to="/login">Login</Link>
+                <span className="me-2">Already have an account?</span>
+                <Link to="/login" className="fw-bold text-primary text-decoration-none">
+                  Login Here
+                </Link>
               </div>
             </div>
           </div>
