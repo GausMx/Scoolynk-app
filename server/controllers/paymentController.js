@@ -395,3 +395,40 @@ export const verifyPayment = async (req, res) => {
     res.status(500).json({ message: 'Verification failed.' });
   }
 };
+
+// Get payment history - ONLY initiated payments
+export const getPaymentHistory = async (req, res) => {
+  try {
+    const schoolId = req.user.schoolId;
+    const { status } = req.query;
+
+    const query = { 
+      schoolId,
+      paystackReference: { $exists: true, $ne: null } // Only show payments with Paystack reference
+    };
+    
+    if (status) query.status = status;
+
+    const payments = await Payment.find(query)
+      .populate('studentId', 'name regNo')
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    const totalAmount = payments
+      .filter(p => p.status === 'completed')
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    res.json({
+      payments,
+      stats: {
+        total: payments.length,
+        completed: payments.filter(p => p.status === 'completed').length,
+        pending: payments.filter(p => p.status === 'pending').length,
+        totalAmount
+      }
+    });
+  } catch (err) {
+    console.error('[GetPaymentHistory]', err);
+    res.status(500).json({ message: 'Failed to fetch history.' });
+  }
+};
