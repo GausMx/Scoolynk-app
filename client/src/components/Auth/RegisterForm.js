@@ -16,8 +16,8 @@ const RegisterForm = () => {
     schoolName: '',
     schoolCode: '',
     role: '',
-    classes: [], 
-    courses: [], 
+    classes: [], // Changed to array for multiple selection
+    courses: [], // Changed to array for multiple selection
   });
   const [message, setMessage] = useState('');
   const [adminExists, setAdminExists] = useState(false);
@@ -26,39 +26,82 @@ const RegisterForm = () => {
   const [availableClasses, setAvailableClasses] = useState([]);
   const [availableCourses, setAvailableCourses] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
-  // Existing useEffect hooks (admin exists check and classes/courses fetch)
-  // ... [Keep all existing useEffect hooks from the previous implementation]
+  // Check if admin exists
+  useEffect(() => {
+    if (formData.role !== 'admin' || !formData.schoolName) {
+      setAdminExists(false);
+      return;
+    }
+    const checkAdmin = setTimeout(() => {
+      fetch(
+        process.env.REACT_APP_API_URL + '/api/auth/admin-exists?schoolName=' + encodeURIComponent(formData.schoolName)
+      )
+        .then(res => res.json())
+        .then(data => setAdminExists(!!data.exists))
+        .catch(() => setAdminExists(false));
+    }, 500);
+    return () => clearTimeout(checkAdmin);
+  }, [formData.schoolName, formData.role]);
+
+  // NEW: Fetch classes and courses when teacher enters school code
+  useEffect(() => {
+    if (formData.role === 'teacher' && formData.schoolCode.length === 16) {
+      fetchClassesAndCourses();
+    } else {
+      setAvailableClasses([]);
+      setAvailableCourses([]);
+    }
+  }, [formData.schoolCode, formData.role]);
+
+  const fetchClassesAndCourses = async () => {
+    try {
+      setLoadingOptions(true);
+      const res = await axios.get(
+        `${process.env.REACT_APP_API_URL}/api/teacher/classes-courses?schoolCode=${formData.schoolCode}`
+      );
+      setAvailableClasses(res.data.classes || []);
+      setAvailableCourses(res.data.courses || []);
+    } catch (err) {
+      console.error('Failed to fetch classes/courses:', err);
+      setMessage('Invalid school code or failed to load classes/courses.');
+      setAvailableClasses([]);
+      setAvailableCourses([]);
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Existing handleMultiSelect method
+  // NEW: Handle multi-select for classes and courses
   const handleMultiSelect = (e, fieldName) => {
     const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
     setFormData({ ...formData, [fieldName]: selectedOptions });
   };
 
-  // Existing handleSubmit method
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
     try {
       const payload = { ...formData };
       
+      // Send classes and courses as arrays of IDs
       if (formData.role === 'teacher') {
-        payload.classes = formData.classes;
-        payload.courses = formData.courses;
+        payload.classes = formData.classes; // Array of Class IDs
+        payload.courses = formData.courses; // Array of Course names
       }
 
       const response = await API.post('/api/auth/register', payload);
       
+      // Check if teacher needs onboarding
       if (response.data.needsOnboarding) {
+        // Store teacher ID and token for onboarding
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('teacherId', response.data._id);
-        localStorage.setItem('user', JSON.stringify(response.data));
+        localStorage.setItem('user', JSON.stringify(response.data)); // Store full user data
         setMessage('Registration successful! Redirecting to onboarding...');
         setTimeout(() => {
           navigate('/teacher/onboarding');
@@ -86,23 +129,16 @@ const RegisterForm = () => {
     }
   };
 
-  // Admin exists block
   if (formData.role === 'admin' && adminExists) {
     return (
-      <div className="container py-5">
+      <div className="container mt-5">
         <div className="row justify-content-center">
-          <div className="col-12 col-md-8 col-lg-6">
-            <div className="card shadow-lg border-0 rounded-4">
-              <div className="card-header bg-danger text-white text-center py-4">
-                <h2 className="mb-0">
-                  <i className="bi bi-exclamation-triangle me-2"></i>
-                  Registration Blocked
-                </h2>
-              </div>
+          <div className="col-md-6">
+            <div className="card shadow-sm rounded-3">
               <div className="card-body p-4 text-center">
+                <h2 className="mb-4">Registration Blocked</h2>
                 <div className="alert alert-danger rounded-3" role="alert">
-                  An admin already exists for this school. 
-                  Please <Link to="/login" className="alert-link">login</Link> or contact your school admin.
+                  An admin already exists for this school. Please <Link to="/login">login</Link> or contact your school admin.
                 </div>
               </div>
             </div>
@@ -113,42 +149,20 @@ const RegisterForm = () => {
   }
 
   return (
-    <div className="container py-5">
+    <div className="container mt-5">
       <div className="row justify-content-center">
-        <div className="col-12 col-md-8 col-lg-6">
-          <div className="card shadow-lg border-0 rounded-4">
-            <div className="card-header bg-primary text-white text-center py-4">
-              <h2 className="mb-0">
-                <i className="bi bi-person-plus me-2"></i>
-                Register
-              </h2>
-            </div>
+        <div className="col-md-6">
+          <div className="card shadow-sm rounded-3">
             <div className="card-body p-4">
+              <h2 className="text-center mb-4">Register</h2>
               {message && (
-                <div 
-                  className={`alert ${message.includes('successful') 
-                    ? 'alert-success' 
-                    : 'alert-danger'} alert-dismissible fade show rounded-3`} 
-                  role="alert"
-                >
+                <div className={`alert ${message.includes('successful') ? 'alert-success' : 'alert-danger'} rounded-3`} role="alert">
                   {message}
-                  <button 
-                    type="button" 
-                    className="btn-close" 
-                    data-bs-dismiss="alert" 
-                    aria-label="Close"
-                    onClick={() => setMessage('')}
-                  ></button>
                 </div>
               )}
-              
               <form onSubmit={handleSubmit}>
-                {/* Role Select */}
                 <div className="mb-3">
-                  <label className="form-label d-flex align-items-center">
-                    <i className="bi bi-person-badge me-2"></i>
-                    Role
-                  </label>
+                  <label className="form-label">Role</label>
                   <select
                     className="form-select rounded-3"
                     name="role"
@@ -161,13 +175,8 @@ const RegisterForm = () => {
                     <option value="teacher">Teacher</option>
                   </select>
                 </div>
-
-                {/* Name Input */}
                 <div className="mb-3">
-                  <label className="form-label d-flex align-items-center">
-                    <i className="bi bi-person me-2"></i>
-                    Name
-                  </label>
+                  <label className="form-label">Name</label>
                   <input
                     type="text"
                     className="form-control rounded-3"
@@ -177,13 +186,8 @@ const RegisterForm = () => {
                     required
                   />
                 </div>
-
-                {/* Email Input */}
                 <div className="mb-3">
-                  <label className="form-label d-flex align-items-center">
-                    <i className="bi bi-envelope me-2"></i>
-                    Email
-                  </label>
+                  <label className="form-label">Email</label>
                   <input
                     type="email"
                     className="form-control rounded-3"
@@ -193,13 +197,8 @@ const RegisterForm = () => {
                     required
                   />
                 </div>
-
-                {/* Phone Input */}
                 <div className="mb-3">
-                  <label className="form-label d-flex align-items-center">
-                    <i className="bi bi-phone me-2"></i>
-                    Phone
-                  </label>
+                  <label className="form-label">Phone</label>
                   <input
                     type="tel"
                     className="form-control rounded-3"
@@ -209,39 +208,20 @@ const RegisterForm = () => {
                     required
                   />
                 </div>
-
-                {/* Password Input */}
                 <div className="mb-3">
-                  <label className="form-label d-flex align-items-center">
-                    <i className="bi bi-lock me-2"></i>
-                    Password
-                  </label>
-                  <div className="input-group">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      className="form-control rounded-3"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      required
-                    />
-                    <button 
-                      className="btn btn-outline-secondary" 
-                      type="button" 
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
-                    </button>
-                  </div>
+                  <label className="form-label">Password</label>
+                  <input
+                    type="password"
+                    className="form-control rounded-3"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                  />
                 </div>
-
-                {/* School Name for Admin */}
                 {formData.role === 'admin' && (
                   <div className="mb-3">
-                    <label className="form-label d-flex align-items-center">
-                      <i className="bi bi-building me-2"></i>
-                      School Name
-                    </label>
+                    <label className="form-label">School Name</label>
                     <input
                       type="text"
                       className="form-control rounded-3"
@@ -252,15 +232,10 @@ const RegisterForm = () => {
                     />
                   </div>
                 )}
-
-                {/* School Code and Class/Course Selection for Teacher */}
                 {formData.role === 'teacher' && (
                   <>
                     <div className="mb-3">
-                      <label className="form-label d-flex align-items-center">
-                        <i className="bi bi-code-slash me-2"></i>
-                        School Code
-                      </label>
+                      <label className="form-label">School Code</label>
                       <input
                         type="text"
                         className="form-control rounded-3"
@@ -275,7 +250,6 @@ const RegisterForm = () => {
                       {loadingOptions && <small className="text-muted">Loading classes and courses...</small>}
                     </div>
                     
-                    {/* Existing Classes and Courses Multi-Select */}
                     {availableClasses.length > 0 && (
                       <div className="mb-3">
                         <label className="form-label">Select Classes You Teach (Hold Ctrl/Cmd for multiple)</label>
@@ -319,23 +293,15 @@ const RegisterForm = () => {
                     )}
                   </>
                 )}
-
-                {/* Submit Button */}
                 <div className="d-grid gap-2">
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary rounded-3 shadow-sm"
-                  >
-                    <i className="bi bi-person-plus-fill me-2"></i>
+                  <button type="submit" className="btn btn-primary rounded-3 shadow-sm">
                     Register
                   </button>
                 </div>
               </form>
-
-              {/* Login Link */}
               <div className="text-center mt-3">
                 <span>Already have an account? </span>
-                <Link to="/login" className="text-primary">Login</Link>
+                <Link to="/login">Login</Link>
               </div>
             </div>
           </div>
