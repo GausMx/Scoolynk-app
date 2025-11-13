@@ -1,8 +1,8 @@
-// src/components/Teacher/TeacherProfile.js - COMPLETE WITH PARENT NAME
+// src/components/Teacher/TeacherProfile.js - COMPLETE WITH EDITABLE FIELDS
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { User, Users, Camera, Edit, Save, X, Plus } from 'lucide-react';
+import { User, Users, Camera, Edit, Save, X, Plus, BookOpen, GraduationCap } from 'lucide-react';
 import OCRStudentInput from './OCRStudentInput';
 
 const { REACT_APP_API_URL } = process.env;
@@ -17,8 +17,15 @@ const TeacherProfile = () => {
     email: '',
     phone: '',
     classes: [],
+    courses: [],
     classTeacherFor: []
   });
+
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [editedTeacher, setEditedTeacher] = useState({});
+  
+  const [availableClasses, setAvailableClasses] = useState([]);
+  const [availableCourses, setAvailableCourses] = useState([]);
 
   const [students, setStudents] = useState([]);
   const [selectedClass, setSelectedClass] = useState('');
@@ -30,6 +37,7 @@ const TeacherProfile = () => {
 
   useEffect(() => {
     fetchTeacherData();
+    fetchAvailableOptions();
   }, []);
 
   useEffect(() => {
@@ -45,6 +53,7 @@ const TeacherProfile = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTeacher(res.data.teacher);
+      setEditedTeacher(res.data.teacher);
       if (res.data.teacher.classTeacherFor?.length > 0) {
         setSelectedClass(res.data.teacher.classTeacherFor[0]._id);
       }
@@ -52,6 +61,27 @@ const TeacherProfile = () => {
       showMessage('error', 'Failed to load teacher data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAvailableOptions = async () => {
+    try {
+      const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/school-classes`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAvailableClasses(res.data.classes || []);
+      
+      // Fetch available courses from school
+      const schoolData = JSON.parse(localStorage.getItem('user'));
+      if (schoolData?.schoolId) {
+        const coursesRes = await axios.get(
+          `${REACT_APP_API_URL}/api/admin/courses`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setAvailableCourses(coursesRes.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch options:', err);
     }
   };
 
@@ -63,6 +93,30 @@ const TeacherProfile = () => {
       setStudents(res.data.students || []);
     } catch (err) {
       showMessage('error', 'Failed to load students');
+    }
+  };
+
+  const handleUpdateTeacherInfo = async () => {
+    try {
+      setLoading(true);
+      await axios.put(
+        `${REACT_APP_API_URL}/api/teacher/profile`,
+        {
+          name: editedTeacher.name,
+          phone: editedTeacher.phone,
+          classes: editedTeacher.classes?.map(c => c._id || c),
+          courses: editedTeacher.courses,
+          classTeacherFor: editedTeacher.classTeacherFor?.map(c => c._id || c)
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      showMessage('success', 'Profile updated successfully');
+      setIsEditingInfo(false);
+      fetchTeacherData();
+    } catch (err) {
+      showMessage('error', err.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -84,6 +138,11 @@ const TeacherProfile = () => {
     }
   };
 
+  const handleMultiSelect = (e, fieldName) => {
+    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+    setEditedTeacher({ ...editedTeacher, [fieldName]: selectedOptions });
+  };
+
   const showMessage = (type, text) => {
     setMessage({ type, text });
     setTimeout(() => setMessage({ type: '', text: '' }), 5000);
@@ -91,27 +150,217 @@ const TeacherProfile = () => {
 
   const renderInfoTab = () => (
     <div className="card border-0 shadow-sm rounded-4 p-4">
-      <h5 className="text-primary mb-4">
-        <User size={20} className="me-2" />
-        Teacher Information
-      </h5>
-      <div className="row g-3">
-        <div className="col-md-6">
-          <label className="form-label fw-semibold">Name</label>
-          <input type="text" className="form-control rounded-3 bg-light" value={teacher.name} disabled />
-        </div>
-        <div className="col-md-6">
-          <label className="form-label fw-semibold">Email</label>
-          <input type="email" className="form-control rounded-3 bg-light" value={teacher.email} disabled />
-        </div>
-        <div className="col-12">
-          <label className="form-label fw-semibold">Classes Teaching</label>
-          <div className="d-flex flex-wrap gap-2">
-            {teacher.classTeacherFor?.map(cls => (
-              <span key={cls._id} className="badge bg-primary px-3 py-2">{cls.name}</span>
-            ))}
-            {teacher.classTeacherFor?.length === 0 && <span className="text-muted">No classes assigned</span>}
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h5 className="text-primary mb-0">
+          <User size={20} className="me-2" />
+          Teacher Information
+        </h5>
+        {!isEditingInfo ? (
+          <button 
+            className="btn btn-outline-primary btn-sm rounded-3"
+            onClick={() => setIsEditingInfo(true)}
+          >
+            <Edit size={16} className="me-1" />
+            Edit Profile
+          </button>
+        ) : (
+          <div className="btn-group btn-group-sm">
+            <button 
+              className="btn btn-success rounded-start-3"
+              onClick={handleUpdateTeacherInfo}
+              disabled={loading}
+            >
+              <Save size={16} className="me-1" />
+              Save Changes
+            </button>
+            <button 
+              className="btn btn-secondary rounded-end-3"
+              onClick={() => {
+                setIsEditingInfo(false);
+                setEditedTeacher(teacher);
+              }}
+            >
+              <X size={16} className="me-1" />
+              Cancel
+            </button>
           </div>
+        )}
+      </div>
+
+      <div className="row g-3">
+        {/* Name */}
+        <div className="col-md-6">
+          <label className="form-label fw-semibold">
+            <User size={16} className="me-1" />
+            Name
+          </label>
+          {isEditingInfo ? (
+            <input 
+              type="text" 
+              className="form-control rounded-3"
+              value={editedTeacher.name || ''}
+              onChange={(e) => setEditedTeacher({...editedTeacher, name: e.target.value})}
+            />
+          ) : (
+            <input 
+              type="text" 
+              className="form-control rounded-3 bg-light" 
+              value={teacher.name} 
+              disabled 
+            />
+          )}
+        </div>
+
+        {/* Email */}
+        <div className="col-md-6">
+          <label className="form-label fw-semibold">
+            <i className="bi bi-envelope me-1"></i>
+            Email
+          </label>
+          <input 
+            type="email" 
+            className="form-control rounded-3 bg-light" 
+            value={teacher.email} 
+            disabled 
+          />
+          <small className="text-muted">Email cannot be changed</small>
+        </div>
+
+        {/* Phone */}
+        <div className="col-md-6">
+          <label className="form-label fw-semibold">
+            <i className="bi bi-telephone me-1"></i>
+            Phone
+          </label>
+          {isEditingInfo ? (
+            <input 
+              type="tel" 
+              className="form-control rounded-3"
+              value={editedTeacher.phone || ''}
+              onChange={(e) => setEditedTeacher({...editedTeacher, phone: e.target.value})}
+            />
+          ) : (
+            <input 
+              type="text" 
+              className="form-control rounded-3 bg-light" 
+              value={teacher.phone} 
+              disabled 
+            />
+          )}
+        </div>
+
+        {/* Classes Teaching */}
+        <div className="col-12">
+          <label className="form-label fw-semibold">
+            <GraduationCap size={16} className="me-1" />
+            Classes Teaching
+          </label>
+          {isEditingInfo ? (
+            <>
+              <select
+                multiple
+                className="form-select rounded-3"
+                size="5"
+                value={editedTeacher.classes?.map(c => c._id || c) || []}
+                onChange={(e) => handleMultiSelect(e, 'classes')}
+              >
+                {availableClasses.map((cls) => (
+                  <option key={cls._id} value={cls._id}>
+                    {cls.name}
+                  </option>
+                ))}
+              </select>
+              <small className="text-muted">
+                Hold Ctrl/Cmd for multiple selection. Selected: {editedTeacher.classes?.length || 0} class(es)
+              </small>
+            </>
+          ) : (
+            <div className="d-flex flex-wrap gap-2">
+              {teacher.classes?.map(cls => (
+                <span key={cls._id} className="badge bg-primary px-3 py-2">
+                  {cls.name}
+                </span>
+              ))}
+              {(!teacher.classes || teacher.classes?.length === 0) && (
+                <span className="text-muted">No classes assigned</span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Courses/Subjects Teaching */}
+        <div className="col-12">
+          <label className="form-label fw-semibold">
+            <BookOpen size={16} className="me-1" />
+            Courses/Subjects Teaching
+          </label>
+          {isEditingInfo ? (
+            <>
+              <input
+                type="text"
+                className="form-control rounded-3"
+                placeholder="Enter courses separated by commas (e.g., Mathematics, English, Science)"
+                value={Array.isArray(editedTeacher.courses) ? editedTeacher.courses.join(', ') : editedTeacher.courses || ''}
+                onChange={(e) => {
+                  const coursesArray = e.target.value.split(',').map(c => c.trim()).filter(c => c);
+                  setEditedTeacher({...editedTeacher, courses: coursesArray});
+                }}
+              />
+              <small className="text-muted">
+                Enter course names separated by commas
+              </small>
+            </>
+          ) : (
+            <div className="d-flex flex-wrap gap-2">
+              {teacher.courses?.map((course, idx) => (
+                <span key={idx} className="badge bg-success px-3 py-2">
+                  {course}
+                </span>
+              ))}
+              {(!teacher.courses || teacher.courses?.length === 0) && (
+                <span className="text-muted">No courses assigned</span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Class Teacher For */}
+        <div className="col-12">
+          <label className="form-label fw-semibold">
+            <i className="bi bi-person-check me-1"></i>
+            Class Teacher For
+          </label>
+          {isEditingInfo ? (
+            <>
+              <select
+                multiple
+                className="form-select rounded-3"
+                size="5"
+                value={editedTeacher.classTeacherFor?.map(c => c._id || c) || []}
+                onChange={(e) => handleMultiSelect(e, 'classTeacherFor')}
+              >
+                {availableClasses.map((cls) => (
+                  <option key={cls._id} value={cls._id}>
+                    {cls.name}
+                  </option>
+                ))}
+              </select>
+              <small className="text-muted">
+                Hold Ctrl/Cmd for multiple selection. Selected: {editedTeacher.classTeacherFor?.length || 0} class(es)
+              </small>
+            </>
+          ) : (
+            <div className="d-flex flex-wrap gap-2">
+              {teacher.classTeacherFor?.map(cls => (
+                <span key={cls._id} className="badge bg-info px-3 py-2">
+                  {cls.name}
+                </span>
+              ))}
+              {(!teacher.classTeacherFor || teacher.classTeacherFor?.length === 0) && (
+                <span className="text-muted">Not a class teacher for any class</span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -156,7 +405,6 @@ const TeacherProfile = () => {
               <tbody>
                 {students.map(student => (
                   <tr key={student._id}>
-                    {/* Student Name */}
                     <td>
                       {editingStudent?._id === student._id ? (
                         <input
@@ -169,11 +417,7 @@ const TeacherProfile = () => {
                         <strong>{student.name}</strong>
                       )}
                     </td>
-
-                    {/* Reg No */}
                     <td><small className="text-muted">{student.regNo}</small></td>
-
-                    {/* Parent Name - ADDED */}
                     <td>
                       {editingStudent?._id === student._id ? (
                         <input
@@ -187,8 +431,6 @@ const TeacherProfile = () => {
                         <small>{student.parentName || 'N/A'}</small>
                       )}
                     </td>
-
-                    {/* Parent Phone */}
                     <td>
                       {editingStudent?._id === student._id ? (
                         <input
@@ -202,11 +444,7 @@ const TeacherProfile = () => {
                         <small>{student.parentPhone || 'N/A'}</small>
                       )}
                     </td>
-
-                    {/* Fee */}
                     <td>₦{student.classFee?.toLocaleString()}</td>
-
-                    {/* Amount Paid */}
                     <td>
                       {editingStudent?._id === student._id ? (
                         <input
@@ -221,8 +459,6 @@ const TeacherProfile = () => {
                         </span>
                       )}
                     </td>
-
-                    {/* Payment Status */}
                     <td>
                       <span className={`badge ${
                         student.paymentStatus === 'paid' ? 'bg-success' :
@@ -231,8 +467,6 @@ const TeacherProfile = () => {
                         {student.paymentStatus}
                       </span>
                     </td>
-
-                    {/* Actions */}
                     <td className="text-center">
                       {editingStudent?._id === student._id ? (
                         <div className="btn-group btn-group-sm">
@@ -327,8 +561,9 @@ const TeacherProfile = () => {
       </div>
 
       {message.text && (
-        <div className={`alert alert-${message.type === 'success' ? 'success' : 'danger'} rounded-3`}>
+        <div className={`alert alert-${message.type === 'success' ? 'success' : 'danger'} alert-dismissible fade show rounded-3`}>
           {message.text}
+          <button type="button" className="btn-close" onClick={() => setMessage({ type: '', text: '' })}></button>
         </div>
       )}
 
