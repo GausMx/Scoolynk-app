@@ -1,4 +1,4 @@
-// server/controllers/teacherController.js - CORRECTED VERSION
+// server/controllers/teacherController.js - FIXED UPDATE PROFILE
 
 import User from '../models/User.js';
 import Class from '../models/Class.js';
@@ -126,7 +126,7 @@ export const saveClassTeacherInfo = async (req, res) => {
   }
 };
 
-// ✅ FIXED: Bulk Add Students - Use parentPhone
+// Bulk Add Students
 export const bulkAddStudents = async (req, res) => {
   try {
     const { students, classId } = req.body;
@@ -186,7 +186,7 @@ export const bulkAddStudents = async (req, res) => {
         regNo: regNo,
         classId: classId,
         schoolId: req.user.schoolId,
-        parentPhone: student.parentPhone?.trim() || '', // ✅ FIXED
+        parentPhone: student.parentPhone?.trim() || '',
         parentName: student.parentName?.trim() || '',
         parentEmail: student.parentEmail?.trim() || '',
         amountPaid: student.amountPaid || 0
@@ -236,34 +236,92 @@ export const bulkAddStudents = async (req, res) => {
   }
 };
 
-// Update Teacher Profile
+// ✅ FIXED: Update Teacher Profile - Now includes name and phone
 export const updateTeacherProfile = async (req, res) => {
   try {
     const teacherId = req.user._id;
-    const { classes, courses, classTeacherFor } = req.body;
+    const { name, phone, classes, courses, classTeacherFor } = req.body;
+
+    console.log('[UpdateTeacherProfile] Request body:', req.body);
 
     const updateData = {};
-    if (classes) updateData.classes = classes;
-    if (courses) updateData.courses = courses;
-    if (classTeacherFor) updateData.classTeacherFor = classTeacherFor;
+    
+    // ✅ CRITICAL: Add name and phone to updateData
+    if (name !== undefined && name.trim() !== '') {
+      updateData.name = name.trim();
+    }
+    
+    if (phone !== undefined && phone.trim() !== '') {
+      updateData.phone = phone.trim();
+    }
+    
+    // Handle classes
+    if (classes !== undefined) {
+      updateData.classes = Array.isArray(classes) ? classes : [];
+    }
+    
+    // Handle courses
+    if (courses !== undefined) {
+      updateData.courses = Array.isArray(courses) ? courses : [];
+    }
+    
+    // Handle classTeacherFor
+    if (classTeacherFor !== undefined) {
+      updateData.classTeacherFor = Array.isArray(classTeacherFor) ? classTeacherFor : [];
+    }
+
+    console.log('[UpdateTeacherProfile] Update data:', updateData);
+
+    // Validate class IDs if provided
+    if (updateData.classes && updateData.classes.length > 0) {
+      const validClasses = await Class.find({ 
+        _id: { $in: updateData.classes },
+        schoolId: req.user.schoolId 
+      });
+      
+      if (validClasses.length !== updateData.classes.length) {
+        return res.status(400).json({ message: 'Some class IDs are invalid.' });
+      }
+    }
+
+    // Validate classTeacherFor IDs if provided
+    if (updateData.classTeacherFor && updateData.classTeacherFor.length > 0) {
+      const validClassTeacher = await Class.find({ 
+        _id: { $in: updateData.classTeacherFor },
+        schoolId: req.user.schoolId 
+      });
+      
+      if (validClassTeacher.length !== updateData.classTeacherFor.length) {
+        return res.status(400).json({ message: 'Some class teacher IDs are invalid.' });
+      }
+    }
 
     const teacher = await User.findByIdAndUpdate(
       teacherId,
       updateData,
-      { new: true }
+      { new: true, runValidators: true }
     ).populate('classes', 'name').populate('classTeacherFor', 'name');
 
     if (!teacher) {
       return res.status(404).json({ message: 'Teacher not found.' });
     }
 
+    console.log('[UpdateTeacherProfile] Updated teacher:', teacher);
+
     res.json({ 
       message: 'Profile updated successfully.',
-      teacher 
+      teacher: {
+        name: teacher.name,
+        email: teacher.email,
+        phone: teacher.phone,
+        classes: teacher.classes,
+        classTeacherFor: teacher.classTeacherFor,
+        courses: teacher.courses
+      }
     });
   } catch (err) {
-    console.error('[UpdateTeacherProfile]', err);
-    res.status(500).json({ message: 'Failed to update profile.' });
+    console.error('[UpdateTeacherProfile] Error:', err);
+    res.status(500).json({ message: 'Failed to update profile.', error: err.message });
   }
 };
 
@@ -341,7 +399,7 @@ export const getClassStudents = async (req, res) => {
   }
 };
 
-// ✅ NEW: Update Student (for teacher to edit student info including payment)
+// Update Student (for teacher to edit student info including payment)
 export const updateStudent = async (req, res) => {
   try {
     const { studentId } = req.params;
