@@ -47,15 +47,16 @@ const ClassView = () => {
       setStudents(studentsRes.data.students || []);
 
       // Fetch courses for this class
-      try {
-        const coursesRes = await axios.get(`${REACT_APP_API_URL}/api/admin/classes/${classId}/courses`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setCourses(coursesRes.data.courses || []);
-      } catch (err) {
-        console.log('Could not fetch courses (admin endpoint)');
-        setCourses([]);
-      }
+try {
+  const coursesRes = await axios.get(
+    `${REACT_APP_API_URL}/api/teacher/class/${classId}/courses`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  setCourses(coursesRes.data.courses || []);
+} catch (err) {
+  console.error('Failed to fetch courses:', err);
+  setCourses([]);
+}
       
     } catch (err) {
       console.error('Failed to fetch class data:', err);
