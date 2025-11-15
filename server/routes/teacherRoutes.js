@@ -42,7 +42,6 @@ router.post('/onboarding/class-teacher', protect, requireRole('teacher'), saveCl
 router.post('/students/bulk', protect, requireRole('teacher'), bulkAddStudents);
 router.put('/students/:studentId', protect, requireRole('teacher'), updateStudent);
 router.get('/my-class/students', protect, requireRole('teacher'), getMyClassStudents);
-router.get('/classes/:classId/students', protect, requireRole('teacher'), getClassStudents);
 router.get('class/:classId/students', protect, requireRole('teacher'), getClassStudents);  
 
 // ========== PROFILE ==========
