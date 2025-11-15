@@ -1,9 +1,8 @@
-// src/components/Admin/AdminResultManagement.js - MOBILE RESPONSIVE VERSION
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
-  FileText, Eye, Check, Send, Filter, Plus, Edit2,
+  FileText, Eye, Check, Send, Plus, Edit2,
   AlertCircle, CheckCircle, Clock, Trash2
 } from 'lucide-react';
 import VisualTemplateBuilder from './VisualTemplateBuilder';
@@ -16,6 +15,7 @@ const AdminResultManagement = () => {
   const [templates, setTemplates] = useState([]);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingPercent, setLoadingPercent] = useState(0);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [selectedTerm, setSelectedTerm] = useState('First Term');
   const [selectedSession, setSelectedSession] = useState('2024/2025');
@@ -42,21 +42,29 @@ const AdminResultManagement = () => {
   const fetchTemplates = async () => {
     try {
       setLoading(true);
+      setLoadingPercent(10);
+      
       const res = await axios.get(`${REACT_APP_API_URL}/api/admin/templates`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      setLoadingPercent(70);
       setTemplates(res.data.templates || []);
+      setLoadingPercent(100);
     } catch (err) {
       console.error('Failed to fetch templates:', err);
       showMessage('error', 'Failed to load templates.');
+      setLoadingPercent(100);
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 300);
     }
   };
 
   const fetchPendingResults = async () => {
     try {
       setLoading(true);
+      setLoadingPercent(10);
+      
       const res = await axios.get(
         `${REACT_APP_API_URL}/api/admin/results/submitted`,
         {
@@ -64,18 +72,24 @@ const AdminResultManagement = () => {
           params: { term: selectedTerm, session: selectedSession }
         }
       );
+      
+      setLoadingPercent(70);
       setResults(res.data.results || []);
+      setLoadingPercent(100);
     } catch (err) {
       console.error('Failed to fetch pending results:', err);
       showMessage('error', 'Failed to load pending results.');
+      setLoadingPercent(100);
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 300);
     }
   };
 
   const fetchAllResults = async () => {
     try {
       setLoading(true);
+      setLoadingPercent(10);
+      
       const res = await axios.get(
         `${REACT_APP_API_URL}/api/admin/results`,
         {
@@ -83,28 +97,41 @@ const AdminResultManagement = () => {
           params: { term: selectedTerm, session: selectedSession }
         }
       );
+      
+      setLoadingPercent(70);
       setResults(res.data.results || []);
+      setLoadingPercent(100);
     } catch (err) {
       console.error('Failed to fetch results:', err);
       showMessage('error', 'Failed to load results.');
+      setLoadingPercent(100);
+    } finally {
+      setTimeout(() => setLoading(false), 300);
+    }
+  };
+
+  const deleteTemplate = async (templateId, templateName) => {
+    if (!window.confirm(`Are you sure you want to permanently delete "${templateName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await axios.delete(`${REACT_APP_API_URL}/api/admin/templates/${templateId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      showMessage('success', 'Template deleted successfully');
+      fetchTemplates();
+    } catch (err) {
+      showMessage('error', err.response?.data?.message || 'Failed to delete template');
     } finally {
       setLoading(false);
     }
   };
 
-  const deleteTemplate = async (templateId) => {
-    if (!window.confirm('Are you sure you want to deactivate this template?')) return;
-
-    try {
-      await axios.delete(`${REACT_APP_API_URL}/api/admin/templates/${templateId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      showMessage('success', 'Template deactivated successfully');
-      fetchTemplates();
-    } catch (err) {
-      showMessage('error', 'Failed to deactivate template');
-    }
-  };
+  if (loading) {
+    return <Loading percentage={loadingPercent} />;
+  }
 
   return (
     <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
@@ -127,7 +154,7 @@ const AdminResultManagement = () => {
             </div>
           )}
 
-          {/* Tabs - Mobile Optimized */}
+          {/* Tabs */}
           <ul className="nav nav-pills mb-4 gap-2 flex-column flex-md-row">
             <li className="nav-item w-100 w-md-auto">
               <button 
@@ -167,7 +194,6 @@ const AdminResultManagement = () => {
           {activeTab === 'templates' && (
             <TemplatesTab 
               templates={templates}
-              loading={loading}
               onCreateNew={() => {
                 setEditingTemplate(null);
                 setShowTemplateBuilder(true);
@@ -183,7 +209,6 @@ const AdminResultManagement = () => {
           {activeTab === 'pending' && (
             <PendingResultsTab 
               results={results}
-              loading={loading}
               selectedTerm={selectedTerm}
               setSelectedTerm={setSelectedTerm}
               selectedSession={selectedSession}
@@ -199,7 +224,6 @@ const AdminResultManagement = () => {
           {activeTab === 'all' && (
             <AllResultsTab 
               results={results}
-              loading={loading}
               selectedTerm={selectedTerm}
               setSelectedTerm={setSelectedTerm}
               selectedSession={selectedSession}
@@ -229,11 +253,14 @@ const AdminResultManagement = () => {
 };
 
 // ==================== TEMPLATES TAB ====================
-const TemplatesTab = ({ templates, loading, onCreateNew, onEdit, onDelete }) => {
+const TemplatesTab = ({ templates, onCreateNew, onEdit, onDelete }) => {
+  const activeTemplates = templates.filter(t => t.isActive);
+  const inactiveTemplates = templates.filter(t => !t.isActive);
+
   return (
     <>
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
-        <h5 className="mb-0">Active Result Templates</h5>
+        <h5 className="mb-0">Result Templates</h5>
         <button 
           className="btn btn-primary rounded-3 w-100 w-md-auto"
           onClick={onCreateNew}
@@ -243,73 +270,117 @@ const TemplatesTab = ({ templates, loading, onCreateNew, onEdit, onDelete }) => 
         </button>
       </div>
 
-      {loading ? (
-        <Loading percentage={100} />
+      {templates.length === 0 ? (
+        <div className="alert alert-info rounded-3">
+          <AlertCircle size={20} className="me-2" />
+          No templates created yet. Create a template to get started with result entry.
+        </div>
       ) : (
         <>
-          {templates.length === 0 ? (
-            <div className="alert alert-info rounded-3">
-              <AlertCircle size={20} className="me-2" />
-              No templates created yet. Create a template to get started with result entry.
-            </div>
-          ) : (
-            <div className="row g-3 g-md-4">
-              {templates.map(template => (
-                <div key={template._id} className="col-12 col-md-6 col-lg-4">
-                  <div className="card border-0 shadow-sm rounded-4 h-100">
-                    <div className="card-body">
-                      <div className="d-flex justify-content-between align-items-start mb-3">
-                        <div className="flex-grow-1">
-                          <h6 className="mb-1 fw-bold">{template.name}</h6>
-                          <small className="text-muted">
-                            {template.term} - {template.session}
-                          </small>
-                        </div>
-                        <span className={`badge ${template.isActive ? 'bg-success' : 'bg-secondary'}`}>
-                          {template.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                      
-                      <div className="border-top pt-3 mt-3">
-                        <div className="text-muted small mb-3">
-                          <div className="d-flex justify-content-between mb-1">
-                            <span>Created by:</span>
-                            <span className="fw-semibold">{template.createdBy?.name || 'N/A'}</span>
+          {/* Active Templates */}
+          {activeTemplates.length > 0 && (
+            <>
+              <h6 className="text-success mb-3">
+                <CheckCircle size={18} className="me-2" />
+                Active Templates ({activeTemplates.length})
+              </h6>
+              <div className="row g-3 g-md-4 mb-4">
+                {activeTemplates.map(template => (
+                  <div key={template._id} className="col-12 col-md-6 col-lg-4">
+                    <div className="card border-0 shadow-sm rounded-4 h-100 border-start border-success border-4">
+                      <div className="card-body">
+                        <div className="d-flex justify-content-between align-items-start mb-3">
+                          <div className="flex-grow-1">
+                            <h6 className="mb-1 fw-bold">{template.name}</h6>
+                            <small className="text-muted">
+                              {template.term} - {template.session}
+                            </small>
                           </div>
-                          <div className="d-flex justify-content-between">
-                            <span>Date:</span>
-                            <span className="fw-semibold">{new Date(template.createdAt).toLocaleDateString()}</span>
-                          </div>
+                          <span className="badge bg-success">Active</span>
                         </div>
+                        
+                        <div className="border-top pt-3 mt-3">
+                          <div className="text-muted small mb-3">
+                            <div className="d-flex justify-content-between mb-1">
+                              <span>Created by:</span>
+                              <span className="fw-semibold">{template.createdBy?.name || 'N/A'}</span>
+                            </div>
+                            <div className="d-flex justify-content-between">
+                              <span>Date:</span>
+                              <span className="fw-semibold">{new Date(template.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
 
-                        <div className="d-flex gap-2">
                           <button 
-                            className="btn btn-sm btn-outline-primary rounded-3 flex-grow-1"
+                            className="btn btn-sm btn-outline-primary rounded-3 w-100"
                             onClick={() => onEdit(template)}
                           >
                             <Edit2 size={14} className="me-1" />
                             Edit
                           </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Inactive Templates */}
+          {inactiveTemplates.length > 0 && (
+            <>
+              <h6 className="text-secondary mb-3">
+                <AlertCircle size={18} className="me-2" />
+                Inactive Templates ({inactiveTemplates.length})
+              </h6>
+              <div className="row g-3 g-md-4">
+                {inactiveTemplates.map(template => (
+                  <div key={template._id} className="col-12 col-md-6 col-lg-4">
+                    <div className="card border-0 shadow-sm rounded-4 h-100 bg-light">
+                      <div className="card-body">
+                        <div className="d-flex justify-content-between align-items-start mb-3">
+                          <div className="flex-grow-1">
+                            <h6 className="mb-1 fw-bold text-muted">{template.name}</h6>
+                            <small className="text-muted">
+                              {template.term} - {template.session}
+                            </small>
+                          </div>
+                          <span className="badge bg-secondary">Inactive</span>
+                        </div>
+                        
+                        <div className="border-top pt-3 mt-3">
+                          <div className="text-muted small mb-3">
+                            <div className="d-flex justify-content-between mb-1">
+                              <span>Created by:</span>
+                              <span className="fw-semibold">{template.createdBy?.name || 'N/A'}</span>
+                            </div>
+                            <div className="d-flex justify-content-between">
+                              <span>Deactivated:</span>
+                              <span className="fw-semibold">{new Date(template.updatedAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+
                           <button 
-                            className="btn btn-sm btn-outline-danger rounded-3"
-                            onClick={() => onDelete(template._id)}
+                            className="btn btn-sm btn-outline-danger rounded-3 w-100"
+                            onClick={() => onDelete(template._id, template.name)}
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={14} className="me-1" />
+                            Delete Permanently
                           </button>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </>
           )}
         </>
       )}
     </>
   );
 };
-
 // ==================== PENDING RESULTS TAB ====================
 const PendingResultsTab = ({ 
   results, 
