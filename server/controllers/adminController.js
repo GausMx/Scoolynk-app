@@ -428,7 +428,19 @@ export const deleteCourse = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete course.' });
   }
 };
-
+// -------------------------
+// Get all classes
+// -------------------------
+export const getClasses = async (req, res) => {
+  try {
+    const classes = await Class.find({ schoolId: req.user.schoolId })
+      .sort({ createdAt: -1 });
+    res.json({ classes });
+  } catch (err) {
+    console.error('[AdminGetClasses]', err);
+    res.status(500).json({ message: 'Failed to fetch classes.' });
+  }
+};
 // -------------------------
 // Create new class
 // -------------------------
