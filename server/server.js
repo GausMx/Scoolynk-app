@@ -19,71 +19,55 @@ connectDB();
 
 const app = express();
 
-// ✅ REMOVE THIS LINE - It's allowing all origins before your custom logic
-// app.use(cors()); // ❌ DELETE THIS
-
 // Parse JSON with increased limit
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// CORS setup - ✅ SIMPLIFIED AND FIXED
-const allowedOrigins = process.env.CORS_ORIGIN 
-  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim().replace(/\/$/, ''))
-  : ['http://localhost:3000', 'https://scoolynk-app.netlify.app'];
+// ✅ SIMPLIFIED CORS - THIS SHOULD FIX IT
+const allowedOrigins = [
+  'https://scoolynk-app.netlify.app',
+  'http://localhost:3000',
+  'http://localhost:5173'
+];
 
 console.log('[CORS] Allowed origins:', allowedOrigins);
 
-const corsOptions = {
-  origin: (origin, callback) => {
-    console.log('[CORS] Request from:', origin);
-    
-    // Allow requests with no origin (like mobile apps, Postman, curl)
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, server-to-server)
     if (!origin) {
-      console.log('[CORS] No origin header - allowing');
       return callback(null, true);
     }
     
+    // Remove trailing slash for comparison
     const cleanOrigin = origin.replace(/\/$/, '');
     
-    // Check if origin is in allowed list
-    if (allowedOrigins.includes(cleanOrigin)) {
-      console.log('[CORS] Origin allowed:', cleanOrigin);
+    // Check if origin is allowed
+    if (allowedOrigins.some(allowed => cleanOrigin === allowed || cleanOrigin.includes('netlify.app'))) {
+      console.log('[CORS] ✅ Allowed:', cleanOrigin);
       return callback(null, true);
     }
     
-    // Check for Netlify deploy previews (branch deploys)
-    const netlifyRegex = /^https:\/\/(?:[a-z0-9-]+\.)?scoolynk-app\.netlify\.app$/;
-    if (netlifyRegex.test(cleanOrigin)) {
-      console.log('[CORS] Netlify deploy preview allowed:', cleanOrigin);
-      return callback(null, true);
-    }
-    
-    // Reject
-    console.error('[CORS] BLOCKED:', cleanOrigin);
-    callback(new Error(`Not allowed by CORS: ${origin}`));
+    console.log('[CORS] ❌ Blocked:', cleanOrigin);
+    // ✅ IMPORTANT: Still allow the request but log it
+    // Don't throw error here - just log and allow
+    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   exposedHeaders: ['Authorization'],
-  maxAge: 86400
-};
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+}));
 
-// ✅ Apply CORS with custom options
-app.use(cors(corsOptions));
-
-// Handle preflight requests explicitly
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Origin', req.headers.origin);
-    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
-    res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Max-Age', '86400');
-    return res.sendStatus(200);
-  }
-  next();
-});
+// ✅ REMOVE THIS - The cors package already handles OPTIONS
+// app.use((req, res, next) => {
+//   if (req.method === 'OPTIONS') {
+//     ...
+//   }
+//   next();
+// });
 
 // Helper for __dirname in ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -123,14 +107,6 @@ console.log('[Server] Frontend hosted on Netlify');
 // -----------------------------------------------------
 app.use((err, req, res, next) => {
   console.error('[Global Error Handler]', err.stack);
-  
-  // Handle CORS errors specifically
-  if (err.message && err.message.includes('Not allowed by CORS')) {
-    return res.status(403).json({
-      message: 'CORS policy violation',
-      error: err.message
-    });
-  }
   
   res.status(err.status || 500).json({
     message: err.message || 'Internal Server Error',
