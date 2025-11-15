@@ -1,8 +1,8 @@
-// src/components/Admin/Settings.js - WITH SMS ERROR HANDLING
+// src/components/Admin/Settings.js - WITHOUT FEES TAB
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Settings as SettingsIcon, User, Lock, CreditCard, Eye, EyeOff, Copy, Check, Send, Users, DollarSign, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Settings as SettingsIcon, User, Lock, Eye, EyeOff, Copy, Check, Send, Users, DollarSign, AlertTriangle, ExternalLink } from 'lucide-react';
 
 // Import the payment link modal
 import SendPaymentLinkModal from './SendPaymentLinkModal';
@@ -36,11 +36,6 @@ const Settings = () => {
     current: false,
     new: false,
     confirm: false
-  });
-
-  // Fees state
-  const [fees, setFees] = useState({
-    defaultFee: 0
   });
 
   // Payment tracking state
@@ -92,10 +87,6 @@ const Settings = () => {
         email: admin.email || '',
         phone: school.phone || '',
         motto: school.motto || ''
-      });
-
-      setFees({
-        defaultFee: school.defaultFee || 0
       });
       
       setLoadingPercent(100);
@@ -195,29 +186,6 @@ const Settings = () => {
     } catch (err) {
       console.error('Failed to update password:', err);
       showMessage('error', err.response?.data?.message || 'Failed to update password');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle fees update
-  const handleFeesUpdate = async (e) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      await axios.put(
-        `${REACT_APP_API_URL}/api/admin/settings`,
-        {
-          section: 'fees',
-          data: fees
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      showMessage('success', 'Fee settings updated successfully!');
-      await fetchSettings();
-    } catch (err) {
-      console.error('Failed to update fees:', err);
-      showMessage('error', err.response?.data?.message || 'Failed to update fees');
     } finally {
       setLoading(false);
     }
@@ -553,67 +521,6 @@ const Settings = () => {
     </form>
   );
 
-  // Fees Section
-  const renderFeesSection = () => (
-    <form onSubmit={handleFeesUpdate}>
-      <div className="row justify-content-center">
-        <div className="col-lg-8">
-          <div className="card border-0 shadow-sm rounded-4 p-4">
-            <h5 className="text-primary mb-4">
-              <CreditCard size={20} className="me-2" />
-              Default Fee Structure
-            </h5>
-
-            <div className="alert alert-info rounded-3 mb-4">
-              <small>
-                This is the default fee applied to all classes. Individual class fees can be customized in the Manage Classes section.
-              </small>
-            </div>
-
-            <div className="mb-4">
-              <label className="form-label fw-semibold">Default Class Fee (₦) *</label>
-              <input
-                type="number"
-                className="form-control rounded-3 form-control-lg"
-                value={fees.defaultFee}
-                onChange={(e) => setFees({ defaultFee: parseFloat(e.target.value) || 0 })}
-                min="0"
-                step="1000"
-                placeholder="Enter default fee"
-                required
-              />
-              <small className="text-muted">Standard fee amount for all classes</small>
-            </div>
-
-            <div className="card bg-light border-0 p-4">
-              <div className="text-center">
-                <p className="mb-2 text-muted">Current Default Fee</p>
-                <h2 className="fw-bold text-primary mb-0">₦{fees.defaultFee.toLocaleString()}</h2>
-              </div>
-            </div>
-
-            <div className="d-flex justify-content-end mt-4">
-              <button
-                type="submit"
-                className="btn btn-primary rounded-3 px-4"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    Saving...
-                  </>
-                ) : (
-                  'Save Fee Settings'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </form>
-  );
-
   // Payments Section WITH BULK SEND FEATURE
   const renderPaymentsSection = () => {
     
@@ -895,15 +802,6 @@ const Settings = () => {
             </li>
             <li className="nav-item">
               <button
-                className={`nav-link rounded-3 w-100 w-md-auto ${activeTab === 'fees' ? 'active' : ''}`}
-                onClick={() => setActiveTab('fees')}
-              >
-                <CreditCard size={18} className="me-2" />
-                Fees
-              </button>
-            </li>
-            <li className="nav-item">
-              <button
                 className={`nav-link rounded-3 w-100 w-md-auto ${activeTab === 'payments' ? 'active' : ''}`}
                 onClick={() => setActiveTab('payments')}
               >
@@ -916,7 +814,6 @@ const Settings = () => {
           <div className="tab-content">
             {activeTab === 'profile' && renderProfileSection()}
             {activeTab === 'security' && renderSecuritySection()}
-            {activeTab === 'fees' && renderFeesSection()}
             {activeTab === 'payments' && renderPaymentsSection()}
           </div>
 
