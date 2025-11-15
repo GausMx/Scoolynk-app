@@ -279,42 +279,85 @@ export const getCourses = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch courses.' });
   }
 };
-
 // -------------------------
-// Create course
+// Create course (FIXED VERSION)
 // -------------------------
 export const createCourse = async (req, res) => {
   try {
     const { name, teacher, classes } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ message: 'Course name is required.' });
+    }
+    
     const course = new Course({
       name,
-      teacher,
-      classes,
+      teacher: teacher === '' ? null : teacher, // Convert empty string to null
+      classes: classes || [],
       schoolId: req.user.schoolId
     });
+    
     await course.save();
-    res.status(201).json({ message: 'Course created successfully', course });
+    
+    const populatedCourse = await Course.findById(course._id)
+      .populate('teacher', 'name email')
+      .populate('classes', 'name');
+    
+    res.status(201).json({ 
+      message: 'Course created successfully', 
+      course: populatedCourse 
+    });
   } catch (err) {
     console.error('[CreateCourse]', err);
-    res.status(500).json({ message: 'Failed to create course.' });
+    res.status(500).json({ 
+      message: 'Failed to create course.',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
 // -------------------------
-// Update course
+// Update course (FIXED VERSION)
 // -------------------------
 export const updateCourse = async (req, res) => {
   try {
-    const course = await Course.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-    if (!course) return res.status(404).json({ message: 'Course not found' });
+    const { name, teacher, classes } = req.body;
+    
+    // Prepare update object
+    const updateData = {};
+    
+    if (name !== undefined) {
+      updateData.name = name;
+    }
+    
+    // Handle teacher field - convert empty string to null
+    if (teacher !== undefined) {
+      updateData.teacher = teacher === '' ? null : teacher;
+    }
+    
+    if (classes !== undefined) {
+      updateData.classes = classes;
+    }
+    
+    const course = await Course.findOneAndUpdate(
+      { _id: req.params.id, schoolId: req.user.schoolId },
+      updateData,
+      { new: true, runValidators: true }
+    )
+    .populate('teacher', 'name email')
+    .populate('classes', 'name');
+    
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+    
     res.json({ message: 'Course updated successfully', course });
   } catch (err) {
     console.error('[UpdateCourse]', err);
-    res.status(500).json({ message: 'Failed to update course.' });
+    res.status(500).json({ 
+      message: 'Failed to update course.',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
