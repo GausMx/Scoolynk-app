@@ -51,7 +51,7 @@ export const createPaymentLink = async (req, res) => {
   }
 };
 
-// ✅ Send payment link to individual parent
+// ✅ FIXED: Send payment link to individual parent
 export const sendPaymentLinkToParent = async (req, res) => {
   try {
     const { studentId } = req.body;
@@ -98,20 +98,23 @@ export const sendPaymentLinkToParent = async (req, res) => {
       await student.save();
     }
 
-    // Create payment link
-    const paymentLink = `${process.env.FRONTEND_URL}/pay/${student.paymentToken}`;
+    // ✅ FIXED: Check if FRONTEND_URL is defined
+    const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://scoolynk-app.netlify.app';
+    const paymentLink = `${frontendUrl}/pay/${student.paymentToken}`;
 
     console.log('[SendPaymentLink] Payment link:', paymentLink);
     console.log('[SendPaymentLink] Balance:', balance);
 
-    // ✅ FIXED: Use the correct method name and handle errors
-    const smsResult = await SMSService.sendPaymentLink(
-      student.parentPhone,
-      student.name,
-      balance,
-      paymentLink,
-      school.name
-    );
+    // ✅ FIXED: Pass options object with all required parameters
+    const smsResult = await SMSService.sendPaymentLink({
+      parentPhone: student.parentPhone,
+      parentName: student.parentName || 'Parent',
+      studentName: student.name,
+      amount: balance,
+      paymentLink: paymentLink,
+      schoolName: school.name,
+      dueDate: null
+    });
 
     if (!smsResult.success) {
       console.error('[SendPaymentLink] SMS failed:', smsResult.error);
