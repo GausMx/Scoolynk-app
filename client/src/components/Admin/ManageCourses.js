@@ -1,4 +1,4 @@
-// src/components/Admin/ManageCourses.js - MOBILE RESPONSIVE VERSION
+// src/components/Admin/ManageCourses.js - FIXED VERSION
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { BookOpen, Users, Edit, Trash2, PlusCircle, Search, Eye, Download } from 'lucide-react';
@@ -23,6 +23,7 @@ const ManageCourses = () => {
     try {
       setLoading(true);
       const res = await axios.get(`${API_BASE}/courses`, { headers: { Authorization: `Bearer ${token}` } });
+      console.log('Fetched courses:', res.data.courses);
       setCourses(res.data.courses || []);
     } catch (err) {
       console.error(err);
@@ -35,6 +36,7 @@ const ManageCourses = () => {
   const fetchTeachers = async () => {
     try {
       const res = await axios.get(`${API_BASE}/teachers`, { headers: { Authorization: `Bearer ${token}` } });
+      console.log('Fetched teachers:', res.data.teachers);
       setTeachers(res.data.teachers || []);
     } catch (err) {
       console.error('Failed to load teachers');
@@ -44,6 +46,7 @@ const ManageCourses = () => {
   const fetchClasses = async () => {
     try {
       const res = await axios.get(`${API_BASE}/classes`, { headers: { Authorization: `Bearer ${token}` } });
+      console.log('Fetched classes:', res.data.classes);
       setClassOptions(res.data.classes || []);
     } catch (err) {
       console.error('Failed to load classes');
@@ -70,10 +73,11 @@ const ManageCourses = () => {
 
   const exportToCSV = () => {
     const csvContent = [
-      ['Course Name', 'Teachers', 'Classes'],
+      ['Course Name', 'Primary Teacher', 'All Teachers', 'Classes'],
       ...courses.map(c => [
         c.name,
-        getTeachersForCourse(c.name).map(t => t.name).join('; ') || 'Not Assigned',
+        c.teacher?.name || 'Not Assigned',
+        getTeachersForCourse(c.name).map(t => t.name).join('; ') || 'None',
         c.classes?.map(cls => cls.name).join('; ') || 'None'
       ])
     ].map(row => row.join(',')).join('\n');
@@ -91,17 +95,28 @@ const ManageCourses = () => {
     try {
       setLoading(true);
       setMessage('');
+      
+      console.log('Submitting form data:', formData);
+      
       if (modalState.mode === 'add') {
-        await axios.post(`${API_BASE}/courses`, formData, { headers: { Authorization: `Bearer ${token}` } });
+        const res = await axios.post(`${API_BASE}/courses`, formData, { 
+          headers: { Authorization: `Bearer ${token}` } 
+        });
+        console.log('Course created:', res.data);
         setMessage(`Course '${formData.name}' added successfully`);
       } else {
-        await axios.put(`${API_BASE}/courses/${formData._id}`, formData, { headers: { Authorization: `Bearer ${token}` } });
+        const res = await axios.put(`${API_BASE}/courses/${formData._id}`, formData, { 
+          headers: { Authorization: `Bearer ${token}` } 
+        });
+        console.log('Course updated:', res.data);
         setMessage(`Course '${formData.name}' updated successfully`);
       }
+      
       await fetchCourses();
+      await fetchTeachers(); // Refresh teachers to see updated courses
       closeModal();
     } catch (err) {
-      console.error(err);
+      console.error('Error saving course:', err);
       setMessage(err.response?.data?.message || 'Error saving course');
     } finally {
       setLoading(false);
@@ -111,10 +126,13 @@ const ManageCourses = () => {
   const handleDeleteConfirmed = async (courseId, courseName) => {
     try {
       setLoading(true);
-      await axios.delete(`${API_BASE}/courses/${courseId}`, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.delete(`${API_BASE}/courses/${courseId}`, { 
+        headers: { Authorization: `Bearer ${token}` } 
+      });
       closeModal();
       setMessage(`Course '${courseName}' deleted successfully`);
       await fetchCourses();
+      await fetchTeachers(); // Refresh teachers to see updated courses
     } catch (err) {
       console.error(err);
       setMessage(err.response?.data?.message || 'Error deleting course');
@@ -126,6 +144,9 @@ const ManageCourses = () => {
   const CourseDetails = ({ course }) => {
     const teachersTeachingCourse = getTeachersForCourse(course.name);
     
+    console.log('Course details:', course);
+    console.log('Teachers teaching this course:', teachersTeachingCourse);
+    
     return (
       <div className="p-3">
         <div className="mb-3">
@@ -134,7 +155,17 @@ const ManageCourses = () => {
         </div>
 
         <div className="mb-3">
-          <strong className="text-primary small">Teachers Teaching This Course:</strong>
+          <strong className="text-primary small">Primary Assigned Teacher:</strong>
+          <p className="mb-0">
+            {course.teacher?.name || <span className="text-muted">Not assigned</span>}
+          </p>
+          {course.teacher && (
+            <small className="text-muted">{course.teacher.email}</small>
+          )}
+        </div>
+
+        <div className="mb-3">
+          <strong className="text-primary small">All Teachers Teaching This Course:</strong>
           {teachersTeachingCourse.length > 0 ? (
             <ul className="list-group mt-2">
               {teachersTeachingCourse.map(teacher => (
@@ -207,16 +238,36 @@ const ManageCourses = () => {
       classes: initialData?.classes?.map(c => c._id) || [],
     });
 
-    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+    console.log('CourseForm initial data:', initialData);
+    console.log('CourseForm state:', formData);
+
+    const handleChange = (e) => {
+      const { name, value } = e.target;
+      console.log(`Field changed: ${name} = ${value}`);
+      setFormData({ ...formData, [name]: value });
+    };
 
     const handleClassChange = (e) => {
       const value = Array.from(e.target.selectedOptions, opt => opt.value);
+      console.log('Classes selected:', value);
       setFormData({ ...formData, classes: value });
     };
 
     const handleSubmit = (e) => {
       e.preventDefault();
-      onSubmit({ ...initialData, ...formData });
+      
+      // ✅ Ensure teacher is sent as empty string if not selected
+      const submitData = {
+        ...initialData,
+        ...formData,
+        teacher: formData.teacher || ''
+      };
+      
+      console.log('Submitting course data:', submitData);
+      console.log('Selected classes:', formData.classes);
+      console.log('Selected teacher:', formData.teacher);
+      
+      onSubmit(submitData);
     };
 
     return (
@@ -233,16 +284,29 @@ const ManageCourses = () => {
             required 
           />
         </div>
+        
         <div className="mb-3">
           <label className="form-label fw-semibold small">Primary Assigned Teacher</label>
-          <select className="form-select rounded-3" name="teacher" value={formData.teacher} onChange={handleChange}>
+          <select 
+            className="form-select rounded-3" 
+            name="teacher" 
+            value={formData.teacher} 
+            onChange={handleChange}
+          >
             <option value="">-- Select Teacher (Optional) --</option>
-            {teachers.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+            {teachers.map(t => (
+              <option key={t._id} value={t._id}>{t.name}</option>
+            ))}
           </select>
-          <small className="text-muted">This is optional. Teachers can also be assigned during registration.</small>
+          <small className="text-muted">
+            This is optional. Teachers can also be assigned during registration.
+          </small>
         </div>
+        
         <div className="mb-4">
-          <label className="form-label fw-semibold small">Applicable Classes (Hold Ctrl/Cmd for multiple)</label>
+          <label className="form-label fw-semibold small">
+            Applicable Classes (Hold Ctrl/Cmd for multiple)
+          </label>
           <select 
             className="form-select rounded-3" 
             multiple 
@@ -250,15 +314,29 @@ const ManageCourses = () => {
             value={formData.classes} 
             onChange={handleClassChange}
           >
-            {classOptions.map(cls => <option key={cls._id} value={cls._id}>{cls.name}</option>)}
+            {classOptions.map(cls => (
+              <option key={cls._id} value={cls._id}>{cls.name}</option>
+            ))}
           </select>
-          <small className="text-muted">Selected: {formData.classes.length} class(es)</small>
+          <small className="text-muted">
+            Selected: {formData.classes.length} class(es)
+          </small>
         </div>
+        
         <div className="d-flex flex-column flex-md-row justify-content-end gap-2">
-          <button type="button" className="btn btn-outline-secondary rounded-3 w-100 w-md-auto order-2 order-md-1" onClick={onCancel}>
+          <button 
+            type="button" 
+            className="btn btn-outline-secondary rounded-3 w-100 w-md-auto order-2 order-md-1" 
+            onClick={onCancel}
+            disabled={isSaving}
+          >
             Cancel
           </button>
-          <button type="submit" className="btn btn-primary rounded-3 w-100 w-md-auto order-1 order-md-2" disabled={isSaving}>
+          <button 
+            type="submit" 
+            className="btn btn-primary rounded-3 w-100 w-md-auto order-1 order-md-2" 
+            disabled={isSaving}
+          >
             {isSaving ? 'Saving...' : (initialData ? 'Update Course' : 'Add Course')}
           </button>
         </div>
@@ -281,10 +359,19 @@ const ManageCourses = () => {
                 <strong>Warning:</strong> {teachersTeachingCourse.length} teacher(s) are currently teaching this course.
               </p>
             )}
+            {course.classes && course.classes.length > 0 && (
+              <p className="mb-0 mt-2 text-warning small">
+                <strong>Note:</strong> This course is assigned to {course.classes.length} class(es).
+              </p>
+            )}
           </div>
         </div>
         <div className="d-flex flex-column flex-md-row justify-content-end gap-2">
-          <button className="btn btn-outline-secondary rounded-3 w-100 w-md-auto order-2 order-md-1" onClick={onCancel}>
+          <button 
+            className="btn btn-outline-secondary rounded-3 w-100 w-md-auto order-2 order-md-1" 
+            onClick={onCancel}
+            disabled={isDeleting}
+          >
             Cancel
           </button>
           <button 
@@ -302,8 +389,22 @@ const ManageCourses = () => {
   const renderModalContent = () => {
     const { mode, currentCourse } = modalState;
     if (mode === 'view') return <CourseDetails course={currentCourse} />;
-    if (mode === 'add' || mode === 'edit') return <CourseForm initialData={currentCourse} onSubmit={handleAddOrEdit} onCancel={closeModal} isSaving={loading} />;
-    if (mode === 'delete') return <DeleteConfirmation course={currentCourse} onConfirm={handleDeleteConfirmed} onCancel={closeModal} isDeleting={loading} />;
+    if (mode === 'add' || mode === 'edit') return (
+      <CourseForm 
+        initialData={currentCourse} 
+        onSubmit={handleAddOrEdit} 
+        onCancel={closeModal} 
+        isSaving={loading} 
+      />
+    );
+    if (mode === 'delete') return (
+      <DeleteConfirmation 
+        course={currentCourse} 
+        onConfirm={handleDeleteConfirmed} 
+        onCancel={closeModal} 
+        isDeleting={loading} 
+      />
+    );
     return null;
   };
 
@@ -376,9 +477,9 @@ const ManageCourses = () => {
             <div className="card bg-light border-0 shadow-sm rounded-4 p-3">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h6 className="text-muted mb-1 small">Courses with Teachers</h6>
+                  <h6 className="text-muted mb-1 small">With Teachers</h6>
                   <h3 className="fw-bold mb-0 fs-4 fs-md-3">
-                    {courses.filter(c => getTeachersForCourse(c.name).length > 0).length}
+                    {courses.filter(c => c.teacher || getTeachersForCourse(c.name).length > 0).length}
                   </h3>
                 </div>
                 <Users size={32} className="text-info d-none d-md-block" />
@@ -419,7 +520,7 @@ const ManageCourses = () => {
                 <tr>
                   <th className="small">#</th>
                   <th className="small">Course Name</th>
-                  <th className="small d-none d-md-table-cell">Teachers</th>
+                  <th className="small d-none d-md-table-cell">Primary Teacher</th>
                   <th className="small d-none d-lg-table-cell">Classes</th>
                   <th className="text-center small">Actions</th>
                 </tr>
@@ -434,40 +535,34 @@ const ManageCourses = () => {
                       <td className="fw-semibold small">
                         {course.name}
                         <div className="d-md-none mt-1">
-                          {teachersTeachingCourse.length > 0 ? (
-                            <div>
-                              {teachersTeachingCourse.slice(0, 1).map(teacher => (
-                                <span key={teacher._id} className="badge bg-success me-1" style={{ fontSize: '0.7rem' }}>
-                                  {teacher.name}
-                                </span>
-                              ))}
-                              {teachersTeachingCourse.length > 1 && (
-                                <span className="badge bg-secondary" style={{ fontSize: '0.7rem' }}>
-                                  +{teachersTeachingCourse.length - 1}
-                                </span>
-                              )}
-                            </div>
+                          {course.teacher ? (
+                            <span className="badge bg-success" style={{ fontSize: '0.7rem' }}>
+                              {course.teacher.name}
+                            </span>
                           ) : (
-                            <span className="text-muted" style={{ fontSize: '0.75rem' }}>No teacher</span>
+                            <span className="text-muted" style={{ fontSize: '0.75rem' }}>No primary teacher</span>
+                          )}
+                          {teachersTeachingCourse.length > 0 && (
+                            <span className="badge bg-info text-dark ms-1" style={{ fontSize: '0.7rem' }}>
+                              {teachersTeachingCourse.length} teacher(s)
+                            </span>
                           )}
                         </div>
                       </td>
                       <td className="d-none d-md-table-cell small">
-                        {teachersTeachingCourse.length > 0 ? (
-                          <div>
-                            {teachersTeachingCourse.slice(0, 2).map(teacher => (
-                              <span key={teacher._id} className="badge bg-success me-1 mb-1">
-                                {teacher.name}
-                              </span>
-                            ))}
-                            {teachersTeachingCourse.length > 2 && (
-                              <span className="badge bg-secondary">
-                                +{teachersTeachingCourse.length - 2} more
-                              </span>
-                            )}
-                          </div>
+                        {course.teacher ? (
+                          <span className="badge bg-success">
+                            {course.teacher.name}
+                          </span>
                         ) : (
                           <span className="text-muted">Not assigned</span>
+                        )}
+                        {teachersTeachingCourse.length > 0 && (
+                          <div className="mt-1">
+                            <small className="text-muted">
+                              +{teachersTeachingCourse.length} teaching
+                            </small>
+                          </div>
                         )}
                       </td>
                       <td className="d-none d-lg-table-cell small">
@@ -540,7 +635,7 @@ const ManageCourses = () => {
                   {modalState.mode === 'delete' && 'Delete Course'}
                   {modalState.mode === 'view' && 'Course Details'}
                 </h5>
-                <button type="button" className="btn-close" onClick={closeModal}></button>
+                <button type="button" className="btn-close" onClick={closeModal} disabled={loading}></button>
               </div>
               <div className="modal-body">{renderModalContent()}</div>
             </div>
