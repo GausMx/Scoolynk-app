@@ -130,26 +130,38 @@ export const getResultTemplate = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch template.' });
   }
 };
-
-// ✅ DELETE TEMPLATE (Soft delete)
+// ✅ DELETE TEMPLATE (soft delete for active, hard delete for inactive)
 export const deleteResultTemplate = async (req, res) => {
   try {
     const { id } = req.params;
+    const schoolId = req.user.schoolId;
 
-    const template = await ResultTemplate.findOne({
-      _id: id,
-      schoolId: req.user.schoolId
+    const template = await ResultTemplate.findOne({ 
+      _id: id, 
+      schoolId 
     });
 
     if (!template) {
       return res.status(404).json({ message: 'Template not found.' });
     }
 
-    // Soft delete by setting isActive to false
-    template.isActive = false;
-    await template.save();
+    // ✅ If template is active, soft delete (deactivate)
+    if (template.isActive) {
+      template.isActive = false;
+      await template.save();
+      return res.json({ 
+        message: 'Template deactivated successfully. You can delete it permanently from the inactive templates section.',
+        deactivated: true
+      });
+    }
 
-    res.json({ message: 'Template deactivated successfully.' });
+    // ✅ If template is already inactive, permanently delete
+    await ResultTemplate.findByIdAndDelete(id);
+    
+    res.json({ 
+      message: 'Template permanently deleted.',
+      deleted: true
+    });
   } catch (err) {
     console.error('[DeleteResultTemplate]', err);
     res.status(500).json({ message: 'Failed to delete template.' });
