@@ -44,14 +44,21 @@ const PaymentHistory = () => {
   const fetchPaymentHistory = async () => {
     try {
       setLoading(true);
+      setLoadingPercent(10);
+
       const res = await axios.get(`${REACT_APP_API_URL}/api/payments/history`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
+      setLoadingPercent(70);
+
       setPayments(res.data.payments);
       setStats(res.data.stats);
+
+      setLoadingPercent(100);
     } catch (err) {
       console.error('Failed to fetch payment history:', err);
+      setLoadingPercent(100);
     } finally {
       setLoading(false);
     }
@@ -138,16 +145,7 @@ const PaymentHistory = () => {
   };
 
   if (loading) {
-    return (
-      <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
-          <p className="text-muted mt-3">Loading payment history...</p>
-        </div>
-      </div>
-    );
+    return <Loading percentage={loadingPercent} />;
   }
 
   return (
