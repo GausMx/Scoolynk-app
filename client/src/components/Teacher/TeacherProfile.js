@@ -87,7 +87,7 @@ const TeacherProfile = () => {
 
   const fetchClassStudents = async (classId) => {
     try {
-      const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/classes/${classId}/students`, {
+      const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/class/${classId}/students`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setStudents(res.data.students || []);
