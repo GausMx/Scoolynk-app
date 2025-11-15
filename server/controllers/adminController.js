@@ -292,12 +292,21 @@ export const createCourse = async (req, res) => {
     
     const course = new Course({
       name,
-      teacher: teacher === '' ? null : teacher, // Convert empty string to null
+      teacher: teacher === '' ? null : teacher,
       classes: classes || [],
       schoolId: req.user.schoolId
     });
     
     await course.save();
+    
+    // ✅ Add course name to teacher's courses array
+    if (teacher && teacher !== '') {
+      await User.findByIdAndUpdate(
+        teacher,
+        { $addToSet: { courses: name } },
+        { new: true }
+      );
+    }
     
     const populatedCourse = await Course.findById(course._id)
       .populate('teacher', 'name email')
@@ -316,9 +325,7 @@ export const createCourse = async (req, res) => {
   }
 };
 
-// -------------------------
-// Update course (FIXED VERSION)
-// -------------------------
+
 export const updateCourse = async (req, res) => {
   try {
     const { name, teacher, classes } = req.body;
@@ -339,6 +346,7 @@ export const updateCourse = async (req, res) => {
       updateData.classes = classes;
     }
     
+    // Find and update the course
     const course = await Course.findOneAndUpdate(
       { _id: req.params.id, schoolId: req.user.schoolId },
       updateData,
@@ -351,6 +359,35 @@ export const updateCourse = async (req, res) => {
       return res.status(404).json({ message: 'Course not found' });
     }
     
+    // ✅ IMPORTANT: Also update teacher's courses array if teacher is assigned
+    if (updateData.teacher) {
+      // Add course name to teacher's courses array if not already there
+      await User.findByIdAndUpdate(
+        updateData.teacher,
+        { $addToSet: { courses: course.name } }, // $addToSet prevents duplicates
+        { new: true }
+      );
+      
+      // Remove this course from other teachers who might have been previously assigned
+      await User.updateMany(
+        { 
+          _id: { $ne: updateData.teacher },
+          schoolId: req.user.schoolId,
+          courses: course.name
+        },
+        { $pull: { courses: course.name } }
+      );
+    } else if (updateData.teacher === null) {
+      // If teacher is removed, remove course from all teachers
+      await User.updateMany(
+        { 
+          schoolId: req.user.schoolId,
+          courses: course.name
+        },
+        { $pull: { courses: course.name } }
+      );
+    }
+    
     res.json({ message: 'Course updated successfully', course });
   } catch (err) {
     console.error('[UpdateCourse]', err);
@@ -361,30 +398,34 @@ export const updateCourse = async (req, res) => {
   }
 };
 
+
 // -------------------------
 // Delete course
 // -------------------------
 export const deleteCourse = async (req, res) => {
   try {
-    const course = await Course.findByIdAndDelete(req.params.id);
-    if (!course) return res.status(404).json({ message: 'Course not found' });
+    const course = await Course.findOneAndDelete({ 
+      _id: req.params.id,
+      schoolId: req.user.schoolId 
+    });
+    
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+    
+    // ✅ Remove course from all teachers
+    await User.updateMany(
+      { 
+        schoolId: req.user.schoolId,
+        courses: course.name
+      },
+      { $pull: { courses: course.name } }
+    );
+    
     res.json({ message: 'Course deleted successfully' });
   } catch (err) {
     console.error('[DeleteCourse]', err);
     res.status(500).json({ message: 'Failed to delete course.' });
-  }
-};
-
-// -------------------------
-// Get all classes
-// -------------------------
-export const getClasses = async (req, res) => {
-  try {
-    const classes = await Class.find({ schoolId: req.user.schoolId }).sort({ createdAt: -1 });
-    res.json({ classes });
-  } catch (err) {
-    console.error('[AdminGetClasses]', err);
-    res.status(500).json({ message: 'Failed to fetch classes.' });
   }
 };
 
