@@ -69,5 +69,5 @@ router.post('/results/submit-multiple', protect, requireRole('teacher'), submitM
 // Delete result (only drafts)
 router.delete('/results/:resultId', protect, requireRole('teacher'), deleteResult);
 //Class courses route
-router.get('/classes/:classId/courses', protect, requireRole('teacher'), getClassCourses);  
+router.get('/class/:classId/courses', protect, requireRole('teacher'), getClassCourses);  
 export default router;
