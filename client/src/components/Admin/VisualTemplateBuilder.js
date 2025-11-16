@@ -7,6 +7,7 @@ import {
   Plus, Trash2, Check, X 
 } from 'lucide-react';
 import axios from 'axios';
+import Loading from '../common/Loading';
 
 const { REACT_APP_API_URL } = process.env;
 
@@ -44,6 +45,8 @@ const VisualTemplateBuilder = ({
   // Get token from props or localStorage (like Settings.js does)
   const token = propToken || localStorage.getItem('token');
   
+  const [loading, setLoading] = useState(true);
+  const [loadingPercent, setLoadingPercent] = useState(0);
   const [templateName, setTemplateName] = useState(existingTemplate?.name || '');
   const [term, setTerm] = useState(existingTemplate?.term || 'First Term');
   const [session, setSession] = useState(existingTemplate?.session || '');
@@ -113,16 +116,23 @@ const VisualTemplateBuilder = ({
   useEffect(() => {
     const fetchSchoolInfo = async () => {
       try {
+        setLoading(true);
+        setLoadingPercent(10);
+
         const res = await axios.get(`${REACT_APP_API_URL}/api/admin/settings`, {
           headers: { Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}` }
         });
         
+        setLoadingPercent(70);
+
         const { school } = res.data;
         setSchoolInfo({
           name: school.name || 'Your School Name',
           address: school.address || 'School Address, City, State',
           motto: school.motto || ''
         });
+
+        setLoadingPercent(100);
       } catch (err) {
         console.error('Failed to fetch school info:', err);
         // Use default values if fetch fails
@@ -131,11 +141,16 @@ const VisualTemplateBuilder = ({
           address: 'School Address, City, State',
           motto: ''
         });
+        setLoadingPercent(100);
+      } finally {
+        setLoading(false);
       }
     };
 
     if (token) {
       fetchSchoolInfo();
+    } else {
+      setLoading(false);
     }
   }, [token]);
 
@@ -272,6 +287,10 @@ const VisualTemplateBuilder = ({
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return <Loading percentage={loadingPercent} />;
+  }
 
   return (
     <div className="container-fluid py-4">
