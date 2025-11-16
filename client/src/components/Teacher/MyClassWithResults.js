@@ -5,6 +5,7 @@ import {
   Edit, Trash2, Send, Eye, Scan
 } from 'lucide-react';
 import VisualResultEntry from './VisualResultEntry';
+import ResultPreviewModal from './ResultPreviewModal';
 const { REACT_APP_API_URL } = process.env;
 
 const MyClassWithResults = () => {
@@ -462,6 +463,7 @@ const HistoryTab = ({
   token 
 }) => {
   const [selectedResult, setSelectedResult] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const submitResult = async (resultId) => {
     try {
@@ -492,6 +494,11 @@ const HistoryTab = ({
     } catch (err) {
       alert('Failed to delete result: ' + (err.response?.data?.message || err.message));
     }
+  };
+
+  const handlePreview = (result) => {
+    setSelectedResult(result);
+    setShowPreview(true);
   };
 
   return (
@@ -574,7 +581,8 @@ const HistoryTab = ({
                       <div className="btn-group btn-group-sm">
                         <button 
                           className="btn btn-outline-primary"
-                          onClick={() => setSelectedResult(result)}
+                          onClick={() => handlePreview(result)}
+                          title="Preview Result"
                         >
                           <Eye size={14} />
                         </button>
@@ -583,12 +591,14 @@ const HistoryTab = ({
                             <button 
                               className="btn btn-outline-success"
                               onClick={() => submitResult(result._id)}
+                              title="Submit to Admin"
                             >
                               <Send size={14} />
                             </button>
                             <button 
                               className="btn btn-outline-danger"
                               onClick={() => deleteResult(result._id)}
+                              title="Delete Result"
                             >
                               <Trash2 size={14} />
                             </button>
@@ -610,33 +620,18 @@ const HistoryTab = ({
         </>
       )}
 
-      {/* View Result Modal */}
-      {selectedResult && (
-        <ViewResultModal 
+      {/* Preview Modal */}
+      {showPreview && selectedResult && (
+        <ResultPreviewModal 
           result={selectedResult}
-          onClose={() => setSelectedResult(null)}
+          onClose={() => {
+            setShowPreview(false);
+            setSelectedResult(null);
+          }}
+          token={token}
         />
       )}
     </>
   );
 };
-
-const ViewResultModal = ({ result, onClose }) => {
-  return (
-    <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-      <div className="modal-dialog modal-lg">
-        <div className="modal-content">
-          <div className="modal-header">
-            <h5 className="modal-title">Result Details</h5>
-            <button type="button" className="btn-close" onClick={onClose}></button>
-          </div>
-          <div className="modal-body">
-            <p>Full result details will be shown here...</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 export default MyClassWithResults;
