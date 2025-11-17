@@ -1,11 +1,9 @@
 // src/components/Auth/LoginForm.js
-
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import API from '../utils/api';
-import { setAccessToken, setUser} from '../utils/auth';
+import { setAccessToken, setUser } from '../utils/auth';
 import { redirectByRole } from '../utils/auth';
-import { Link } from 'react-router-dom';
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -24,23 +22,28 @@ const LoginForm = () => {
   // handle form submit
   const onSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     try {
       const res = await API.post('/api/auth/login', { email, password });
-      // backend should return token + user details
       const { token, role, name, _id, schoolId, mustChangePassword } = res.data;
-      // store token and user info in localStorage, include mustChangePassword
+
+      // save token and user info using your new helpers
       setAccessToken(token);
       setUser({ id: _id, name, email, role, schoolId, mustChangePassword });
-      // If mustChangePassword, redirect to password reset page
+
+      // redirect based on mustChangePassword or role
       if (mustChangePassword) {
         navigate('/reset-password');
       } else {
-        // redirect by role
         navigate(redirectByRole(role));
       }
     } catch (err) {
-      setError(err.response?.data?.msg || err.response?.data?.message || 'Login failed. Try again.');
-    } 
+      setError(
+        err.response?.data?.msg ||
+        err.response?.data?.message ||
+        'Login failed. Try again.'
+      );
+    }
   };
 
   return (
@@ -58,14 +61,20 @@ const LoginForm = () => {
               {error && (
                 <div className="alert alert-danger alert-dismissible fade show" role="alert">
                   {error}
-                  <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close" onClick={() => setError('')}></button>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close"
+                    onClick={() => setError('')}
+                  ></button>
                 </div>
               )}
               <form onSubmit={onSubmit}>
+                {/* Email */}
                 <div className="mb-3">
                   <label className="form-label d-flex align-items-center">
-                    <i className="bi bi-envelope me-2"></i>
-                    Email
+                    <i className="bi bi-envelope me-2"></i>Email
                   </label>
                   <div className="input-group">
                     <span className="input-group-text"><i className="bi bi-at"></i></span>
@@ -80,10 +89,11 @@ const LoginForm = () => {
                     />
                   </div>
                 </div>
+
+                {/* Password */}
                 <div className="mb-3">
                   <label className="form-label d-flex align-items-center">
-                    <i className="bi bi-lock me-2"></i>
-                    Password
+                    <i className="bi bi-lock me-2"></i>Password
                   </label>
                   <div className="input-group">
                     <span className="input-group-text"><i className="bi bi-key"></i></span>
@@ -108,6 +118,7 @@ const LoginForm = () => {
                     <Link to="/forgot-password" className="text-decoration-none small">Forgot Password?</Link>
                   </div>
                 </div>
+
                 <div className="d-grid mb-3">
                   <button 
                     type="submit" 
