@@ -18,7 +18,11 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^8.2.1",
     "express-validator": "^7.2.1",
+    "helmet": "^8.1.0",
+    "hpp": "^0.2.3",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.1",
     "multer": "^2.0.2",
@@ -28,6 +32,7 @@
     "sib-api-v3-sdk": "^8.5.0",
     "tesseract.js": "^6.0.1",
     "twilio": "^5.10.3",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "xss-clean": "^0.1.4"
   }
 }

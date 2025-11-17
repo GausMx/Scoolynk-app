@@ -1,116 +1,154 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import teacherRoutes from './routes/teacherRoutes.js';
-import authRoutes from './routes/authRoutes.js';
-import adminRoutes from './routes/adminRoutes.js';
-import connectDB from './config/db.js';
-import subaccountRoutes from './routes/subaccountRoutes.js';
-import ocrRoutes from './routes/ocrRoutes.js';
-import paymentRoutes from './routes/paymentRoutes.js';
+import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// Load environment variables
+// Security middleware
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import mongoSanitize from "express-mongo-sanitize";
+import xss from "xss-clean";
+import hpp from "hpp";
+
+// Routes
+import teacherRoutes from "./routes/teacherRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import subaccountRoutes from "./routes/subaccountRoutes.js";
+import ocrRoutes from "./routes/ocrRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
+
+import connectDB from "./config/db.js";
+
+// -----------------------------------------------------
+// INITIAL SETUP
+// -----------------------------------------------------
 dotenv.config();
-
-// Connect to MongoDB
 connectDB();
 
 const app = express();
 
-// Parse JSON with increased limit
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// ✅ SIMPLIFIED CORS - THIS SHOULD FIX IT
-const allowedOrigins = [
-  'https://scoolynk-app.netlify.app',
-  'http://localhost:3000',
-  'http://localhost:5173'
-];
-
-console.log('[CORS] Allowed origins:', allowedOrigins);
-
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, server-to-server)
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    // Remove trailing slash for comparison
-    const cleanOrigin = origin.replace(/\/$/, '');
-    
-    // Check if origin is allowed
-    if (allowedOrigins.some(allowed => cleanOrigin === allowed || cleanOrigin.includes('netlify.app'))) {
-      console.log('[CORS] ✅ Allowed:', cleanOrigin);
-      return callback(null, true);
-    }
-    
-    console.log('[CORS] ❌ Blocked:', cleanOrigin);
-    // ✅ IMPORTANT: Still allow the request but log it
-    // Don't throw error here - just log and allow
-    return callback(null, true);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Authorization'],
-  preflightContinue: false,
-  optionsSuccessStatus: 204
-}));
-
-// ✅ REMOVE THIS - The cors package already handles OPTIONS
-// app.use((req, res, next) => {
-//   if (req.method === 'OPTIONS') {
-//     ...
-//   }
-//   next();
-// });
-
-// Helper for __dirname in ES Modules
+// Resolve __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // -----------------------------------------------------
-// API ROUTES
+// SECURITY LAYER (🔥 PRODUCTION-GRADE)
 // -----------------------------------------------------
 
-// Root route
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'School Management API Running',
-    cors: 'Configured',
-    allowedOrigins: allowedOrigins,
-    timestamp: new Date().toISOString()
+// 1. Helmet (security headers)
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false, // needed for Netlify/React
+  })
+);
+
+// 2. Content Security Policy (CSP)
+app.use(
+  helmet.contentSecurityPolicy({
+    useDefaults: true,
+    directives: {
+      "default-src": ["'self'"],
+      "script-src": ["'self'", "'unsafe-inline'"],
+      "img-src": ["'self'", "data:", "blob:"],
+      "connect-src": ["'self'", "*"], // allow API calls
+    },
+  })
+);
+
+// 3. Prevent HTTP Parameter Pollution
+app.use(hpp());
+
+// 4. MongoDB Injection protection
+app.use(mongoSanitize());
+
+// 5. XSS Protection
+app.use(xss());
+
+// 6. Rate Limiting (protect API)
+app.use(
+  "/api/",
+  rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 150,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Calm down. Too many requests." },
+  })
+);
+
+// -----------------------------------------------------
+// JSON + BODY PARSER
+// -----------------------------------------------------
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// -----------------------------------------------------
+// CORS CONFIG (STRICT & SAFE)
+// -----------------------------------------------------
+const allowedOrigins = [
+  "https://scoolynk-app.netlify.app",
+  "http://localhost:3000",
+  "http://localhost:5173",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+
+      const cleanOrigin = origin.replace(/\/$/, "");
+
+      if (allowedOrigins.includes(cleanOrigin)) {
+        return callback(null, true);
+      }
+
+      console.log("[CORS BLOCKED]", cleanOrigin);
+      return callback(null, false); // block silently
+    },
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+  })
+);
+
+// -----------------------------------------------------
+// ROOT ROUTE
+// -----------------------------------------------------
+app.get("/", (req, res) => {
+  res.json({
+    message: "School Management API Running",
+    status: "OK",
+    secure: true,
+    timestamp: new Date().toISOString(),
   });
 });
 
-// Mount all API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/teacher', teacherRoutes);
-app.use('/api/subaccount', subaccountRoutes); 
-app.use('/api/ocr', ocrRoutes);
-app.use('/api/payments', paymentRoutes);
+// -----------------------------------------------------
+// API ROUTES
+// -----------------------------------------------------
+app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/teacher", teacherRoutes);
+app.use("/api/subaccount", subaccountRoutes);
+app.use("/api/ocr", ocrRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // Test route
-app.post('/test', (req, res) => {
-  res.json({ message: 'Test route working!' });
+app.post("/test", (req, res) => {
+  res.json({ message: "Test route working!" });
 });
 
-console.log('[Server] Frontend hosted on Netlify');
-
 // -----------------------------------------------------
-// ERROR HANDLING MIDDLEWARE
+// GLOBAL ERROR HANDLER
 // -----------------------------------------------------
 app.use((err, req, res, next) => {
-  console.error('[Global Error Handler]', err.stack);
-  
+  console.error("[ERROR]", err.stack);
+
   res.status(err.status || 500).json({
-    message: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    message: err.message || "Internal Server Error",
+    error: process.env.NODE_ENV === "development" ? err.stack : undefined,
   });
 });
 
@@ -120,6 +158,6 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log('CORS enabled for:', allowedOrigins);
+  console.log(`🔥 Server running securely on port ${PORT}`);
+  console.log("✔ Allowed origins:", allowedOrigins);
 });

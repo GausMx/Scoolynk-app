@@ -1,39 +1,47 @@
-// server/routes/authRoutes.js
-
-
-
 import express from 'express';
 import { check } from 'express-validator';
-import { register, login, getMe, resetPassword, adminExists } from '../controllers/authController.js';
+import {
+  register,
+  login,
+  getMe,
+  resetPassword,
+  adminExists,
+  refreshToken,
+  logout,
+} from '../controllers/authController.js';
 import protect from '../middleware/authMiddleware.js';
-import requireRole from '../middleware/roleMiddleware.js';
 
 const router = express.Router();
-// Check if admin exists (for frontend to secure register page)
+
+// Check if admin exists (frontend use)
 router.get('/admin-exists', adminExists);
 
-
+// Register
 router.post(
   '/register',
   [
-    // Input validation ensures data integrity and security
-    check('name', 'Name is required').not().isEmpty(),
-    check('email', 'Please include a valid email').isEmail(),
-    check('phone', 'Phone number is required').not().isEmpty(),
-    check('password', 'Please enter a password with 6 or more characters').isLength({ min: 6 }),
-    check('role', 'Role is required').isIn(['admin', 'teacher']),
+    check('name', 'Name is required').notEmpty(),
+    check('email', 'Valid email required').isEmail(),
+    check('phone', 'Phone number required').notEmpty(),
+    check('password', 'Password min 6 chars').isLength({ min: 6 }),
+    check('role', 'Role required').isIn(['admin', 'teacher']),
   ],
   register
 );
 
-
+// Login
 router.post('/login', login);
 
-// Password reset for users with mustChangePassword
+// Refresh access token
+router.post('/refresh', refreshToken);
+
+// Logout
+router.post('/logout', logout);
+
+// Reset password
 router.post('/reset-password', resetPassword);
 
-
-// This route is protected by both authentication and subscription middleware
+// Get current user
 router.get('/me', protect, getMe);
 
 export default router;
