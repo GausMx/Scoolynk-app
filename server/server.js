@@ -7,7 +7,6 @@ import { fileURLToPath } from "url";
 // Security
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import mongoSanitize from "express-mongo-sanitize";
 import hpp from "hpp";
 
 // Routes
@@ -82,30 +81,45 @@ app.use(
 // Prevent HTTP parameter pollution
 app.use(hpp());
 
-// Mongo sanitize - FIXED VERSION for Express 5+
+// Custom sanitization middleware to avoid Express 5+ read-only issue
 app.use((req, res, next) => {
-  try {
-    if (req.body) {
-      req.body = mongoSanitize.sanitize(req.body, { replaceWith: '_' });
+  // Simple sanitization function
+  const sanitize = (obj) => {
+    if (!obj || typeof obj !== 'object') return obj;
+    
+    const sanitized = Array.isArray(obj) ? [] : {};
+    
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        const value = obj[key];
+        
+        // Remove keys with $ or . (NoSQL injection attempts)
+        if (key.includes('$') || key.includes('.')) {
+          continue;
+        }
+        
+        // Recursively sanitize nested objects
+        if (typeof value === 'object' && value !== null) {
+          sanitized[key] = sanitize(value);
+        } else {
+          sanitized[key] = value;
+        }
+      }
     }
-    if (req.params) {
-      req.params = mongoSanitize.sanitize(req.params, { replaceWith: '_' });
-    }
-    // Don't sanitize req.query directly - create a sanitized copy
-    if (req.query) {
-      const sanitizedQuery = mongoSanitize.sanitize(req.query, { replaceWith: '_' });
-      // Use defineProperty to safely set query
-      Object.defineProperty(req, 'sanitizedQuery', {
-        value: sanitizedQuery,
-        writable: false,
-        enumerable: true,
-      });
-    }
-    next();
-  } catch (err) {
-    console.error('[Sanitization Error]', err.message);
-    next();
+    
+    return sanitized;
+  };
+  
+  // Sanitize body and params (skip query due to Express 5+ read-only)
+  if (req.body) {
+    req.body = sanitize(req.body);
   }
+  
+  if (req.params) {
+    req.params = sanitize(req.params);
+  }
+  
+  next();
 });
 
 // Rate limiter - apply to API routes only
