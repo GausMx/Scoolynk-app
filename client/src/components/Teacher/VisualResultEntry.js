@@ -171,7 +171,7 @@ const VisualResultEntry = ({
       const res = await axios.post(
         `${REACT_APP_API_URL}/api/teacher/results`,
         payload,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       alert(res.data.message || 'Result saved successfully!');
