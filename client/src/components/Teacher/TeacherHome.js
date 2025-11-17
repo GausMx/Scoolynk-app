@@ -36,7 +36,7 @@ const TeacherHome = ({ teacherData, refreshData }) => {
       const coursePromises = classIds.map(classId =>
         axios.get(
           `${REACT_APP_API_URL}/api/teacher/class/${classId}/courses`,
-          { headers: { Authorization: `Bearer ${accessToken}` } }
+          { headers: { Authorization: `Bearer ${token}` } }
         ).catch(err => ({ data: { courses: [] } }))
       );
 

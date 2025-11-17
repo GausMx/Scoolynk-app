@@ -28,7 +28,7 @@ const SendPaymentLinkModal = ({ student, onClose, onSuccess }) => {
         const res = await axios.post(
           `${REACT_APP_API_URL}/api/payments/send-link`,
           { studentId: student._id },
-          { headers: { Authorization: `Bearer ${accessToken}` } }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         
         setMessage({ type: 'success', text: res.data.message });
@@ -40,7 +40,7 @@ const SendPaymentLinkModal = ({ student, onClose, onSuccess }) => {
         const res = await axios.post(
           `${REACT_APP_API_URL}/api/payments/create-link`,
           { studentId: student._id },
-          { headers: { Authorization: `Bearer ${accessToken}` } }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         
         await navigator.clipboard.writeText(res.data.paymentLink);

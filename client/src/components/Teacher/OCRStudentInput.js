@@ -81,7 +81,7 @@ const OCRStudentInput = ({ classId, method, onComplete, onCancel }) => {
       const res = await axios.post(
         `${REACT_APP_API_URL}/api/ocr/extract-base64`,
         { image: imageData },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (res.data.success && res.data.data.students.length > 0) {
@@ -134,7 +134,7 @@ const OCRStudentInput = ({ classId, method, onComplete, onCancel }) => {
       await axios.post(
         `${REACT_APP_API_URL}/api/teacher/students/bulk`,
         { students: extractedStudents, classId },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       onComplete();

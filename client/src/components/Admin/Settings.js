@@ -74,7 +74,7 @@ const Settings = () => {
       setLoadingPercent(10);
       
       const res = await axios.get(`${REACT_APP_API_URL}/api/admin/settings`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       setLoadingPercent(50);
@@ -102,7 +102,7 @@ const Settings = () => {
   const fetchSchoolCode = async () => {
     try {
       const res = await axios.get(`${REACT_APP_API_URL}/api/admin/school/code`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       setSchoolCode(res.data.schoolCode || '');
     } catch (err) {
@@ -114,7 +114,7 @@ const Settings = () => {
     try {
       setLoading(true);
       const res = await axios.get(`${REACT_APP_API_URL}/api/admin/payments/status`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       setPayments(res.data);
     } catch (err) {
@@ -145,7 +145,7 @@ const Settings = () => {
             motto: profile.motto
           }
         },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       showMessage('success', 'Profile updated successfully!');
       await fetchSettings();
@@ -179,7 +179,7 @@ const Settings = () => {
           section: 'security',
           data: security
         },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       showMessage('success', 'Password changed successfully!');
       setSecurity({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -200,7 +200,7 @@ const Settings = () => {
       await axios.post(
         `${REACT_APP_API_URL}/api/admin/payments/send-reminders`,
         { category },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       showMessage('success', `Payment reminders sent to ${category} parents!`);
     } catch (err) {
@@ -572,7 +572,7 @@ const Settings = () => {
         const res = await axios.post(
           `${REACT_APP_API_URL}/api/payments/send-bulk`,
           {},
-          { headers: { Authorization: `Bearer ${accessToken}` } }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         
         showMessage('success', res.data.message);

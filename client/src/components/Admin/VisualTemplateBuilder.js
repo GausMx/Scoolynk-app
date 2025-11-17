@@ -120,7 +120,7 @@ const VisualTemplateBuilder = ({
         setLoadingPercent(10);
 
         const res = await axios.get(`${REACT_APP_API_URL}/api/admin/settings`, {
-          headers: { Authorization: token.startsWith('Bearer ') ? token : `Bearer ${accessToken}` }
+          headers: { Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}` }
         });
         
         setLoadingPercent(70);
@@ -271,7 +271,7 @@ const VisualTemplateBuilder = ({
       // Check if token already has "Bearer" prefix
       const authHeader = token.startsWith('Bearer ') 
         ? token 
-        : `Bearer ${accessToken}`;
+        : `Bearer ${token}`;
 
       const res = await axios[method](url, templateData, {
         headers: { Authorization: authHeader }

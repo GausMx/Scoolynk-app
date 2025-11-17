@@ -36,7 +36,7 @@ const PaymentSetup = () => {
 
       // Fetch banks
       const banksRes = await axios.get(`${REACT_APP_API_URL}/api/subaccount/banks`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       setBanks(banksRes.data.banks);
       
@@ -44,7 +44,7 @@ const PaymentSetup = () => {
 
       // Check configuration
       const configRes = await axios.get(`${REACT_APP_API_URL}/api/subaccount/config`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       setIsConfigured(configRes.data.isConfigured);
       setConfig(configRes.data);
@@ -70,7 +70,7 @@ const PaymentSetup = () => {
   const checkConfiguration = async () => {
     try {
       const res = await axios.get(`${REACT_APP_API_URL}/api/subaccount/config`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       setIsConfigured(res.data.isConfigured);
       setConfig(res.data);
@@ -99,7 +99,7 @@ const PaymentSetup = () => {
       const res = await axios.post(
         `${REACT_APP_API_URL}/api/subaccount/verify-account`,
         { accountNumber: formData.accountNumber, bankCode: formData.bankCode },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       
       setFormData({ ...formData, accountName: res.data.accountName });
@@ -126,7 +126,7 @@ const PaymentSetup = () => {
       const res = await axios.post(
         `${REACT_APP_API_URL}${endpoint}`,
         formData,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       
       showMessage('success', res.data.message);

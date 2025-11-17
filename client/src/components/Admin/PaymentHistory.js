@@ -47,7 +47,7 @@ const PaymentHistory = () => {
       setLoadingPercent(10);
 
       const res = await axios.get(`${REACT_APP_API_URL}/api/payments/history`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       setLoadingPercent(70);

@@ -28,7 +28,7 @@ const ClassView = () => {
       
       // Fetch all classes to find current one
       const classRes = await axios.get(`${REACT_APP_API_URL}/api/teacher/school-classes`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       
       const currentClass = classRes.data.classes.find(c => c._id === classId);
@@ -41,7 +41,7 @@ const ClassView = () => {
 
       // Fetch students in this specific class
       const studentsRes = await axios.get(`${REACT_APP_API_URL}/api/teacher/class/${classId}/students`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       
       setStudents(studentsRes.data.students || []);
@@ -50,7 +50,7 @@ const ClassView = () => {
 try {
   const coursesRes = await axios.get(
     `${REACT_APP_API_URL}/api/teacher/class/${classId}/courses`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
+    { headers: { Authorization: `Bearer ${token}` } }
   );
   setCourses(coursesRes.data.courses || []);
 } catch (err) {

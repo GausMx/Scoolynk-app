@@ -40,7 +40,7 @@ const TeacherOnboarding = () => {
     const fetchClasses = async () => {
       try {
         const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/school-classes`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
+          headers: { Authorization: `Bearer ${token}` }
         });
         setAvailableClasses(res.data.classes || []);
       } catch (err) {
@@ -83,7 +83,7 @@ const TeacherOnboarding = () => {
       await axios.post(
         `${REACT_APP_API_URL}/api/teacher/onboarding/class-teacher`,
         { teacherId, classTeacherFor: selectedClasses },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       setMessage('Class teacher info saved!');
       setStep(3);

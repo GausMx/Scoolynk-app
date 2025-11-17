@@ -30,7 +30,7 @@ const TeacherDashboard = () => {
     try {
       setLoading(true);
       const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/dashboard`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       setTeacherData(res.data);
     } catch (err) {

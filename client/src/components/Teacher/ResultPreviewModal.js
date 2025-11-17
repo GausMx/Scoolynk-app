@@ -23,7 +23,7 @@ const ResultPreviewModal = ({ result, onClose, token }) => {
       // Fetch the complete result with all populated fields
       const res = await axios.get(
         `${REACT_APP_API_URL}/api/teacher/results/${result._id}`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       
       console.log('[Preview] Full result data:', res.data);

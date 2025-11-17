@@ -27,7 +27,7 @@ const ManageTeachers = () => {
     try {
       setLoading(true);
       const res = await axios.get(`${REACT_APP_API_URL}/api/admin/teachers`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       setTeachers(res.data.teachers || []);
     } catch (err) {
@@ -42,10 +42,10 @@ const ManageTeachers = () => {
     try {
       const [classesRes, coursesRes] = await Promise.all([
         axios.get(`${REACT_APP_API_URL}/api/admin/classes`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
+          headers: { Authorization: `Bearer ${token}` }
         }),
         axios.get(`${REACT_APP_API_URL}/api/admin/courses`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
+          headers: { Authorization: `Bearer ${token}` }
         })
       ]);
       setClasses(classesRes.data.classes || []);
@@ -74,7 +74,7 @@ const ManageTeachers = () => {
           courses: formData.courses,
           classTeacherFor: formData.classTeacherFor
         },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       setMessage(`Teacher '${formData.name}' updated successfully.`);
@@ -98,7 +98,7 @@ const ManageTeachers = () => {
       setMessage('');
       
       await axios.delete(`${REACT_APP_API_URL}/api/admin/teachers/${teacherId}`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       setMessage(`Teacher '${teacherName}' deleted successfully.`);

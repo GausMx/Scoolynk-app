@@ -56,7 +56,7 @@ const StudentInput = ({ inputMethod, selectedClasses, onComplete, onBack }) => {
       await axios.post(
         `${REACT_APP_API_URL}/api/teacher/students/bulk`,
         { students: validStudents, classId: selectedClass },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       setMessage(`${validStudents.length} students added successfully!`);
       setTimeout(() => onComplete(), 2000);
