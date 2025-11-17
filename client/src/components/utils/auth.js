@@ -1,33 +1,30 @@
-// src/utils/auth.js
-
-// Function to get the user object from localStorage
+// ----------------------
+// Local Storage Helpers
+// ----------------------
 export const getUser = () => {
   const user = localStorage.getItem('user');
   return user ? JSON.parse(user) : null;
 };
 
-// Function to get the JWT token from localStorage
-export const getToken = () => {
-  return localStorage.getItem('token');
-};
-
-// Function to set token
-export const setToken = (token) => {
-  localStorage.setItem('token', token);
-};
-
-// Function to set user
 export const setUser = (user) => {
   localStorage.setItem('user', JSON.stringify(user));
 };
 
-// Function to remove user and token from localStorage
-export const logout = () => {
+export const getAccessToken = () => localStorage.getItem('accessToken');
+export const setAccessToken = (token) => localStorage.setItem('accessToken', token);
+
+export const getRefreshToken = () => localStorage.getItem('refreshToken');
+export const setRefreshToken = (token) => localStorage.setItem('refreshToken', token);
+
+export const clearAuth = () => {
   localStorage.removeItem('user');
-  localStorage.removeItem('token');
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
 };
 
-// Function to redirect to the correct dashboard based on role
+// ----------------------
+// Redirect Helper
+// ----------------------
 export const redirectByRole = (role) => {
   switch (role) {
     case 'admin':
@@ -37,4 +34,44 @@ export const redirectByRole = (role) => {
     default:
       return '/';
   }
+};
+
+// ----------------------
+// Fetch Wrapper w/ Auto Refresh
+// ----------------------
+export const fetchWithAuth = async (url, options = {}) => {
+  let token = getAccessToken();
+  const refreshToken = getRefreshToken();
+
+  if (!options.headers) options.headers = {};
+  options.headers['Authorization'] = `Bearer ${token}`;
+  options.headers['Content-Type'] = 'application/json';
+
+  let res = await fetch(url, options);
+
+  // If access token expired
+  if (res.status === 401 && refreshToken) {
+    const refreshRes = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: refreshToken }),
+    });
+
+    if (refreshRes.ok) {
+      const data = await refreshRes.json();
+      token = data.accessToken;
+      setAccessToken(token);
+
+      // Retry original request
+      options.headers['Authorization'] = `Bearer ${token}`;
+      res = await fetch(url, options);
+    } else {
+      // Refresh failed → logout
+      clearAuth();
+      window.location.href = '/login';
+      return;
+    }
+  }
+
+  return res;
 };

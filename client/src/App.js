@@ -1,4 +1,3 @@
-// src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
@@ -9,12 +8,12 @@ import AdminDashboard from './components/pages/AdminDashboard';
 import LoginForm from './components/Auth/LoginForm';
 import RegisterForm from './components/Auth/RegisterForm';
 import PasswordResetForm from './components/Auth/PasswordResetForm';
-import { getUser, getToken } from './components/utils/auth';
+import { getUser, getAccessToken } from './components/utils/auth';
 
 // ProtectedRoute wrapper
 const ProtectedRoute = ({ children, roles }) => {
   const user = getUser();
-  const token = getToken();
+  const token = getAccessToken(); // Updated to accessToken
 
   if (!user || !token) {
     return <Navigate to="/login" replace />;
@@ -41,7 +40,7 @@ const App = () => {
         <Route path="/register" element={<RegisterForm />} />
         <Route path="/reset-password" element={<PasswordResetForm />} />
 
-        {/* Admin routes with nested pages */}
+        {/* Admin routes */}
         <Route
           path="/admin/*"
           element={
@@ -52,20 +51,17 @@ const App = () => {
         />
 
         {/* Teacher routes */}
-        <Route 
-          path="/teacher/onboarding" 
-          element={<TeacherOnboarding />} 
-        />
-        <Route 
-          path="/teacher/*" 
+        <Route path="/teacher/onboarding" element={<TeacherOnboarding />} />
+        <Route
+          path="/teacher/*"
           element={
             <ProtectedRoute roles={['teacher']}>
               <TeacherDashboard />
             </ProtectedRoute>
-          } 
+          }
         />
 
-        {/* Catch-all redirect */}
+        {/* Catch-all */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
