@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../utils/api';
-import { setToken, setUser} from '../utils/auth';
+import { setAccessToken, setUser} from '../utils/auth';
 import { redirectByRole } from '../utils/auth';
 import { Link } from 'react-router-dom';
 
@@ -29,7 +29,7 @@ const LoginForm = () => {
       // backend should return token + user details
       const { token, role, name, _id, schoolId, mustChangePassword } = res.data;
       // store token and user info in localStorage, include mustChangePassword
-      setToken(token);
+      setAccessToken(token);
       setUser({ id: _id, name, email, role, schoolId, mustChangePassword });
       // If mustChangePassword, redirect to password reset page
       if (mustChangePassword) {

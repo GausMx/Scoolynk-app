@@ -1,10 +1,9 @@
 // src/components/Auth/RegisterForm.js
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import API from '../utils/api';
-import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { setAccessToken, setUser } from '../utils/auth';
 
 const RegisterForm = () => {
   const navigate = useNavigate();
@@ -22,8 +21,7 @@ const RegisterForm = () => {
   const [message, setMessage] = useState('');
   const [adminExists, setAdminExists] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
-  // State for dropdowns
+
   const [availableClasses, setAvailableClasses] = useState([]);
   const [availableCourses, setAvailableCourses] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
@@ -36,7 +34,9 @@ const RegisterForm = () => {
     }
     const checkAdmin = setTimeout(() => {
       fetch(
-        process.env.REACT_APP_API_URL + '/api/auth/admin-exists?schoolName=' + encodeURIComponent(formData.schoolName)
+        `${process.env.REACT_APP_API_URL}/api/auth/admin-exists?schoolName=${encodeURIComponent(
+          formData.schoolName
+        )}`
       )
         .then(res => res.json())
         .then(data => setAdminExists(!!data.exists))
@@ -45,7 +45,7 @@ const RegisterForm = () => {
     return () => clearTimeout(checkAdmin);
   }, [formData.schoolName, formData.role]);
 
-  // Fetch classes and courses when teacher enters school code
+  // Fetch classes and courses for teachers
   useEffect(() => {
     if (formData.role === 'teacher' && formData.schoolCode.length === 16) {
       fetchClassesAndCourses();
@@ -63,8 +63,7 @@ const RegisterForm = () => {
       );
       setAvailableClasses(res.data.classes || []);
       setAvailableCourses(res.data.courses || []);
-    } catch (err) {
-      console.error('Failed to fetch classes/courses:', err);
+    } catch {
       setMessage('Invalid school code or failed to load classes/courses.');
       setAvailableClasses([]);
       setAvailableCourses([]);
@@ -73,46 +72,36 @@ const RegisterForm = () => {
     }
   };
 
-  const handleChange = (e) => {
+  const handleChange = e =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
 
-  // Handle multi-select for classes and courses
   const handleMultiSelect = (e, fieldName) => {
-    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+    const selectedOptions = Array.from(e.target.selectedOptions, opt => opt.value);
     setFormData({ ...formData, [fieldName]: selectedOptions });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     setMessage('');
     try {
       const payload = { ...formData };
-      
-      // Send classes and courses as arrays of IDs
       if (formData.role === 'teacher') {
         payload.classes = formData.classes;
         payload.courses = formData.courses;
       }
 
       const response = await API.post('/api/auth/register', payload);
-      
-      // Check if teacher needs onboarding
+
       if (response.data.needsOnboarding) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('teacherId', response.data._id);
-        localStorage.setItem('user', JSON.stringify(response.data));
+        setAccessToken(response.data.token);
+        setUser(response.data);
         setMessage('Registration successful! Redirecting to onboarding...');
-        setTimeout(() => {
-          navigate('/teacher/onboarding');
-        }, 1500);
+        setTimeout(() => navigate('/teacher/onboarding'), 1500);
       } else {
         setMessage('Registration successful! Redirecting to login...');
-        setTimeout(() => {
-          navigate('/login');
-        }, 1500);
+        setTimeout(() => navigate('/login'), 1500);
       }
-      
+
       setFormData({
         name: '',
         email: '',
@@ -141,9 +130,13 @@ const RegisterForm = () => {
                   Registration Blocked
                 </h2>
               </div>
-              <div className="card-body p-4 text-center">
-                <div className="alert alert-danger alert-dismissible fade show" role="alert">
-                  An admin already exists for this school. Please <Link to="/login" className="fw-bold">login</Link> or contact your school admin.
+              <div className="card-body text-center">
+                <div className="alert alert-danger">
+                  An admin already exists for this school. Please{' '}
+                  <Link to="/login" className="fw-bold">
+                    login
+                  </Link>{' '}
+                  or contact your school admin.
                 </div>
               </div>
             </div>
@@ -166,19 +159,32 @@ const RegisterForm = () => {
             </div>
             <div className="card-body p-4">
               {message && (
-                <div className={`alert ${message.includes('successful') ? 'alert-success' : 'alert-danger'} alert-dismissible fade show`} role="alert">
+                <div
+                  className={`alert ${
+                    message.includes('successful') ? 'alert-success' : 'alert-danger'
+                  } alert-dismissible fade show`}
+                  role="alert"
+                >
                   {message}
-                  <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close" onClick={() => setMessage('')}></button>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close"
+                    onClick={() => setMessage('')}
+                  ></button>
                 </div>
               )}
               <form onSubmit={handleSubmit}>
+                {/* Role */}
                 <div className="mb-3">
                   <label className="form-label d-flex align-items-center">
-                    <i className="bi bi-person-badge me-2"></i>
-                    Role
+                    <i className="bi bi-person-badge me-2"></i>Role
                   </label>
                   <div className="input-group">
-                    <span className="input-group-text"><i className="bi bi-shield-check"></i></span>
+                    <span className="input-group-text">
+                      <i className="bi bi-shield-check"></i>
+                    </span>
                     <select
                       className="form-select form-select-lg"
                       name="role"
@@ -193,13 +199,15 @@ const RegisterForm = () => {
                   </div>
                 </div>
 
+                {/* Name */}
                 <div className="mb-3">
                   <label className="form-label d-flex align-items-center">
-                    <i className="bi bi-person me-2"></i>
-                    Name
+                    <i className="bi bi-person me-2"></i>Name
                   </label>
                   <div className="input-group">
-                    <span className="input-group-text"><i className="bi bi-person-circle"></i></span>
+                    <span className="input-group-text">
+                      <i className="bi bi-person-circle"></i>
+                    </span>
                     <input
                       type="text"
                       className="form-control form-control-lg"
@@ -212,13 +220,15 @@ const RegisterForm = () => {
                   </div>
                 </div>
 
+                {/* Email */}
                 <div className="mb-3">
                   <label className="form-label d-flex align-items-center">
-                    <i className="bi bi-envelope me-2"></i>
-                    Email
+                    <i className="bi bi-envelope me-2"></i>Email
                   </label>
                   <div className="input-group">
-                    <span className="input-group-text"><i className="bi bi-at"></i></span>
+                    <span className="input-group-text">
+                      <i className="bi bi-at"></i>
+                    </span>
                     <input
                       type="email"
                       className="form-control form-control-lg"
@@ -231,13 +241,15 @@ const RegisterForm = () => {
                   </div>
                 </div>
 
+                {/* Phone */}
                 <div className="mb-3">
                   <label className="form-label d-flex align-items-center">
-                    <i className="bi bi-telephone me-2"></i>
-                    Phone
+                    <i className="bi bi-telephone me-2"></i>Phone
                   </label>
                   <div className="input-group">
-                    <span className="input-group-text"><i className="bi bi-phone"></i></span>
+                    <span className="input-group-text">
+                      <i className="bi bi-phone"></i>
+                    </span>
                     <input
                       type="tel"
                       className="form-control form-control-lg"
@@ -250,15 +262,17 @@ const RegisterForm = () => {
                   </div>
                 </div>
 
+                {/* Password */}
                 <div className="mb-3">
                   <label className="form-label d-flex align-items-center">
-                    <i className="bi bi-lock me-2"></i>
-                    Password
+                    <i className="bi bi-lock me-2"></i>Password
                   </label>
                   <div className="input-group">
-                    <span className="input-group-text"><i className="bi bi-key"></i></span>
+                    <span className="input-group-text">
+                      <i className="bi bi-key"></i>
+                    </span>
                     <input
-                      type={showPassword ? "text" : "password"}
+                      type={showPassword ? 'text' : 'password'}
                       className="form-control form-control-lg"
                       name="password"
                       value={formData.password}
@@ -266,9 +280,9 @@ const RegisterForm = () => {
                       placeholder="Enter your password"
                       required
                     />
-                    <button 
-                      className="btn btn-outline-secondary" 
-                      type="button" 
+                    <button
+                      className="btn btn-outline-secondary"
+                      type="button"
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
@@ -276,14 +290,16 @@ const RegisterForm = () => {
                   </div>
                 </div>
 
+                {/* Admin School Name */}
                 {formData.role === 'admin' && (
                   <div className="mb-3">
                     <label className="form-label d-flex align-items-center">
-                      <i className="bi bi-building me-2"></i>
-                      School Name
+                      <i className="bi bi-building me-2"></i>School Name
                     </label>
                     <div className="input-group">
-                      <span className="input-group-text"><i className="bi bi-bank"></i></span>
+                      <span className="input-group-text">
+                        <i className="bi bi-bank"></i>
+                      </span>
                       <input
                         type="text"
                         className="form-control form-control-lg"
@@ -297,15 +313,17 @@ const RegisterForm = () => {
                   </div>
                 )}
 
+                {/* Teacher School Code */}
                 {formData.role === 'teacher' && (
                   <>
                     <div className="mb-3">
                       <label className="form-label d-flex align-items-center">
-                        <i className="bi bi-key-fill me-2"></i>
-                        School Code
+                        <i className="bi bi-key-fill me-2"></i>School Code
                       </label>
                       <div className="input-group">
-                        <span className="input-group-text"><i className="bi bi-hash"></i></span>
+                        <span className="input-group-text">
+                          <i className="bi bi-hash"></i>
+                        </span>
                         <input
                           type="text"
                           className="form-control form-control-lg"
@@ -325,24 +343,26 @@ const RegisterForm = () => {
                         </div>
                       )}
                     </div>
-                    
+
+                    {/* Classes */}
                     {availableClasses.length > 0 && (
                       <div className="mb-3">
                         <label className="form-label d-flex align-items-center">
-                          <i className="bi bi-book me-2"></i>
-                          Select Classes You Teach
+                          <i className="bi bi-book me-2"></i>Select Classes You Teach
                         </label>
                         <div className="input-group">
-                          <span className="input-group-text"><i className="bi bi-list-check"></i></span>
+                          <span className="input-group-text">
+                            <i className="bi bi-list-check"></i>
+                          </span>
                           <select
                             multiple
                             className="form-select form-select-lg"
                             size="5"
                             value={formData.classes}
-                            onChange={(e) => handleMultiSelect(e, 'classes')}
+                            onChange={e => handleMultiSelect(e, 'classes')}
                             required
                           >
-                            {availableClasses.map((cls) => (
+                            {availableClasses.map(cls => (
                               <option key={cls._id} value={cls._id}>
                                 {cls.name}
                               </option>
@@ -351,28 +371,31 @@ const RegisterForm = () => {
                         </div>
                         <div className="form-text">
                           <i className="bi bi-info-circle me-1"></i>
-                          Hold Ctrl/Cmd for multiple selection. Selected: {formData.classes.length} class(es)
+                          Hold Ctrl/Cmd for multiple selection. Selected: {formData.classes.length}{' '}
+                          class(es)
                         </div>
                       </div>
                     )}
-                    
+
+                    {/* Courses */}
                     {availableCourses.length > 0 && (
                       <div className="mb-3">
                         <label className="form-label d-flex align-items-center">
-                          <i className="bi bi-journal-text me-2"></i>
-                          Select Courses You Teach
+                          <i className="bi bi-journal-text me-2"></i>Select Courses You Teach
                         </label>
                         <div className="input-group">
-                          <span className="input-group-text"><i className="bi bi-list-check"></i></span>
+                          <span className="input-group-text">
+                            <i className="bi bi-list-check"></i>
+                          </span>
                           <select
                             multiple
                             className="form-select form-select-lg"
                             size="5"
                             value={formData.courses}
-                            onChange={(e) => handleMultiSelect(e, 'courses')}
+                            onChange={e => handleMultiSelect(e, 'courses')}
                             required
                           >
-                            {availableCourses.map((course) => (
+                            {availableCourses.map(course => (
                               <option key={course._id} value={course.name}>
                                 {course.name}
                               </option>
@@ -381,7 +404,8 @@ const RegisterForm = () => {
                         </div>
                         <div className="form-text">
                           <i className="bi bi-info-circle me-1"></i>
-                          Hold Ctrl/Cmd for multiple selection. Selected: {formData.courses.length} course(s)
+                          Hold Ctrl/Cmd for multiple selection. Selected: {formData.courses.length}{' '}
+                          course(s)
                         </div>
                       </div>
                     )}
@@ -389,12 +413,8 @@ const RegisterForm = () => {
                 )}
 
                 <div className="d-grid mb-3">
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary btn-lg rounded-pill"
-                  >
-                    <i className="bi bi-person-check me-2"></i>
-                    Register
+                  <button type="submit" className="btn btn-primary btn-lg rounded-pill">
+                    <i className="bi bi-person-check me-2"></i>Register
                   </button>
                 </div>
               </form>
