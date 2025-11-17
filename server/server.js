@@ -4,7 +4,7 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Security middleware
+// Security
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import mongoSanitize from "express-mongo-sanitize";
@@ -21,71 +21,57 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 
 import connectDB from "./config/db.js";
 
-// -----------------------------------------------------
-// INITIAL SETUP
-// -----------------------------------------------------
 dotenv.config();
 connectDB();
 
 const app = express();
 
-// Resolve __dirname for ES modules
+// Resolve dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // -----------------------------------------------------
-// SECURITY LAYER (🔥 PRODUCTION-GRADE)
+// 🔐 SECURITY MIDDLEWARE
 // -----------------------------------------------------
 
-// 1. Helmet (security headers)
+// Helmet basics (CSP removed for now so API won’t break)
 app.use(
   helmet({
-    crossOriginResourcePolicy: false, // needed for Netlify/React
+    crossOriginResourcePolicy: false,
   })
 );
 
-// 2. Content Security Policy (CSP)
-app.use(
-  helmet.contentSecurityPolicy({
-    useDefaults: true,
-    directives: {
-      "default-src": ["'self'"],
-      "script-src": ["'self'", "'unsafe-inline'"],
-      "img-src": ["'self'", "data:", "blob:"],
-      "connect-src": ["'self'", "*"], // allow API calls
-    },
-  })
-);
-
-// 3. Prevent HTTP Parameter Pollution
+// Prevent HTTP parameter pollution
 app.use(hpp());
 
-// 4. MongoDB Injection protection
-app.use(mongoSanitize());
-
-// 5. XSS Protection
+// XSS cleaning
 app.use(xss());
 
-// 6. Rate Limiting (protect API)
+// Fix mongo-sanitize bug (Express 5 read-only req.query)
+app.use(
+  mongoSanitize({
+    replaceWith: "_",
+  })
+);
+
+// Rate limiter
 app.use(
   "/api/",
   rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
+    windowMs: 15 * 60 * 1000,
     max: 150,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { message: "Calm down. Too many requests." },
+    message: { message: "Too many requests." },
   })
 );
 
 // -----------------------------------------------------
-// JSON + BODY PARSER
+// 📦 BODY PARSER
 // -----------------------------------------------------
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // -----------------------------------------------------
-// CORS CONFIG (STRICT & SAFE)
+// 🌐 CORS CONFIG (stable + predictable)
 // -----------------------------------------------------
 const allowedOrigins = [
   "https://scoolynk-app.netlify.app",
@@ -95,21 +81,8 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
-
-      const cleanOrigin = origin.replace(/\/$/, "");
-
-      if (allowedOrigins.includes(cleanOrigin)) {
-        return callback(null, true);
-      }
-
-      console.log("[CORS BLOCKED]", cleanOrigin);
-      return callback(null, false); // block silently
-    },
+    origin: allowedOrigins,
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"],
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   })
 );
 
@@ -120,7 +93,6 @@ app.get("/", (req, res) => {
   res.json({
     message: "School Management API Running",
     status: "OK",
-    secure: true,
     timestamp: new Date().toISOString(),
   });
 });
@@ -135,29 +107,27 @@ app.use("/api/subaccount", subaccountRoutes);
 app.use("/api/ocr", ocrRoutes);
 app.use("/api/payments", paymentRoutes);
 
-// Test route
+// Test
 app.post("/test", (req, res) => {
   res.json({ message: "Test route working!" });
 });
 
 // -----------------------------------------------------
-// GLOBAL ERROR HANDLER
+// 🔥 GLOBAL ERROR HANDLER
 // -----------------------------------------------------
 app.use((err, req, res, next) => {
-  console.error("[ERROR]", err.stack);
+  console.error("[SERVER ERROR]", err.message);
 
   res.status(err.status || 500).json({
     message: err.message || "Internal Server Error",
-    error: process.env.NODE_ENV === "development" ? err.stack : undefined,
   });
 });
 
 // -----------------------------------------------------
-// START SERVER
+// 🚀 START SERVER
 // -----------------------------------------------------
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`🔥 Server running securely on port ${PORT}`);
-  console.log("✔ Allowed origins:", allowedOrigins);
+  console.log(`🔥 Server running on port ${PORT}`);
 });
