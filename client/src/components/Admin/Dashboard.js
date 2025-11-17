@@ -46,19 +46,19 @@ const Dashboard = () => {
     recentActivity: []
   });
 
-  const token = localStorage.getItem('token');
+  const accessToken = localStorage.getItem('accessToken');
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
-
+    
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       setLoadingPercent(10);
 
       const res = await axios.get(`${REACT_APP_API_URL}/api/admin`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       setLoadingPercent(70);

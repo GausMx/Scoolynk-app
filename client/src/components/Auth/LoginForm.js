@@ -25,10 +25,10 @@ const LoginForm = () => {
     setError('');
     try {
       const res = await API.post('/api/auth/login', { email, password });
-      const { token, role, name, _id, schoolId, mustChangePassword } = res.data;
+      const { accessToken, role, name, _id, schoolId, mustChangePassword } = res.data;
 
-      // save token and user info using your new helpers
-      setAccessToken(token);
+      // save accessToken and user info using your helpers
+      setAccessToken(accessToken);
       setUser({ id: _id, name, email, role, schoolId, mustChangePassword });
 
       // redirect based on mustChangePassword or role

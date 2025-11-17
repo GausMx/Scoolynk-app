@@ -93,7 +93,7 @@ const RegisterForm = () => {
       const response = await API.post('/api/auth/register', payload);
 
       if (response.data.needsOnboarding) {
-        setAccessToken(response.data.token);
+        setAccessToken(response.data.accessToken);
         setUser(response.data);
         setMessage('Registration successful! Redirecting to onboarding...');
         setTimeout(() => navigate('/teacher/onboarding'), 1500);
