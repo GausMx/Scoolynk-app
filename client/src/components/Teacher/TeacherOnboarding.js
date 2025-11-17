@@ -17,7 +17,7 @@ const TeacherOnboarding = () => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accessToken');
   const teacherId = localStorage.getItem('teacherId');
 
   useEffect(() => {
@@ -40,7 +40,7 @@ const TeacherOnboarding = () => {
     const fetchClasses = async () => {
       try {
         const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/school-classes`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${accessToken}` }
         });
         setAvailableClasses(res.data.classes || []);
       } catch (err) {
@@ -83,7 +83,7 @@ const TeacherOnboarding = () => {
       await axios.post(
         `${REACT_APP_API_URL}/api/teacher/onboarding/class-teacher`,
         { teacherId, classTeacherFor: selectedClasses },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setMessage('Class teacher info saved!');
       setStep(3);

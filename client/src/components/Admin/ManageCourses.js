@@ -16,13 +16,13 @@ const ManageCourses = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accessToken');
   const API_BASE = `${REACT_APP_API_URL}/api/admin`;
 
   const fetchCourses = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_BASE}/courses`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get(`${API_BASE}/courses`, { headers: { Authorization: `Bearer ${accessToken}` } });
       console.log('Fetched courses:', res.data.courses);
       setCourses(res.data.courses || []);
     } catch (err) {
@@ -35,7 +35,7 @@ const ManageCourses = () => {
 
   const fetchTeachers = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/teachers`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get(`${API_BASE}/teachers`, { headers: { Authorization: `Bearer ${accessToken}` } });
       console.log('Fetched teachers:', res.data.teachers);
       setTeachers(res.data.teachers || []);
     } catch (err) {
@@ -45,7 +45,7 @@ const ManageCourses = () => {
 
   const fetchClasses = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/classes`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get(`${API_BASE}/classes`, { headers: { Authorization: `Bearer ${accessToken}` } });
       console.log('Fetched classes:', res.data.classes);
       setClassOptions(res.data.classes || []);
     } catch (err) {
@@ -100,13 +100,13 @@ const ManageCourses = () => {
       
       if (modalState.mode === 'add') {
         const res = await axios.post(`${API_BASE}/courses`, formData, { 
-          headers: { Authorization: `Bearer ${token}` } 
+          headers: { Authorization: `Bearer ${accessToken}` } 
         });
         console.log('Course created:', res.data);
         setMessage(`Course '${formData.name}' added successfully`);
       } else {
         const res = await axios.put(`${API_BASE}/courses/${formData._id}`, formData, { 
-          headers: { Authorization: `Bearer ${token}` } 
+          headers: { Authorization: `Bearer ${accessToken}` } 
         });
         console.log('Course updated:', res.data);
         setMessage(`Course '${formData.name}' updated successfully`);
@@ -127,7 +127,7 @@ const ManageCourses = () => {
     try {
       setLoading(true);
       await axios.delete(`${API_BASE}/courses/${courseId}`, { 
-        headers: { Authorization: `Bearer ${token}` } 
+        headers: { Authorization: `Bearer ${accessToken}` } 
       });
       closeModal();
       setMessage(`Course '${courseName}' deleted successfully`);

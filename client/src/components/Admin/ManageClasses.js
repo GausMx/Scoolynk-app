@@ -16,16 +16,16 @@ const ManageClasses = () => {
   const [modalState, setModalState] = useState({ isOpen: false, mode: 'add', currentClass: null });
 
   const API_BASE = `${REACT_APP_API_URL}/api/admin`;
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accessToken');
 
   const fetchClasses = async () => {
     try {
       setLoading(true);
       const [classRes, studentRes, courseRes, teacherRes] = await Promise.all([
-        axios.get(`${API_BASE}/classes`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_BASE}/students`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_BASE}/courses`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_BASE}/teachers`, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API_BASE}/classes`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+        axios.get(`${API_BASE}/students`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+        axios.get(`${API_BASE}/courses`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+        axios.get(`${API_BASE}/teachers`, { headers: { Authorization: `Bearer ${accessToken}` } })
       ]);
 
       const classList = classRes.data.classes || [];
@@ -79,10 +79,10 @@ const ManageClasses = () => {
       };
 
       if (modalState.mode === 'add') {
-        await axios.post(`${API_BASE}/classes`, payload, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.post(`${API_BASE}/classes`, payload, { headers: { Authorization: `Bearer ${accessToken}` } });
         setMessage(`Class '${formData.name}' added successfully`);
       } else {
-        await axios.put(`${API_BASE}/classes/${formData._id}`, payload, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.put(`${API_BASE}/classes/${formData._id}`, payload, { headers: { Authorization: `Bearer ${accessToken}` } });
         setMessage(`Class '${formData.name}' updated successfully`);
       }
       await fetchClasses();
@@ -98,7 +98,7 @@ const ManageClasses = () => {
   const handleDeleteConfirmed = async (classId, className) => {
     try {
       setLoading(true);
-      await axios.delete(`${API_BASE}/classes/${classId}`, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.delete(`${API_BASE}/classes/${classId}`, { headers: { Authorization: `Bearer ${accessToken}` } });
       closeModal();
       setMessage(`Class '${className}' deleted successfully`);
       await fetchClasses();

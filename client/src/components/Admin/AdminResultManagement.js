@@ -22,7 +22,7 @@ const AdminResultManagement = () => {
   const [showTemplateBuilder, setShowTemplateBuilder] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
   
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accesToken');
 
   useEffect(() => {
     if (activeTab === 'templates') {
@@ -45,7 +45,7 @@ const AdminResultManagement = () => {
       setLoadingPercent(10);
       
       const res = await axios.get(`${REACT_APP_API_URL}/api/admin/templates`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
       
       setLoadingPercent(70);
@@ -68,7 +68,7 @@ const AdminResultManagement = () => {
       const res = await axios.get(
         `${REACT_APP_API_URL}/api/admin/results/submitted`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
           params: { term: selectedTerm, session: selectedSession }
         }
       );
@@ -93,7 +93,7 @@ const AdminResultManagement = () => {
       const res = await axios.get(
         `${REACT_APP_API_URL}/api/admin/results`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
           params: { term: selectedTerm, session: selectedSession }
         }
       );
@@ -118,7 +118,7 @@ const AdminResultManagement = () => {
     try {
       setLoading(true);
       await axios.delete(`${REACT_APP_API_URL}/api/admin/templates/${templateId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
       showMessage('success', 'Template deleted successfully');
       fetchTemplates();
@@ -213,7 +213,7 @@ const AdminResultManagement = () => {
               setSelectedTerm={setSelectedTerm}
               selectedSession={selectedSession}
               setSelectedSession={setSelectedSession}
-              token={token}
+              token={accessToken}
               onReviewSuccess={() => {
                 showMessage('success', 'Result reviewed successfully!');
                 fetchPendingResults();
@@ -228,7 +228,7 @@ const AdminResultManagement = () => {
               setSelectedTerm={setSelectedTerm}
               selectedSession={selectedSession}
               setSelectedSession={setSelectedSession}
-              token={token}
+              token={accessToken}
               onActionSuccess={() => {
                 showMessage('success', 'Action completed successfully!');
                 fetchAllResults();
@@ -239,7 +239,7 @@ const AdminResultManagement = () => {
       ) : (
         <VisualTemplateBuilder
           schoolId={JSON.parse(localStorage.getItem('user'))?.schoolId}
-          token={token}
+          token={accessToken}
           existingTemplate={editingTemplate}
           onClose={() => {
             setShowTemplateBuilder(false);
@@ -412,7 +412,7 @@ const PendingResultsTab = ({
         await axios.put(
           `${REACT_APP_API_URL}/api/admin/results/${result._id}/review`,
           { action: 'approve' },
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${accessToken}` } }
         );
       }
 
@@ -546,7 +546,7 @@ const PendingResultsTab = ({
       {showReviewModal && selectedResult && (
         <ReviewResultModal 
           result={selectedResult}
-          token={token}
+          token={accessToken}
           onClose={() => {
             setShowReviewModal(false);
             setSelectedResult(null);
@@ -598,7 +598,7 @@ const AllResultsTab = ({
       const res = await axios.post(
         `${REACT_APP_API_URL}/api/admin/results/send-multiple`,
         { resultIds: selectedResults },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       alert(res.data.message);
       setSelectedResults([]);
@@ -769,7 +769,7 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
       await axios.put(
         `${REACT_APP_API_URL}/api/admin/results/${result._id}/review`,
         { action: 'approve', comments },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       alert('Result approved! It will be sent to parents via SMS.');
       onSuccess();
@@ -790,7 +790,7 @@ const ReviewResultModal = ({ result, token, onClose, onSuccess }) => {
       await axios.put(
         `${REACT_APP_API_URL}/api/admin/results/${result._id}/review`,
         { action: 'reject', rejectionReason: reason },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       alert('Result rejected and sent back to teacher.');
       onSuccess();

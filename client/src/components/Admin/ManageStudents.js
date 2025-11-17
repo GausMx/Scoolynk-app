@@ -71,7 +71,7 @@ const ManageStudents = () => {
   const [modalState, setModalState] = useState({ isOpen: false, mode: 'add', currentStudent: null });
   const [confirmState, setConfirmState] = useState({ isOpen: false, id: null, name: '', action: () => {} });
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accessToken');
 
   useEffect(() => {
     fetchStudents();
@@ -82,7 +82,7 @@ const ManageStudents = () => {
     try {
       setLoading(true);
       const res = await axios.get(`${REACT_APP_API_URL}/api/admin/students`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
       setStudents(res.data.students || []);
     } catch (err) {
@@ -96,7 +96,7 @@ const ManageStudents = () => {
   const fetchClasses = async () => {
     try {
       const res = await axios.get(`${REACT_APP_API_URL}/api/admin/classes`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
       setClasses(res.data.classes || []);
     } catch (err) {
@@ -138,14 +138,14 @@ const ManageStudents = () => {
         await axios.post(
           `${REACT_APP_API_URL}/api/admin/students`,
           formData,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${accessToken}` } }
         );
         setMessage(`Student '${formData.name}' added successfully.`);
       } else {
         await axios.put(
           `${REACT_APP_API_URL}/api/admin/students/${formData._id}`,
           formData,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${accessToken}` } }
         );
         setMessage(`Student '${formData.name}' updated successfully.`);
       }
@@ -171,7 +171,7 @@ const ManageStudents = () => {
           setMessage('');
           
           await axios.delete(`${REACT_APP_API_URL}/api/admin/students/${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${accessToken}` }
           });
 
           setMessage(`Student '${name}' deleted successfully.`);

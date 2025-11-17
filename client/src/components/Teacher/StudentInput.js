@@ -17,7 +17,7 @@ const StudentInput = ({ inputMethod, selectedClasses, onComplete, onBack }) => {
   const canvasRef = useRef(null);
   const [stream, setStream] = useState(null);
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accessToken');
 
   // Manual Input Handlers
   const handleStudentChange = (index, field, value) => {
@@ -56,7 +56,7 @@ const StudentInput = ({ inputMethod, selectedClasses, onComplete, onBack }) => {
       await axios.post(
         `${REACT_APP_API_URL}/api/teacher/students/bulk`,
         { students: validStudents, classId: selectedClass },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setMessage(`${validStudents.length} students added successfully!`);
       setTimeout(() => onComplete(), 2000);

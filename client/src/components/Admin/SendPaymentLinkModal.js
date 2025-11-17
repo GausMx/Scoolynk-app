@@ -11,7 +11,7 @@ const SendPaymentLinkModal = ({ student, onClose, onSuccess }) => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [sendMethod, setSendMethod] = useState('sms');
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accessToken');
 
   const balance = (student.classId?.fee || 0) - (student.amountPaid || 0);
 
@@ -28,7 +28,7 @@ const SendPaymentLinkModal = ({ student, onClose, onSuccess }) => {
         const res = await axios.post(
           `${REACT_APP_API_URL}/api/payments/send-link`,
           { studentId: student._id },
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${accessToken}` } }
         );
         
         setMessage({ type: 'success', text: res.data.message });
@@ -40,7 +40,7 @@ const SendPaymentLinkModal = ({ student, onClose, onSuccess }) => {
         const res = await axios.post(
           `${REACT_APP_API_URL}/api/payments/create-link`,
           { studentId: student._id },
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${accessToken}` } }
         );
         
         await navigator.clipboard.writeText(res.data.paymentLink);

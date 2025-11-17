@@ -23,7 +23,7 @@ const PaymentSetup = () => {
     accountName: ''
   });
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accessToken');
 
   useEffect(() => {
     fetchInitialData();
@@ -36,7 +36,7 @@ const PaymentSetup = () => {
 
       // Fetch banks
       const banksRes = await axios.get(`${REACT_APP_API_URL}/api/subaccount/banks`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
       setBanks(banksRes.data.banks);
       
@@ -44,7 +44,7 @@ const PaymentSetup = () => {
 
       // Check configuration
       const configRes = await axios.get(`${REACT_APP_API_URL}/api/subaccount/config`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
       setIsConfigured(configRes.data.isConfigured);
       setConfig(configRes.data);
@@ -70,7 +70,7 @@ const PaymentSetup = () => {
   const checkConfiguration = async () => {
     try {
       const res = await axios.get(`${REACT_APP_API_URL}/api/subaccount/config`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
       setIsConfigured(res.data.isConfigured);
       setConfig(res.data);
@@ -99,7 +99,7 @@ const PaymentSetup = () => {
       const res = await axios.post(
         `${REACT_APP_API_URL}/api/subaccount/verify-account`,
         { accountNumber: formData.accountNumber, bankCode: formData.bankCode },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       
       setFormData({ ...formData, accountName: res.data.accountName });
@@ -126,7 +126,7 @@ const PaymentSetup = () => {
       const res = await axios.post(
         `${REACT_APP_API_URL}${endpoint}`,
         formData,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       
       showMessage('success', res.data.message);

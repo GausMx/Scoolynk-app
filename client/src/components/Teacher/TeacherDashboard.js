@@ -16,7 +16,7 @@ const TeacherDashboard = () => {
   const [teacherData, setTeacherData] = useState(null);
   const [loading, setLoading] = useState(true);
 //getting token from local storage
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accessToken');
 //fetching dashboard data
   useEffect(() => {
     if (!token) {
@@ -30,7 +30,7 @@ const TeacherDashboard = () => {
     try {
       setLoading(true);
       const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
       setTeacherData(res.data);
     } catch (err) {

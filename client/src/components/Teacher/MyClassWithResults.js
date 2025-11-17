@@ -19,7 +19,7 @@ const MyClassWithResults = () => {
   const [selectedSession, setSelectedSession] = useState('2024/2025');
   const [classTeacherFor, setClassTeacherFor] = useState([]);
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accessToken');
 
   useEffect(() => {
     if (activeTab === 'students') {

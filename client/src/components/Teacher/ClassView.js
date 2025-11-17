@@ -16,7 +16,7 @@ const ClassView = () => {
   const [message, setMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accessToken');
 
   useEffect(() => {
     fetchClassData();
@@ -28,7 +28,7 @@ const ClassView = () => {
       
       // Fetch all classes to find current one
       const classRes = await axios.get(`${REACT_APP_API_URL}/api/teacher/school-classes`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
       
       const currentClass = classRes.data.classes.find(c => c._id === classId);
@@ -41,7 +41,7 @@ const ClassView = () => {
 
       // Fetch students in this specific class
       const studentsRes = await axios.get(`${REACT_APP_API_URL}/api/teacher/class/${classId}/students`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
       
       setStudents(studentsRes.data.students || []);
@@ -50,7 +50,7 @@ const ClassView = () => {
 try {
   const coursesRes = await axios.get(
     `${REACT_APP_API_URL}/api/teacher/class/${classId}/courses`,
-    { headers: { Authorization: `Bearer ${token}` } }
+    { headers: { Authorization: `Bearer ${accessToken}` } }
   );
   setCourses(coursesRes.data.courses || []);
 } catch (err) {

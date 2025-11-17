@@ -21,7 +21,7 @@ const TeacherHome = ({ teacherData, refreshData }) => {
   });
   const [loading, setLoading] = useState(true);
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accessToken');
 
   useEffect(() => {
     fetchCoursesAndStats();
@@ -36,7 +36,7 @@ const TeacherHome = ({ teacherData, refreshData }) => {
       const coursePromises = classIds.map(classId =>
         axios.get(
           `${REACT_APP_API_URL}/api/teacher/class/${classId}/courses`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${accessToken}` } }
         ).catch(err => ({ data: { courses: [] } }))
       );
 

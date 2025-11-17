@@ -33,7 +33,7 @@ const TeacherProfile = () => {
   const [showAddStudents, setShowAddStudents] = useState(false);
   const [addMethod, setAddMethod] = useState(null);
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accessToken');
 
   useEffect(() => {
     fetchTeacherData();
@@ -50,7 +50,7 @@ const TeacherProfile = () => {
     try {
       setLoading(true);
       const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
       setTeacher(res.data.teacher);
       setEditedTeacher(res.data.teacher);
@@ -67,7 +67,7 @@ const TeacherProfile = () => {
   const fetchAvailableOptions = async () => {
     try {
       const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/school-classes`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
       setAvailableClasses(res.data.classes || []);
       
@@ -76,7 +76,7 @@ const TeacherProfile = () => {
       if (schoolData?.schoolId) {
         const coursesRes = await axios.get(
           `${REACT_APP_API_URL}/api/admin/courses`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${accessToken}` } }
         );
         setAvailableCourses(coursesRes.data || []);
       }
@@ -88,7 +88,7 @@ const TeacherProfile = () => {
   const fetchClassStudents = async (classId) => {
     try {
       const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/class/${classId}/students`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
       setStudents(res.data.students || []);
     } catch (err) {

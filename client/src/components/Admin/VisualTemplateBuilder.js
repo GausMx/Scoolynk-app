@@ -43,7 +43,7 @@ const VisualTemplateBuilder = ({
   existingTemplate = null 
 }) => {
   // Get token from props or localStorage (like Settings.js does)
-  const token = propToken || localStorage.getItem('token');
+  const token = propToken || localStorage.getItem('accessToken');
   
   const [loading, setLoading] = useState(true);
   const [loadingPercent, setLoadingPercent] = useState(0);
@@ -120,7 +120,7 @@ const VisualTemplateBuilder = ({
         setLoadingPercent(10);
 
         const res = await axios.get(`${REACT_APP_API_URL}/api/admin/settings`, {
-          headers: { Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}` }
+          headers: { Authorization: token.startsWith('Bearer ') ? token : `Bearer ${accessToken}` }
         });
         
         setLoadingPercent(70);
@@ -271,7 +271,7 @@ const VisualTemplateBuilder = ({
       // Check if token already has "Bearer" prefix
       const authHeader = token.startsWith('Bearer ') 
         ? token 
-        : `Bearer ${token}`;
+        : `Bearer ${accessToken}`;
 
       const res = await axios[method](url, templateData, {
         headers: { Authorization: authHeader }

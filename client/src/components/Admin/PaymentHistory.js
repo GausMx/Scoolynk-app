@@ -31,7 +31,7 @@ const PaymentHistory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accessToken');
 
   useEffect(() => {
     fetchPaymentHistory();
@@ -47,7 +47,7 @@ const PaymentHistory = () => {
       setLoadingPercent(10);
 
       const res = await axios.get(`${REACT_APP_API_URL}/api/payments/history`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
 
       setLoadingPercent(70);

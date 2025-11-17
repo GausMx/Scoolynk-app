@@ -126,7 +126,7 @@ const ResultEntryModal = ({
     try {
       setLoadingTemplate(true);
       const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/results/template`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
         params: { term, session }
       });
       setTemplate(res.data?.template || null);
@@ -178,7 +178,7 @@ const ResultEntryModal = ({
       if (existingResult) payload.resultId = existingResult._id;
 
       const res = await axios.post(`${REACT_APP_API_URL}/api/teacher/results`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
 
       if (res?.data?.message) alert(res.data.message);
