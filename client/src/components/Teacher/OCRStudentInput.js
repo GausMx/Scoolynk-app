@@ -238,63 +238,89 @@ const OCRStudentInput = ({ classId, method, onComplete, onCancel }) => {
     const students = [];
     const lines = text.split('\n').map(line => line.trim()).filter(line => line);
 
-    console.log('[OCR] Parsing lines:', lines);
+    console.log('[OCR] Parsing', lines.length, 'lines:', lines);
 
-    // Patterns
+    // Enhanced patterns with more flexibility
     const namePattern = /^[A-Za-z][A-Za-z\s]{2,50}$/;
     const regNoPattern = /[A-Z]{2,4}[\/-]?\d{2,}/i;
-    const phonePattern = /(?:^|\s)(\+?\d{10,15})(?:\s|$)/;
-    const emailPattern = /[^\s@]+@[^\s@]+\.[^\s@]+/;
+    const phonePattern = /(\+?234\d{10}|\+?\d{11}|0\d{10})/; // Better phone pattern
+    const emailPattern = /([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i; // Better email pattern
+    const numberingPattern = /^\d+[\.\)]\s*/; // Detect numbering like "1.", "1)", etc.
 
     let i = 0;
     while (i < lines.length) {
       const student = {};
+      let startIndex = i;
       
-      // Look ahead up to 6 lines
-      for (let j = i; j < Math.min(i + 6, lines.length); j++) {
-        const line = lines[j];
+      // Look ahead up to 8 lines (increased from 6)
+      for (let j = i; j < Math.min(i + 8, lines.length); j++) {
+        let line = lines[j];
         
-        // Skip very short lines
-        if (line.length < 2) continue;
+        // Remove numbering if present (1., 2., etc.)
+        line = line.replace(numberingPattern, '').trim();
+        
+        // Skip very short lines or separator lines
+        if (line.length < 2 || /^[-=_]+$/.test(line)) continue;
 
         // Extract name (alphabetic with 2+ words, no numbers)
         if (!student.name && namePattern.test(line) && !/\d/.test(line)) {
           const words = line.split(/\s+/);
-          if (words.length >= 2) {
+          if (words.length >= 2 && words.length <= 6) { // Max 6 words for name
             student.name = words.map(w => 
               w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
             ).join(' ');
+            console.log('[OCR] Found name:', student.name);
           }
         }
 
-        // Extract reg number
+        // Extract reg number (more aggressive search)
         if (!student.regNo) {
           const match = line.match(regNoPattern);
           if (match) {
             student.regNo = match[0].toUpperCase().replace(/\s+/g, '');
+            console.log('[OCR] Found reg no:', student.regNo);
           }
         }
 
-        // Extract phone
+        // Extract phone (more flexible)
         if (!student.parentPhone) {
-          const match = line.match(phonePattern);
-          if (match) {
-            let phone = match[1].replace(/\D/g, '');
+          // Check entire line for phone numbers
+          const phoneMatch = line.match(phonePattern);
+          if (phoneMatch) {
+            let phone = phoneMatch[1].replace(/\D/g, '');
+            // Normalize Nigerian numbers
             if (phone.startsWith('0') && phone.length === 11) {
               phone = '+234' + phone.substring(1);
-            } else if (phone.startsWith('234')) {
+            } else if (phone.startsWith('234') && phone.length === 13) {
               phone = '+' + phone;
+            } else if (phone.length === 11 && !phone.startsWith('0')) {
+              phone = '+234' + phone;
             }
             student.parentPhone = phone;
+            console.log('[OCR] Found phone:', student.parentPhone);
           }
         }
 
-        // Extract email
+        // Extract email (more flexible, case insensitive)
         if (!student.parentEmail) {
-          const match = line.match(emailPattern);
-          if (match) {
-            student.parentEmail = match[0].toLowerCase();
+          const emailMatch = line.match(emailPattern);
+          if (emailMatch) {
+            // Clean common OCR mistakes in emails
+            let email = emailMatch[1].toLowerCase();
+            email = email.replace(/\s/g, ''); // Remove spaces
+            email = email.replace(/[,;]$/, ''); // Remove trailing punctuation
+            
+            // Validate email format
+            if (/@.+\..+/.test(email)) {
+              student.parentEmail = email;
+              console.log('[OCR] Found email:', student.parentEmail);
+            }
           }
+        }
+
+        // If we found a name and have looked ahead enough, consider this student complete
+        if (student.name && (j - startIndex) >= 3) {
+          break;
         }
       }
 
@@ -304,11 +330,101 @@ const OCRStudentInput = ({ classId, method, onComplete, onCancel }) => {
           student.regNo = `STD/${new Date().getFullYear().toString().slice(-2)}/${String(students.length + 1).padStart(3, '0')}`;
         }
         students.push(student);
-        i += 4; // Skip ahead
+        console.log('[OCR] Added student:', student);
+        i += 5; // Skip ahead (increased from 4)
       } else {
         i++;
       }
     }
+
+    // Post-processing: Check if we missed students by looking for isolated names
+    if (students.length < 3 && lines.length > 10) {
+      console.log('[OCR] Possible missed students, trying alternative parsing...');
+      const alternativeStudents = tryAlternativeParsing(lines);
+      if (alternativeStudents.length > students.length) {
+        console.log('[OCR] Alternative parsing found more students:', alternativeStudents.length);
+        return alternativeStudents;
+      }
+    }
+
+    console.log('[OCR] Final count:', students.length, 'students');
+    return students;
+  };
+
+  // Alternative parsing method for edge cases
+  const tryAlternativeParsing = (lines) => {
+    const students = [];
+    const namePattern = /^[A-Za-z][A-Za-z\s]{2,50}$/;
+    
+    // Look for all potential names first
+    const potentialStudents = [];
+    lines.forEach((line, index) => {
+      const cleaned = line.replace(/^\d+[\.\)]\s*/, '').trim();
+      if (namePattern.test(cleaned) && !/\d/.test(cleaned)) {
+        const words = cleaned.split(/\s+/);
+        if (words.length >= 2 && words.length <= 6) {
+          potentialStudents.push({
+            name: words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' '),
+            lineIndex: index
+          });
+        }
+      }
+    });
+
+    console.log('[OCR] Found', potentialStudents.length, 'potential names');
+
+    // For each potential student, look for their details
+    potentialStudents.forEach((potential, idx) => {
+      const student = { name: potential.name };
+      const searchStart = potential.lineIndex + 1;
+      const searchEnd = idx < potentialStudents.length - 1 
+        ? potentialStudents[idx + 1].lineIndex 
+        : Math.min(potential.lineIndex + 6, lines.length);
+
+      // Search for details in the next few lines
+      for (let i = searchStart; i < searchEnd; i++) {
+        const line = lines[i];
+        
+        // Reg number
+        if (!student.regNo) {
+          const regMatch = line.match(/[A-Z]{2,4}[\/-]?\d{2,}/i);
+          if (regMatch) {
+            student.regNo = regMatch[0].toUpperCase().replace(/\s+/g, '');
+          }
+        }
+
+        // Phone
+        if (!student.parentPhone) {
+          const phoneMatch = line.match(/(\+?234\d{10}|\+?\d{11}|0\d{10})/);
+          if (phoneMatch) {
+            let phone = phoneMatch[1].replace(/\D/g, '');
+            if (phone.startsWith('0') && phone.length === 11) {
+              phone = '+234' + phone.substring(1);
+            } else if (phone.startsWith('234') && phone.length === 13) {
+              phone = '+' + phone;
+            }
+            student.parentPhone = phone;
+          }
+        }
+
+        // Email
+        if (!student.parentEmail) {
+          const emailMatch = line.match(/([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i);
+          if (emailMatch) {
+            let email = emailMatch[1].toLowerCase().replace(/\s/g, '');
+            if (/@.+\..+/.test(email)) {
+              student.parentEmail = email;
+            }
+          }
+        }
+      }
+
+      if (!student.regNo) {
+        student.regNo = `STD/${new Date().getFullYear().toString().slice(-2)}/${String(students.length + 1).padStart(3, '0')}`;
+      }
+      
+      students.push(student);
+    });
 
     return students;
   };
@@ -452,19 +568,39 @@ const OCRStudentInput = ({ classId, method, onComplete, onCancel }) => {
       )}
 
       {/* Show Raw Text (Debug) */}
-      {showRawText && rawText && (
+      {rawText && (
         <div className="mb-3">
-          <button 
-            className="btn btn-sm btn-link" 
-            onClick={() => setShowRawText(!showRawText)}
-          >
-            {showRawText ? 'Hide' : 'Show'} Raw OCR Text
-          </button>
-          {showRawText && (
-            <pre className="border p-3 bg-light" style={{ fontSize: '0.85em', maxHeight: '200px', overflow: 'auto' }}>
-              {rawText}
-            </pre>
-          )}
+          <div className="card border-warning">
+            <div className="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
+              <span className="fw-semibold">
+                <i className="bi bi-info-circle me-2"></i>
+                OCR Results: Found {students.length} student(s)
+              </span>
+              <button 
+                className="btn btn-sm btn-outline-secondary" 
+                onClick={() => setShowRawText(!showRawText)}
+              >
+                {showRawText ? 'Hide' : 'Show'} Raw Text
+              </button>
+            </div>
+            {showRawText && (
+              <div className="card-body">
+                <pre className="bg-light p-3 rounded" style={{ fontSize: '0.85em', maxHeight: '300px', overflow: 'auto' }}>
+                  {rawText}
+                </pre>
+                <div className="alert alert-info mt-2 mb-0">
+                  <small>
+                    <strong>Tip:</strong> If students are missing, check:
+                    <ul className="mb-0 mt-1">
+                      <li>Each student has a full name (2+ words)</li>
+                      <li>There's spacing between students</li>
+                      <li>Names don't have numbers mixed in</li>
+                    </ul>
+                  </small>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
