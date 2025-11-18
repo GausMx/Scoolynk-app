@@ -1,144 +1,358 @@
-import React, { useState, useRef } from 'react';
+// src/components/Teacher/OCRStudentInput.js - FIXED WITH PREPROCESSING
+
+import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { Camera, Upload, Loader, Check, X } from 'lucide-react';
+import Tesseract from 'tesseract.js';
+import { Camera, Upload, Loader, CheckCircle, XCircle, Edit2, Trash2 } from 'lucide-react';
 
 const { REACT_APP_API_URL } = process.env;
 
 const OCRStudentInput = ({ classId, method, onComplete, onCancel }) => {
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [extractedStudents, setExtractedStudents] = useState([]);
-  const [capturedImage, setCapturedImage] = useState(null);
+  const [ocrProgress, setOcrProgress] = useState(0);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [rawText, setRawText] = useState('');
+  const [showRawText, setShowRawText] = useState(false);
   
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
   const streamRef = useRef(null);
+  const workerRef = useRef(null);
 
   const token = localStorage.getItem('accessToken');
 
-  // Start camera
+  // Initialize Tesseract worker once
+  useEffect(() => {
+    const initWorker = async () => {
+      try {
+        workerRef.current = await Tesseract.createWorker('eng', 1, {
+          logger: (m) => {
+            if (m.status === 'recognizing text') {
+              setOcrProgress(Math.round(m.progress * 100));
+            }
+          }
+        });
+        console.log('[OCR] Worker initialized');
+      } catch (error) {
+        console.error('[OCR] Worker initialization failed:', error);
+        setMessage({ type: 'error', text: 'Failed to initialize OCR engine' });
+      }
+    };
+
+    initWorker();
+
+    // Cleanup
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+      }
+      stopCamera();
+    };
+  }, []);
+
+  // Camera Methods
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment',
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
       });
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
+        setMessage({ type: 'info', text: 'Camera ready. Position document and capture.' });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to access camera' });
+      console.error('[Camera] Access error:', error);
+      setMessage({ 
+        type: 'error', 
+        text: 'Failed to access camera. Please check permissions.' 
+      });
     }
   };
 
-  // Stop camera
   const stopCamera = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
     }
   };
 
-  // Capture image from camera
-  const captureImage = () => {
+  const captureImage = async () => {
+    if (!videoRef.current || !canvasRef.current) {
+      setMessage({ type: 'error', text: 'Camera not ready' });
+      return;
+    }
+
     const video = videoRef.current;
     const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+
+    // Set canvas size to video dimensions
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // Draw video frame to canvas
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Get preprocessed image
+    const preprocessedCanvas = preprocessImage(canvas);
     
-    if (video && canvas) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0);
+    // Convert to blob
+    preprocessedCanvas.toBlob(async (blob) => {
+      if (blob) {
+        await processImage(blob);
+        stopCamera(); // Stop camera after capture
+      }
+    }, 'image/png', 0.95);
+  };
+
+  // Image Preprocessing
+  const preprocessImage = (sourceCanvas) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = sourceCanvas.width;
+    canvas.height = sourceCanvas.height;
+    
+    // Draw original image
+    ctx.drawImage(sourceCanvas, 0, 0);
+    
+    // Get image data
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    
+    // Convert to grayscale and increase contrast
+    for (let i = 0; i < data.length; i += 4) {
+      // Grayscale
+      const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
       
-      const imageData = canvas.toDataURL('image/jpeg');
-      setCapturedImage(imageData);
-      stopCamera();
-      processImage(imageData);
+      // Increase contrast (simple thresholding)
+      const threshold = 128;
+      const value = gray > threshold ? 255 : 0;
+      
+      data[i] = value;     // R
+      data[i + 1] = value; // G
+      data[i + 2] = value; // B
+      // Alpha channel (i + 3) stays the same
     }
+    
+    ctx.putImageData(imageData, 0, 0);
+    return canvas;
   };
 
-  // Handle file upload
   const handleFileUpload = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const imageData = event.target.result;
-        setCapturedImage(imageData);
-        processImage(imageData);
-      };
-      reader.readAsDataURL(file);
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setMessage({ type: 'error', text: 'Please select an image file' });
+        return;
+      }
+      
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setMessage({ type: 'error', text: 'Image too large. Max 10MB allowed.' });
+        return;
+      }
+      
+      processImage(file);
     }
   };
 
-  // Process image with OCR
-  const processImage = async (imageData) => {
+  const processImage = async (imageFile) => {
+    if (!workerRef.current) {
+      setMessage({ type: 'error', text: 'OCR engine not ready. Please wait and try again.' });
+      return;
+    }
+
+    setLoading(true);
+    setOcrProgress(0);
+    setMessage({ type: 'info', text: 'Processing image with OCR...' });
+
     try {
-      setLoading(true);
-      setMessage({ type: '', text: '' });
-
-      const res = await axios.post(
-        `${REACT_APP_API_URL}/api/ocr/extract-base64`,
-        { image: imageData },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (res.data.success && res.data.data.students.length > 0) {
-        setExtractedStudents(res.data.data.students);
-        setMessage({ 
-          type: 'success', 
-          text: `Extracted ${res.data.data.students.length} student(s)` 
+      // If it's a File object, preprocess it first
+      let processedImage = imageFile;
+      
+      if (imageFile instanceof File) {
+        const img = await createImageBitmap(imageFile);
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        
+        const preprocessedCanvas = preprocessImage(canvas);
+        processedImage = await new Promise(resolve => {
+          preprocessedCanvas.toBlob(resolve, 'image/png', 0.95);
         });
-      } else {
+      }
+
+      // Perform OCR with optimized settings
+      const result = await workerRef.current.recognize(processedImage, {
+        tessedit_pageseg_mode: Tesseract.PSM.AUTO,
+        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 /-@.',
+      });
+
+      const text = result.data.text;
+      setRawText(text);
+      console.log('[OCR] Extracted text:', text);
+
+      const extractedStudents = parseStudentData(text);
+
+      if (extractedStudents.length === 0) {
         setMessage({ 
           type: 'warning', 
-          text: 'No students detected. Please try again or enter manually.' 
+          text: 'No student data detected. Please check image quality or enter manually.' 
+        });
+        setShowRawText(true);
+      } else {
+        setStudents(extractedStudents);
+        setMessage({ 
+          type: 'success', 
+          text: `Found ${extractedStudents.length} student(s). Review and edit if needed.` 
         });
       }
     } catch (error) {
+      console.error('[OCR] Processing error:', error);
       setMessage({ 
         type: 'error', 
-        text: error.response?.data?.message || 'Failed to process image' 
+        text: 'OCR processing failed: ' + (error.message || 'Unknown error') 
       });
     } finally {
       setLoading(false);
+      setOcrProgress(0);
     }
   };
 
-  // Update extracted student
-  const updateStudent = (index, field, value) => {
-    const updated = [...extractedStudents];
+  const parseStudentData = (text) => {
+    const students = [];
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+
+    console.log('[OCR] Parsing lines:', lines);
+
+    // Patterns
+    const namePattern = /^[A-Za-z][A-Za-z\s]{2,50}$/;
+    const regNoPattern = /[A-Z]{2,4}[\/-]?\d{2,}/i;
+    const phonePattern = /(?:^|\s)(\+?\d{10,15})(?:\s|$)/;
+    const emailPattern = /[^\s@]+@[^\s@]+\.[^\s@]+/;
+
+    let i = 0;
+    while (i < lines.length) {
+      const student = {};
+      
+      // Look ahead up to 6 lines
+      for (let j = i; j < Math.min(i + 6, lines.length); j++) {
+        const line = lines[j];
+        
+        // Skip very short lines
+        if (line.length < 2) continue;
+
+        // Extract name (alphabetic with 2+ words, no numbers)
+        if (!student.name && namePattern.test(line) && !/\d/.test(line)) {
+          const words = line.split(/\s+/);
+          if (words.length >= 2) {
+            student.name = words.map(w => 
+              w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+            ).join(' ');
+          }
+        }
+
+        // Extract reg number
+        if (!student.regNo) {
+          const match = line.match(regNoPattern);
+          if (match) {
+            student.regNo = match[0].toUpperCase().replace(/\s+/g, '');
+          }
+        }
+
+        // Extract phone
+        if (!student.parentPhone) {
+          const match = line.match(phonePattern);
+          if (match) {
+            let phone = match[1].replace(/\D/g, '');
+            if (phone.startsWith('0') && phone.length === 11) {
+              phone = '+234' + phone.substring(1);
+            } else if (phone.startsWith('234')) {
+              phone = '+' + phone;
+            }
+            student.parentPhone = phone;
+          }
+        }
+
+        // Extract email
+        if (!student.parentEmail) {
+          const match = line.match(emailPattern);
+          if (match) {
+            student.parentEmail = match[0].toLowerCase();
+          }
+        }
+      }
+
+      // Add student if we have at least a name
+      if (student.name) {
+        if (!student.regNo) {
+          student.regNo = `STD/${new Date().getFullYear().toString().slice(-2)}/${String(students.length + 1).padStart(3, '0')}`;
+        }
+        students.push(student);
+        i += 4; // Skip ahead
+      } else {
+        i++;
+      }
+    }
+
+    return students;
+  };
+
+  const handleStudentChange = (index, field, value) => {
+    const updated = [...students];
     updated[index][field] = value;
-    setExtractedStudents(updated);
+    setStudents(updated);
   };
 
-  // Remove student
+  const addStudent = () => {
+    setStudents([...students, { 
+      name: '', 
+      regNo: `STD/${new Date().getFullYear().toString().slice(-2)}/${String(students.length + 1).padStart(3, '0')}`,
+      parentPhone: '',
+      parentEmail: ''
+    }]);
+  };
+
   const removeStudent = (index) => {
-    setExtractedStudents(extractedStudents.filter((_, i) => i !== index));
+    setStudents(students.filter((_, i) => i !== index));
   };
 
-  // Add manual student
-  const addManualStudent = () => {
-    setExtractedStudents([
-      ...extractedStudents,
-      { name: '', regNo: '', parentPhone: '', parentName: '', amountPaid: 0 }
-    ]);
-  };
-
-  // Submit students
   const handleSubmit = async () => {
+    // Validate
+    const validStudents = students.filter(s => s.name && s.name.trim());
+    
+    if (validStudents.length === 0) {
+      setMessage({ type: 'error', text: 'Please add at least one student with a name' });
+      return;
+    }
+
     try {
       setLoading(true);
-
-      await axios.post(
+      const response = await axios.post(
         `${REACT_APP_API_URL}/api/teacher/students/bulk`,
-        { students: extractedStudents, classId },
+        { students: validStudents, classId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      onComplete();
+      
+      setMessage({ type: 'success', text: response.data.message });
+      setTimeout(() => onComplete(), 1500);
     } catch (error) {
+      console.error('[Submit] Error:', error);
       setMessage({ 
         type: 'error', 
         text: error.response?.data?.message || 'Failed to add students' 
@@ -148,218 +362,224 @@ const OCRStudentInput = ({ classId, method, onComplete, onCancel }) => {
     }
   };
 
-  // Render camera view
-  const renderCamera = () => (
-    <div className="text-center">
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        className="w-100 rounded-3 mb-3"
-        style={{ maxHeight: '400px' }}
-        onLoadedMetadata={startCamera}
-      />
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
-      
-      <div className="d-flex gap-2 justify-content-center">
-        <button
-          className="btn btn-primary rounded-3"
-          onClick={captureImage}
-          disabled={loading}
-        >
-          <Camera size={18} className="me-2" />
-          Capture
-        </button>
-        <button
-          className="btn btn-secondary rounded-3"
-          onClick={() => {
-            stopCamera();
-            onCancel();
-          }}
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
+  return (
+    <div className="ocr-student-input">
+      {/* Message Alert */}
+      {message.text && (
+        <div className={`alert alert-${message.type === 'error' ? 'danger' : message.type === 'success' ? 'success' : message.type === 'warning' ? 'warning' : 'info'} alert-dismissible fade show`}>
+          {message.text}
+          <button type="button" className="btn-close" onClick={() => setMessage({ type: '', text: '' })}></button>
+        </div>
+      )}
 
-  // Render captured/uploaded image
-  const renderImage = () => (
-    <div className="text-center mb-3">
-      <img 
-        src={capturedImage} 
-        alt="Captured" 
-        className="img-fluid rounded-3"
-        style={{ maxHeight: '300px' }}
-      />
-      <button
-        className="btn btn-sm btn-outline-secondary rounded-3 mt-2"
-        onClick={() => {
-          setCapturedImage(null);
-          setExtractedStudents([]);
-          if (method === 'ocr') startCamera();
-        }}
-      >
-        Retake
-      </button>
-    </div>
-  );
+      {/* Camera Method */}
+      {method === 'ocr' && (
+        <div className="mb-4">
+          <div className="d-flex gap-2 mb-3">
+            <button 
+              className="btn btn-primary"
+              onClick={startCamera}
+              disabled={streamRef.current !== null || loading}
+            >
+              <Camera size={18} className="me-2" />
+              Start Camera
+            </button>
+            <button 
+              className="btn btn-success"
+              onClick={captureImage}
+              disabled={!streamRef.current || loading}
+            >
+              <CheckCircle size={18} className="me-2" />
+              Capture & Process
+            </button>
+            <button 
+              className="btn btn-secondary"
+              onClick={stopCamera}
+              disabled={!streamRef.current}
+            >
+              <XCircle size={18} className="me-2" />
+              Stop Camera
+            </button>
+          </div>
 
-  // Render students form
-  const renderStudentsForm = () => (
-    <div>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h6>Review Students ({extractedStudents.length})</h6>
-        <button
-          className="btn btn-sm btn-outline-primary rounded-3"
-          onClick={addManualStudent}
-        >
-          + Add Row
-        </button>
-      </div>
+          <video 
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-100 border rounded mb-3"
+            style={{ 
+              maxHeight: '400px',
+              display: streamRef.current ? 'block' : 'none',
+              backgroundColor: '#000'
+            }}
+          />
+          <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-      <div className="table-responsive mb-3" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-        <table className="table table-sm">
-          <thead className="table-light">
-            <tr>
-              <th>Name *</th>
-              <th>Reg No *</th>
-              <th>Parent Phone</th>
-              <th>Amount Paid</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {extractedStudents.map((student, index) => (
-              <tr key={index}>
-                <td>
-                  <input
-                    type="text"
-                    className="form-control form-control-sm"
-                    value={student.name || ''}
-                    onChange={(e) => updateStudent(index, 'name', e.target.value)}
-                    required
-                  />
-                </td>
-                <td>
-                  <input
-                    type="text"
-                    className="form-control form-control-sm"
-                    value={student.regNo || ''}
-                    onChange={(e) => updateStudent(index, 'regNo', e.target.value)}
-                    required
-                  />
-                </td>
-                <td>
-                  <input
-                    type="text"
-                    className="form-control form-control-sm"
-                    value={student.parentPhone || ''}
-                    onChange={(e) => updateStudent(index, 'parentPhone', e.target.value)}
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    className="form-control form-control-sm"
-                    value={student.amountPaid || 0}
-                    onChange={(e) => updateStudent(index, 'amountPaid', parseFloat(e.target.value) || 0)}
-                  />
-                </td>
-                <td>
-                  <button
-                    className="btn btn-sm btn-outline-danger"
-                    onClick={() => removeStudent(index)}
-                  >
-                    <X size={14} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          <div className="text-center my-3">
+            <strong>— OR —</strong>
+          </div>
 
-      <div className="d-flex justify-content-end gap-2">
-        <button
-          className="btn btn-secondary rounded-3"
+          <div>
+            <label className="btn btn-outline-primary w-100">
+              <Upload size={18} className="me-2" />
+              Upload Image
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                disabled={loading}
+                style={{ display: 'none' }}
+              />
+            </label>
+          </div>
+        </div>
+      )}
+
+      {/* Progress Bar */}
+      {loading && ocrProgress > 0 && (
+        <div className="mb-3">
+          <div className="progress">
+            <div 
+              className="progress-bar progress-bar-striped progress-bar-animated"
+              style={{ width: `${ocrProgress}%` }}
+            >
+              {ocrProgress}%
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Show Raw Text (Debug) */}
+      {showRawText && rawText && (
+        <div className="mb-3">
+          <button 
+            className="btn btn-sm btn-link" 
+            onClick={() => setShowRawText(!showRawText)}
+          >
+            {showRawText ? 'Hide' : 'Show'} Raw OCR Text
+          </button>
+          {showRawText && (
+            <pre className="border p-3 bg-light" style={{ fontSize: '0.85em', maxHeight: '200px', overflow: 'auto' }}>
+              {rawText}
+            </pre>
+          )}
+        </div>
+      )}
+
+      {/* Students Table */}
+      {students.length > 0 && (
+        <div className="mb-3">
+          <div className="d-flex justify-content-between align-items-center mb-2">
+            <h5>Students ({students.length})</h5>
+            <button className="btn btn-sm btn-outline-primary" onClick={addStudent}>
+              <Edit2 size={16} className="me-1" />
+              Add Row
+            </button>
+          </div>
+
+          <div className="table-responsive">
+            <table className="table table-bordered table-sm">
+              <thead className="table-light">
+                <tr>
+                  <th style={{ width: '5%' }}>#</th>
+                  <th style={{ width: '30%' }}>Name *</th>
+                  <th style={{ width: '20%' }}>Reg No</th>
+                  <th style={{ width: '20%' }}>Phone</th>
+                  <th style={{ width: '20%' }}>Email</th>
+                  <th style={{ width: '5%' }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.map((student, index) => (
+                  <tr key={index}>
+                    <td>{index + 1}</td>
+                    <td>
+                      <input
+                        type="text"
+                        className="form-control form-control-sm"
+                        value={student.name || ''}
+                        onChange={(e) => handleStudentChange(index, 'name', e.target.value)}
+                        placeholder="Full name"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        className="form-control form-control-sm"
+                        value={student.regNo || ''}
+                        onChange={(e) => handleStudentChange(index, 'regNo', e.target.value)}
+                        placeholder="Auto"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="tel"
+                        className="form-control form-control-sm"
+                        value={student.parentPhone || ''}
+                        onChange={(e) => handleStudentChange(index, 'parentPhone', e.target.value)}
+                        placeholder="Optional"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="email"
+                        className="form-control form-control-sm"
+                        value={student.parentEmail || ''}
+                        onChange={(e) => handleStudentChange(index, 'parentEmail', e.target.value)}
+                        placeholder="Optional"
+                      />
+                    </td>
+                    <td>
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => removeStudent(index)}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Entry for 'manual' method */}
+      {method === 'manual' && students.length === 0 && (
+        <div className="text-center py-4">
+          <button className="btn btn-primary" onClick={addStudent}>
+            Add First Student
+          </button>
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div className="d-flex justify-content-between mt-4">
+        <button 
+          className="btn btn-outline-secondary"
           onClick={onCancel}
           disabled={loading}
         >
           Cancel
         </button>
-        <button
-          className="btn btn-success rounded-3"
+        <button 
+          className="btn btn-success"
           onClick={handleSubmit}
-          disabled={loading || extractedStudents.length === 0}
+          disabled={loading || students.length === 0}
         >
           {loading ? (
             <>
-              <Loader size={18} className="spinner-border spinner-border-sm me-2" />
-              Saving...
+              <Loader size={18} className="me-2 spinner-border spinner-border-sm" />
+              Submitting...
             </>
           ) : (
-            <>
-              <Check size={18} className="me-2" />
-              Add Students ({extractedStudents.length})
-            </>
+            `Submit ${students.length} Student(s)`
           )}
         </button>
       </div>
-    </div>
-  );
-
-  return (
-    <div>
-      {message.text && (
-        <div className={`alert alert-${message.type === 'error' ? 'danger' : message.type} rounded-3`}>
-          {message.text}
-        </div>
-      )}
-
-      {/* Method: OCR (Camera) */}
-      {method === 'ocr' && !capturedImage && renderCamera()}
-
-      {/* Method: Manual (File Upload) */}
-      {method === 'manual' && !capturedImage && (
-        <div className="text-center py-4">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileUpload}
-            style={{ display: 'none' }}
-          />
-          <button
-            className="btn btn-primary btn-lg rounded-3 mb-3"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload size={20} className="me-2" />
-            Upload Image
-          </button>
-          <p className="text-muted">Or enter students manually below</p>
-          <button
-            className="btn btn-outline-secondary rounded-3"
-            onClick={addManualStudent}
-          >
-            + Add Student Manually
-          </button>
-        </div>
-      )}
-
-      {/* Show captured image */}
-      {capturedImage && renderImage()}
-
-      {/* Show loading */}
-      {loading && !extractedStudents.length && (
-        <div className="text-center py-4">
-          <Loader size={48} className="text-primary spinner-border mb-3" />
-          <p>Processing image...</p>
-        </div>
-      )}
-
-      {/* Show extracted students form */}
-      {extractedStudents.length > 0 && renderStudentsForm()}
     </div>
   );
 };
