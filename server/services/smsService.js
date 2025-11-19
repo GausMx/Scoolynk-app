@@ -5,7 +5,7 @@ import axios from 'axios';
 // ✅ Use v3 API from environment or fallback to v3
 const TERMII_API_URL = process.env.TERMII_API_URL || 'https://v3.api.termii.com';
 const TERMII_API_KEY = process.env.TERMII_API_KEY;
-const TERMII_SENDER_ID = process.env.TERMII_SENDER_ID || 'Scoolynk001';
+const TERMII_SENDER_ID = process.env.TERMII_SENDER_ID || 'SchoolApp';
 
 /**
  * Format phone number to Nigerian format
@@ -38,9 +38,19 @@ const isValidPhoneNumber = (phone) => {
 };
 
 /**
- * Send a basic SMS
+ * Detect if phone number is MTN
  */
-const sendSMS = async (to, message) => {
+const isMTNNumber = (phone) => {
+  const formatted = formatPhoneNumber(phone);
+  // MTN prefixes in Nigeria: 0703, 0706, 0803, 0806, 0810, 0813, 0814, 0816, 0903, 0906, 0913
+  const mtnPrefixes = ['234703', '234706', '234803', '234806', '234810', '234813', '234814', '234816', '234903', '234906', '234913'];
+  return mtnPrefixes.some(prefix => formatted.startsWith(prefix));
+};
+
+/**
+ * Send a basic SMS with automatic DND channel detection
+ */
+const sendSMS = async (to, message, forceDND = false) => {
   try {
     // Validate configuration
     if (!TERMII_API_KEY) {
@@ -73,18 +83,24 @@ const sendSMS = async (to, message) => {
 
     const formattedPhone = formatPhoneNumber(to);
     
+    // Auto-detect MTN and use DND channel
+    const isMTN = isMTNNumber(formattedPhone);
+    const channel = forceDND || isMTN ? 'dnd' : 'generic';
+    
     const payload = {
       api_key: TERMII_API_KEY,
       to: formattedPhone,
       from: TERMII_SENDER_ID,
       sms: message,
       type: 'plain',
-      channel: 'generic', // Options: 'generic', 'dnd', 'whatsapp'
+      channel: channel, // Use 'dnd' for MTN numbers
     };
 
     console.log('[SMS Service] Sending SMS via', TERMII_API_URL);
     console.log('[SMS Service] To:', formattedPhone);
+    console.log('[SMS Service] Network:', isMTN ? 'MTN (using DND channel)' : 'Other');
     console.log('[SMS Service] From:', TERMII_SENDER_ID);
+    console.log('[SMS Service] Channel:', channel);
     console.log('[SMS Service] Message length:', message.length, 'characters');
 
     const response = await axios.post(
