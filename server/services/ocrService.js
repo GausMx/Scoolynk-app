@@ -287,13 +287,148 @@ class OCRService {
     }
   }
 
-  async terminate() {
-    if (this.worker) {
-      await this.worker.terminate();
-      this.worker = null;
-      console.log('[OCR] Worker terminated');
+  /**
+   * NEW: Extract scores from result sheet
+   */
+  async extractScores(imageBuffer) {
+    if (!this.enabled) {
+      return {
+        success: false,
+        message: 'OCR service not available'
+      };
     }
+
+    try {
+      console.log('[OCR] Starting score extraction...');
+
+      // Preprocess image for handwritten text
+      const processedImage = await this.preprocessImage(imageBuffer);
+
+      // Perform OCR with settings optimized for handwritten text
+      const result = await this.worker.recognize(processedImage, {
+        tessedit_pageseg_mode: Tesseract.PSM.AUTO,
+        // Don't use whitelist for handwritten - let it recognize everything
+      });
+
+      const fullText = result.data.text;
+      const lines = fullText.split('\n').filter(line => line.trim() !== '');
+      const confidence = result.data.confidence;
+
+      console.log('[OCR] Score extraction complete:', {
+        linesFound: lines.length,
+        confidence: `${confidence.toFixed(2)}%`
+      });
+
+      const scores = this.parseResultSheet(lines, fullText);
+
+      return {
+        success: true,
+        scores,
+        fullText,
+        lines,
+        confidence
+      };
+    } catch (error) {
+      console.error('[OCR] Score extraction error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to extract scores'
+      };
+    }
+  }
+
+  /**
+   * Parse result sheet to extract subject scores
+   */
+  parseResultSheet(lines, fullText) {
+    console.log('[OCR] Parsing result sheet from', lines.length, 'lines');
+    
+    const subjects = [];
+    const subjectKeywords = [
+      'mathematics', 'math', 'maths',
+      'english', 'language',
+      'science', 'basic science', 'physics', 'chemistry', 'biology',
+      'social studies', 'social',
+      'yoruba', 'igbo', 'hausa',
+      'computer', 'ict', 'technology',
+      'economics', 'geography', 'history',
+      'literature', 'french',
+      'agricultural', 'agriculture',
+      'civic', 'business', 'commerce',
+      'technical', 'home economics',
+      'music', 'arts', 'physical', 'health',
+      'religious', 'christian', 'islamic'
+    ];
+
+    const headerKeywords = ['subject', 'ca1', 'ca2', 'exam', 'total', 'grade'];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      if (!line || line.length < 3) continue;
+      
+      // Skip headers
+      if (headerKeywords.some(kw => line.toLowerCase().includes(kw))) {
+        console.log('[OCR] Skipping header:', line);
+        continue;
+      }
+
+      // Parse score line
+      const parsed = this.parseScoreLine(line, subjectKeywords);
+      
+      if (parsed && parsed.subject) {
+        subjects.push(parsed);
+        console.log('[OCR] Found subject:', parsed.subject, 
+                   `CA1:${parsed.ca1} CA2:${parsed.ca2} Exam:${parsed.exam}`);
+      }
+    }
+
+    console.log('[OCR] Total subjects extracted:', subjects.length);
+    return subjects;
+  }
+
+  /**
+   * Parse single line to extract subject and scores
+   */
+  parseScoreLine(line, subjectKeywords) {
+    // Check if line contains known subject
+    const lowerLine = line.toLowerCase();
+    const hasSubject = subjectKeywords.some(kw => lowerLine.includes(kw));
+
+    // Extract all numbers
+    const numbers = line.match(/\d+/g);
+    
+    // Need at least 3 numbers (CA1, CA2, Exam)
+    if (!numbers || numbers.length < 3) {
+      return null;
+    }
+
+    // Extract subject name (before first number)
+    let subjectName = line.split(/[\d|]/)[0].trim();
+    
+    // Clean subject name
+    subjectName = subjectName
+      .replace(/[^\w\s]/g, '')
+      .trim()
+      .split(/\s+/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+
+    // Validate subject name
+    if (subjectName.length < 3 || (!hasSubject && subjectName.length < 5)) {
+      return null;
+    }
+
+    // Parse scores
+    const scores = numbers.map(n => parseInt(n, 10));
+    
+    return {
+      subject: subjectName,
+      ca1: Math.min(scores[0] || 0, 20),
+      ca2: Math.min(scores[1] || 0, 20),
+      exam: Math.min(scores[2] || 0, 60)
+    };
   }
 }
 
-export default new OCRService();
+export const ocrService = new OCRService();
