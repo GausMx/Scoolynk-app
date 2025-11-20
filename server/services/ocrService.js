@@ -431,4 +431,4 @@ class OCRService {
   }
 }
 
-export const ocrService = new OCRService();
+export default new OCRService();
