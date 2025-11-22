@@ -1,4 +1,4 @@
-// src/components/Admin/ManageTeachers.js - MOBILE RESPONSIVE VERSION
+// src/components/Admin/ManageTeachers.js - WITH LOADING COMPONENT
 
 import React, { useState, useEffect } from 'react';
 import { Edit, Trash2, Users, Search, UserPlus, Mail, Phone, BookOpen } from 'lucide-react';
@@ -13,19 +13,36 @@ const ManageTeachers = () => {
   const [courses, setCourses] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingPercent, setLoadingPercent] = useState(0);
   const [message, setMessage] = useState('');
   const [modalState, setModalState] = useState({ isOpen: false, mode: 'view', currentTeacher: null });
 
   const token = localStorage.getItem('accessToken');
 
   useEffect(() => {
-    fetchTeachers();
-    fetchClassesAndCourses();
+    fetchInitialData();
   }, []);
+
+  const fetchInitialData = async () => {
+    try {
+      setInitialLoading(true);
+      setLoadingPercent(10);
+
+      await fetchTeachers();
+      setLoadingPercent(50);
+
+      await fetchClassesAndCourses();
+      setLoadingPercent(100);
+    } catch (err) {
+      console.error('Failed to fetch initial data:', err);
+    } finally {
+      setTimeout(() => setInitialLoading(false), 300);
+    }
+  };
 
   const fetchTeachers = async () => {
     try {
-      setLoading(true);
       const res = await axios.get(`${REACT_APP_API_URL}/api/admin/teachers`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -33,8 +50,6 @@ const ManageTeachers = () => {
     } catch (err) {
       console.error('Failed to fetch teachers:', err);
       setMessage('Failed to load teachers.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -313,6 +328,10 @@ const ManageTeachers = () => {
       </form>
     );
   };
+
+  if (initialLoading) {
+    return <Loading percentage={loadingPercent} />;
+  }
 
   return (
     <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>

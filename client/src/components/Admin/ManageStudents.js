@@ -1,4 +1,4 @@
-// src/components/Admin/ManageStudents.js - MOBILE RESPONSIVE VERSION
+// src/components/Admin/ManageStudents.js - WITH LOADING COMPONENT
 
 import React, { useState, useEffect } from 'react';
 import { Users, Edit, Trash2, PlusCircle, Search, AlertTriangle, Download, Upload } from 'lucide-react';
@@ -67,6 +67,8 @@ const ManageStudents = () => {
   const [classes, setClasses] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingPercent, setLoadingPercent] = useState(0);
   const [message, setMessage] = useState('');
   const [modalState, setModalState] = useState({ isOpen: false, mode: 'add', currentStudent: null });
   const [confirmState, setConfirmState] = useState({ isOpen: false, id: null, name: '', action: () => {} });
@@ -74,13 +76,28 @@ const ManageStudents = () => {
   const token = localStorage.getItem('accessToken');
 
   useEffect(() => {
-    fetchStudents();
-    fetchClasses();
+    fetchInitialData();
   }, []);
+
+  const fetchInitialData = async () => {
+    try {
+      setInitialLoading(true);
+      setLoadingPercent(10);
+
+      await fetchStudents();
+      setLoadingPercent(50);
+
+      await fetchClasses();
+      setLoadingPercent(100);
+    } catch (err) {
+      console.error('Failed to fetch initial data:', err);
+    } finally {
+      setTimeout(() => setInitialLoading(false), 300);
+    }
+  };
 
   const fetchStudents = async () => {
     try {
-      setLoading(true);
       const res = await axios.get(`${REACT_APP_API_URL}/api/admin/students`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -88,8 +105,6 @@ const ManageStudents = () => {
     } catch (err) {
       console.error('Failed to fetch students:', err);
       setMessage('Failed to load students.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -290,6 +305,10 @@ const ManageStudents = () => {
     );
   };
 
+  if (initialLoading) {
+    return <Loading percentage={loadingPercent} />;
+  }
+
   return (
     <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
       <div className="card shadow-lg rounded-4 p-3 p-md-4">
@@ -343,13 +362,7 @@ const ManageStudents = () => {
           </div>
         </div>
 
-        {loading && students.length === 0 ? (
-          <div className="text-center py-5">
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
-          </div>
-        ) : students.length === 0 ? (
+        {students.length === 0 ? (
           <div className="alert alert-info rounded-3">
             <p className="mb-0 small">No students registered yet. Click "Add Student" to get started.</p>
           </div>

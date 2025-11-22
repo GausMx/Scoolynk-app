@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'chart.js/auto';
-import Loading from '../common/Loading' // Import the new Loading component
+import Loading from '../common/Loading'
 
 const { REACT_APP_API_URL } = process.env;
 
@@ -29,13 +29,13 @@ const StatCard = ({ title, value, iconClass, bgClass, textClass, onClick }) => (
 const Dashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [loadingPercent, setLoadingPercent] = useState(0); // You can update this if you want dynamic percentage
+  const [loadingPercent, setLoadingPercent] = useState(0);
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalTeachers: 0,
     totalClasses: 0,
     activeStudents: 0,
-    unpaidFees: 0,
+    unpaidFeesAmount: 0,
     partialPaid: 0,
     fullPaid: 0,
     pendingResults: 0,
@@ -70,9 +70,9 @@ const Dashboard = () => {
         totalTeachers: data.totalTeachers || 0,
         totalClasses: data.totalClasses || 0,
         activeStudents: data.activeStudents || 0,
-        unpaidFees: data.unpaidFeesAmount || 0,
-        partialPaid: data.partialPaidCount || 0,
-        fullPaid: data.fullPaidCount || 0,
+        unpaidFeesAmount: data.unpaidFeesAmount || 0,
+        partialPaid: data.partialPaid || 0,
+        fullPaid: data.fullPaid || 0,
         pendingResults: data.pendingResults || 0,
         approvedResults: data.approvedResults || 0,
         rejectedResults: data.rejectedResults || 0,
@@ -89,7 +89,7 @@ const Dashboard = () => {
         totalTeachers: 0,
         totalClasses: 0,
         activeStudents: 0,
-        unpaidFees: 0,
+        unpaidFeesAmount: 0,
         partialPaid: 0,
         fullPaid: 0,
         pendingResults: 0,
@@ -101,7 +101,7 @@ const Dashboard = () => {
       });
       setLoadingPercent(100);
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 300);
     }
   };
 
@@ -157,7 +157,7 @@ const Dashboard = () => {
           iconClass="bi-people-fill"
           bgClass="bg-primary bg-opacity-10"
           textClass="text-primary"
-          onClick={() => navigate('/admin/students')}
+          onClick={() => navigate('/admin/manage-students')}
         />
         <StatCard
           title="Total Teachers"
@@ -165,7 +165,7 @@ const Dashboard = () => {
           iconClass="bi-person-badge-fill"
           bgClass="bg-success bg-opacity-10"
           textClass="text-success"
-          onClick={() => navigate('/admin/teachers')}
+          onClick={() => navigate('/admin/manage-teachers')}
         />
         <StatCard
           title="Total Classes"
@@ -173,7 +173,7 @@ const Dashboard = () => {
           iconClass="bi-door-open-fill"
           bgClass="bg-info bg-opacity-10"
           textClass="text-info"
-          onClick={() => navigate('/admin/classes')}
+          onClick={() => navigate('/admin/manage-classes')}
         />
       </div>
 
@@ -200,7 +200,7 @@ const Dashboard = () => {
               <div className="col-12 col-md-4">
                 <div className="border-start border-danger border-4 ps-3">
                   <small className="text-muted d-block mb-1">Outstanding Fees</small>
-                  <h4 className="fw-bold text-danger mb-0 fs-5 fs-md-4">₦{stats.unpaidFees.toLocaleString()}</h4>
+                  <h4 className="fw-bold text-danger mb-0 fs-5 fs-md-4">₦{stats.unpaidFeesAmount.toLocaleString()}</h4>
                 </div>
               </div>
             </div>
