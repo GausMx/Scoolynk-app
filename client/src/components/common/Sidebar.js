@@ -12,6 +12,7 @@ const Sidebar = ({ user, role }) => {
   const [teacherClasses, setTeacherClasses] = useState([]);
   const [isClassTeacher, setIsClassTeacher] = useState(false);
   const [schoolName, setSchoolName] = useState('');
+  const [userName, setUserName] = useState('');
 
   const token = localStorage.getItem('token');
 
@@ -37,12 +38,14 @@ const Sidebar = ({ user, role }) => {
         });
         console.log('Admin settings response:', res.data);
         setSchoolName(res.data.school?.name || '');
+        setUserName(res.data.admin?.name || '');
       } else if (role === 'teacher') {
         const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/dashboard`, {
           headers: { Authorization: `Bearer ${authToken}` }
         });
         console.log('Teacher dashboard response:', res.data);
         setSchoolName(res.data.school?.name || '');
+        setUserName(res.data.teacher?.name || '');
       }
     } catch (err) {
       console.error('Failed to fetch school name:', err);
@@ -121,7 +124,7 @@ const Sidebar = ({ user, role }) => {
           ))}
         </ul>
         <div className="mt-auto">
-          <small>{user?.name || schoolName || ""}</small>
+          <small>{userName || ''}</small>
         </div>
       </div>
 
