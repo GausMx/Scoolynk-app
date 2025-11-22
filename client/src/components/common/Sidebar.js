@@ -29,19 +29,24 @@ const Sidebar = ({ user, role }) => {
 
   const fetchSchoolName = async () => {
     try {
+      const authToken = localStorage.getItem('accessToken');
+      
       if (role === 'admin') {
         const res = await axios.get(`${REACT_APP_API_URL}/api/admin/settings`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${authToken}` }
         });
+        console.log('Admin settings response:', res.data);
         setSchoolName(res.data.school?.name || '');
       } else if (role === 'teacher') {
         const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/dashboard`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${authToken}` }
         });
+        console.log('Teacher dashboard response:', res.data);
         setSchoolName(res.data.school?.name || '');
       }
     } catch (err) {
       console.error('Failed to fetch school name:', err);
+      console.error('Error details:', err.response?.data);
     }
   };
 
