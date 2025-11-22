@@ -64,6 +64,8 @@ const Dashboard = () => {
       setLoadingPercent(70);
 
       const data = res.data;
+      
+      console.log('Dashboard API Response:', data);
 
       setStats({
         totalStudents: data.totalStudents || 0,
@@ -84,6 +86,7 @@ const Dashboard = () => {
       setLoadingPercent(100);
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
+      console.error('Error details:', err.response?.data);
       setStats({
         totalStudents: 0,
         totalTeachers: 0,
