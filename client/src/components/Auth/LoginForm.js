@@ -54,7 +54,7 @@ const LoginForm = () => {
             <div className="card-header bg-primary text-white text-center py-4">
               <h2 className="mb-0">
                 <i className="bi bi-person-circle me-2"></i>
-                Login
+                Login to Scoolynk
               </h2>
             </div>
             <div className="card-body p-4">

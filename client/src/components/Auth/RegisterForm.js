@@ -154,7 +154,7 @@ const RegisterForm = () => {
             <div className="card-header bg-primary text-white text-center py-4">
               <h2 className="mb-0">
                 <i className="bi bi-person-plus-fill me-2"></i>
-                Register
+                Register to Scoolynk
               </h2>
             </div>
             <div className="card-body p-4">
