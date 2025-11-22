@@ -103,10 +103,12 @@ const ClassView = () => {
     return <Loading percentage={loadingPercent} />;
   }
 
-  if (!classData) {
+  if (!classData && message) {
     return (
-      <div className="alert alert-danger rounded-3 m-4">
-        {message || 'Class not found or you don\'t have access to this class.'}
+      <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
+        <div className="alert alert-danger rounded-3">
+          {message}
+        </div>
       </div>
     );
   }
