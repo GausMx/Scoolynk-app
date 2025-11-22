@@ -6,7 +6,7 @@ import Course from '../models/Course.js';
 import Student from '../models/Student.js';
 import School from '../models/School.js';
 
-// Get Teacher Dashboard Info
+// Get Teacher Dashboard Info - FIXED TO INCLUDE SCHOOL
 export const getTeacherDashboard = async (req, res) => {
   try {
     const teacherId = req.user._id;
@@ -17,6 +17,9 @@ export const getTeacherDashboard = async (req, res) => {
     if (!teacher) {
       return res.status(404).json({ message: 'Teacher not found.' });
     }
+
+    // ✅ FIXED: Fetch school information
+    const school = await School.findById(req.user.schoolId).select('name phone motto');
 
     const courses = await Course.find({ 
       teacher: teacherId, 
@@ -39,6 +42,12 @@ export const getTeacherDashboard = async (req, res) => {
         classes: teacher.classes,
         classTeacherFor: teacher.classTeacherFor,
         courses: teacher.courses
+      },
+      // ✅ ADDED: School information
+      school: {
+        name: school?.name || '',
+        phone: school?.phone || '',
+        motto: school?.motto || ''
       },
       coursesDetailed: courses,
       students
