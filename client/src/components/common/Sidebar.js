@@ -11,8 +11,14 @@ const Sidebar = ({ user, role }) => {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [teacherClasses, setTeacherClasses] = useState([]);
   const [isClassTeacher, setIsClassTeacher] = useState(false);
+  const [schoolName, setSchoolName] = useState('');
 
   const token = localStorage.getItem('token');
+
+  // Fetch school name for both admin and teacher
+  useEffect(() => {
+    fetchSchoolName();
+  }, [role]);
 
   // Fetch teacher's classes if role is teacher
   useEffect(() => {
@@ -20,6 +26,25 @@ const Sidebar = ({ user, role }) => {
       fetchTeacherClasses();
     }
   }, [role]);
+
+  const fetchSchoolName = async () => {
+    try {
+      if (role === 'admin') {
+        const res = await axios.get(`${REACT_APP_API_URL}/api/admin/settings`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setSchoolName(res.data.school?.name || 'SCOOLYNK');
+      } else if (role === 'teacher') {
+        const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/dashboard`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setSchoolName(res.data.school?.name || 'SCOOLYNK');
+      }
+    } catch (err) {
+      console.error('Failed to fetch school name:', err);
+      setSchoolName('SCOOLYNK');
+    }
+  };
 
   const fetchTeacherClasses = async () => {
     try {
@@ -62,8 +87,7 @@ const Sidebar = ({ user, role }) => {
   const links =
     role === "admin" ? adminLinks : role === "teacher" ? teacherLinks : [];
 
-  const displayName =
-    user && (role === "admin" ? user.schoolName : user.name);
+  const displayName = schoolName || "SCOOLYNK";
 
   // Toggle collapse manually
   const toggleNav = () => setIsNavOpen(!isNavOpen);
@@ -76,7 +100,7 @@ const Sidebar = ({ user, role }) => {
         className="d-none d-md-flex flex-column flex-shrink-0 p-3 bg-dark text-white"
         style={{ width: "250px", height: "100vh", position: "sticky", top: 0 }}
       >
-        <h5 className="mb-3">{displayName || "SCOOLYNK"}</h5>
+        <h5 className="mb-3">{displayName}</h5>
         <hr />
         <ul className="nav nav-pills flex-column mb-auto">
           {links.map((link) => (
@@ -95,14 +119,14 @@ const Sidebar = ({ user, role }) => {
           ))}
         </ul>
         <div className="mt-auto">
-          <small>{displayName || ""}</small>
+          <small>{user?.name || displayName}</small>
         </div>
       </div>
 
       {/* ================= Mobile Navbar ================= */}
       <nav className="navbar navbar-expand-sm bg-dark navbar-dark d-md-none fixed-top">
         <div className="container-fluid">
-          <span className="navbar-brand">{displayName || "Scoolynk"}</span>
+          <span className="navbar-brand">{displayName}</span>
           <button
             className="navbar-toggler"
             type="button"
