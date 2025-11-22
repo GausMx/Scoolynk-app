@@ -33,16 +33,15 @@ const Sidebar = ({ user, role }) => {
         const res = await axios.get(`${REACT_APP_API_URL}/api/admin/settings`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setSchoolName(res.data.school?.name || 'SCOOLYNK');
+        setSchoolName(res.data.school?.name || '');
       } else if (role === 'teacher') {
         const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/dashboard`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setSchoolName(res.data.school?.name || 'SCOOLYNK');
+        setSchoolName(res.data.school?.name || '');
       }
     } catch (err) {
       console.error('Failed to fetch school name:', err);
-      setSchoolName('SCOOLYNK');
     }
   };
 
@@ -87,8 +86,6 @@ const Sidebar = ({ user, role }) => {
   const links =
     role === "admin" ? adminLinks : role === "teacher" ? teacherLinks : [];
 
-  const displayName = schoolName || "SCOOLYNK";
-
   // Toggle collapse manually
   const toggleNav = () => setIsNavOpen(!isNavOpen);
   const closeNav = () => setIsNavOpen(false);
@@ -100,7 +97,7 @@ const Sidebar = ({ user, role }) => {
         className="d-none d-md-flex flex-column flex-shrink-0 p-3 bg-dark text-white"
         style={{ width: "250px", height: "100vh", position: "sticky", top: 0 }}
       >
-        <h5 className="mb-3">{displayName}</h5>
+        <h5 className="mb-3">{schoolName || "SCOOLYNK"}</h5>
         <hr />
         <ul className="nav nav-pills flex-column mb-auto">
           {links.map((link) => (
@@ -119,14 +116,14 @@ const Sidebar = ({ user, role }) => {
           ))}
         </ul>
         <div className="mt-auto">
-          <small>{user?.name || displayName}</small>
+          <small>{user?.name || schoolName || ""}</small>
         </div>
       </div>
 
       {/* ================= Mobile Navbar ================= */}
       <nav className="navbar navbar-expand-sm bg-dark navbar-dark d-md-none fixed-top">
         <div className="container-fluid">
-          <span className="navbar-brand">{displayName}</span>
+          <span className="navbar-brand">{schoolName || "Scoolynk"}</span>
           <button
             className="navbar-toggler"
             type="button"
