@@ -14,7 +14,7 @@ const Sidebar = ({ user, role }) => {
   const [schoolName, setSchoolName] = useState('');
   const [userName, setUserName] = useState('');
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accessToken'); // ✅ Use accessToken, not 'token'
 
   // Fetch school name for both admin and teacher
   useEffect(() => {
@@ -55,8 +55,9 @@ const Sidebar = ({ user, role }) => {
 
   const fetchTeacherClasses = async () => {
     try {
+      const authToken = localStorage.getItem('accessToken'); // ✅ Use accessToken consistently
       const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${authToken}` }
       });
       
       const teacherData = res.data;
