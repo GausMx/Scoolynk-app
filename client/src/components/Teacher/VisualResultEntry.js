@@ -1,4 +1,4 @@
-// src/components/Teacher/VisualResultEntry.js
+// src/components/Teacher/VisualResultEntry.js - UPDATED WITH TOKEN FIX
 // Enhanced form-based result entry dynamically rendering full admin template structure
 
 import React, { useState, useEffect } from 'react';
@@ -25,6 +25,16 @@ const VisualResultEntry = ({
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // ✅ Verify token on component mount
+  useEffect(() => {
+    console.log('[VisualResultEntry] Token received:', token ? 'Yes' : 'No');
+    console.log('[VisualResultEntry] Token length:', token?.length);
+    
+    if (!token) {
+      setError('Authentication token is missing. Please log in again.');
+    }
+  }, [token]);
 
   // Initialize full form state from existingResult or from full template structure
   useEffect(() => {
@@ -138,11 +148,20 @@ const VisualResultEntry = ({
     return 'F';
   };
 
-  // Save or submit result to backend
+  // ✅ UPDATED: Save or submit result to backend with better error handling
   const handleSave = async (submitToAdmin = false) => {
     try {
       setLoading(true);
       setError('');
+
+      // ✅ Verify token exists
+      if (!token) {
+        setError('Authentication token is missing. Please log in again.');
+        setLoading(false);
+        return;
+      }
+
+      console.log('[VisualResultEntry] Saving with token:', token.substring(0, 20) + '...');
 
       // Validate subjects: at least one subject with non-empty name
       const validSubjects = subjects.filter(s => s.subject && s.subject.trim() !== '');
@@ -168,17 +187,36 @@ const VisualResultEntry = ({
         payload.resultId = existingResult._id;
       }
 
+      console.log('[VisualResultEntry] Payload:', payload);
+
       const res = await axios.post(
         `${REACT_APP_API_URL}/api/teacher/results`,
         payload,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } 
+        }
       );
 
+      console.log('[VisualResultEntry] Success:', res.data);
       alert(res.data.message || 'Result saved successfully!');
       if (onSuccess) onSuccess(res.data);
 
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save result');
+      console.error('[VisualResultEntry] Error:', err);
+      console.error('[VisualResultEntry] Error response:', err.response?.data);
+      
+      if (err.response?.status === 401) {
+        setError('Your session has expired. Please log in again.');
+        // Optionally redirect to login after 3 seconds
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 3000);
+      } else {
+        setError(err.response?.data?.message || 'Failed to save result');
+      }
     } finally {
       setLoading(false);
     }
