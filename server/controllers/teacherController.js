@@ -7,7 +7,6 @@ import Student from '../models/Student.js';
 import School from '../models/School.js';
 import Result from '../models/Result.js'; // ✅ CRITICAL: Import Result model
 
-// Get Teacher Dashboard Info - WITH RESULTS STATS
 // Get Teacher Dashboard Info - FIXED TO INCLUDE SCHOOL
 export const getTeacherDashboard = async (req, res) => {
   try {
