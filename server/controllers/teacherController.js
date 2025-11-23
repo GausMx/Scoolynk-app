@@ -7,10 +7,13 @@ import Student from '../models/Student.js';
 import School from '../models/School.js';
 import Result from '../models/Result.js'; // ✅ CRITICAL: Import Result model
 
-// Get Teacher Dashboard Info - FIXED TO INCLUDE SCHOOL
+// SIMPLIFIED VERSION - Replace ONLY the getTeacherDashboard function
+
 export const getTeacherDashboard = async (req, res) => {
   try {
     const teacherId = req.user._id;
+    const schoolId = req.user.schoolId;
+    
     const teacher = await User.findById(teacherId)
       .populate('classes', 'name')
       .populate('classTeacherFor', 'name');
@@ -19,21 +22,29 @@ export const getTeacherDashboard = async (req, res) => {
       return res.status(404).json({ message: 'Teacher not found.' });
     }
 
-    // ✅ FIXED: Fetch school information
-    const school = await School.findById(req.user.schoolId).select('name phone motto');
+    const school = await School.findById(schoolId).select('name phone motto');
 
     const courses = await Course.find({ 
       teacher: teacherId, 
-      schoolId: req.user.schoolId 
+      schoolId: schoolId 
     }).populate('classes', 'name');
 
     let students = [];
     if (teacher.classTeacherFor && teacher.classTeacherFor.length > 0) {
       students = await Student.find({ 
         classId: { $in: teacher.classTeacherFor },
-        schoolId: req.user.schoolId 
+        schoolId: schoolId 
       }).populate('classId', 'name fee');
     }
+
+    // ✅ SIMPLE stats calculation - no Result queries
+    const stats = {
+      totalStudents: students.length,
+      pendingResults: 0,  // Will show 0 for now
+      submittedResults: 0, // Will show 0 for now
+      verifiedResults: 0,  // Will show 0 for now
+      classesTeaching: teacher.classes?.length || 0
+    };
 
     res.json({
       teacher: {
@@ -44,18 +55,18 @@ export const getTeacherDashboard = async (req, res) => {
         classTeacherFor: teacher.classTeacherFor,
         courses: teacher.courses
       },
-      // ✅ ADDED: School information
       school: {
         name: school?.name || '',
         phone: school?.phone || '',
         motto: school?.motto || ''
       },
       coursesDetailed: courses,
-      students
+      students,
+      stats  // ✅ This MUST appear in response
     });
   } catch (err) {
-    console.error('[GetTeacherDashboard]', err);
-    res.status(500).json({ message: 'Failed to load dashboard.' });
+    console.error('[GetTeacherDashboard] Error:', err);
+    res.status(500).json({ message: 'Failed to load dashboard.', error: err.message });
   }
 };
 // Get Classes and Courses (Public - for registration)
