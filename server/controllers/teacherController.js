@@ -7,8 +7,6 @@ import Student from '../models/Student.js';
 import School from '../models/School.js';
 import Result from '../models/Result.js'; // ✅ CRITICAL: Import Result model
 
-// SIMPLIFIED VERSION - Replace ONLY the getTeacherDashboard function
-
 export const getTeacherDashboard = async (req, res) => {
   try {
     const teacherId = req.user._id;
@@ -37,12 +35,30 @@ export const getTeacherDashboard = async (req, res) => {
       }).populate('classId', 'name fee');
     }
 
-    // ✅ SIMPLE stats calculation - no Result queries
+    // ✅ REAL RESULT STATS
+    const pendingResults = await Result.countDocuments({
+      teacher: teacherId,
+      schoolId,
+      status: 'draft'
+    });
+
+    const submittedResults = await Result.countDocuments({
+      teacher: teacherId,
+      schoolId,
+      status: 'submitted'
+    });
+
+    const verifiedResults = await Result.countDocuments({
+      teacher: teacherId,
+      schoolId,
+      status: 'approved' // or 'verified'
+    });
+
     const stats = {
       totalStudents: students.length,
-      pendingResults: 0,  // Will show 0 for now
-      submittedResults: 0, // Will show 0 for now
-      verifiedResults: 0,  // Will show 0 for now
+      pendingResults,
+      submittedResults,
+      verifiedResults,
       classesTeaching: teacher.classes?.length || 0
     };
 
@@ -62,13 +78,14 @@ export const getTeacherDashboard = async (req, res) => {
       },
       coursesDetailed: courses,
       students,
-      stats  // ✅ This MUST appear in response
+      stats  // ✅ Real stats included
     });
   } catch (err) {
     console.error('[GetTeacherDashboard] Error:', err);
     res.status(500).json({ message: 'Failed to load dashboard.', error: err.message });
   }
 };
+
 // Get Classes and Courses (Public - for registration)
 export const getClassesAndCourses = async (req, res) => {
   try {
