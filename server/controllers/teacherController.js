@@ -1,12 +1,13 @@
-// server/controllers/teacherController.js - FIXED UPDATE PROFILE
+// server/controllers/teacherController.js - COMPLETE WITH ALL IMPORTS
 
 import User from '../models/User.js';
 import Class from '../models/Class.js';
 import Course from '../models/Course.js';
 import Student from '../models/Student.js';
 import School from '../models/School.js';
+import Result from '../models/Result.js'; // ✅ CRITICAL: Import Result model
 
-// Get Teacher Dashboard Info - FIXED TO INCLUDE SCHOOL
+// Get Teacher Dashboard Info - WITH RESULTS STATS
 export const getTeacherDashboard = async (req, res) => {
   try {
     const teacherId = req.user._id;
@@ -38,7 +39,7 @@ export const getTeacherDashboard = async (req, res) => {
       }).populate('classId', 'name fee');
     }
 
-    // ✅ NEW: Get results statistics for teacher's classes
+    // ✅ Get results statistics for teacher's classes
     const studentIds = students.map(s => s._id);
     
     let pendingResults = 0;
@@ -86,7 +87,7 @@ export const getTeacherDashboard = async (req, res) => {
       },
       coursesDetailed: courses,
       students,
-      // ✅ NEW: Results statistics
+      // ✅ Results statistics
       stats: {
         totalStudents: students.length,
         pendingResults,      // Draft results not yet submitted
@@ -288,7 +289,7 @@ export const bulkAddStudents = async (req, res) => {
   }
 };
 
-// ✅ FIXED: Update Teacher Profile - Now includes name and phone
+// Update Teacher Profile
 export const updateTeacherProfile = async (req, res) => {
   try {
     const teacherId = req.user._id;
@@ -298,7 +299,6 @@ export const updateTeacherProfile = async (req, res) => {
 
     const updateData = {};
     
-    // ✅ CRITICAL: Add name and phone to updateData
     if (name !== undefined && name.trim() !== '') {
       updateData.name = name.trim();
     }
@@ -307,24 +307,20 @@ export const updateTeacherProfile = async (req, res) => {
       updateData.phone = phone.trim();
     }
     
-    // Handle classes
     if (classes !== undefined) {
       updateData.classes = Array.isArray(classes) ? classes : [];
     }
     
-    // Handle courses
     if (courses !== undefined) {
       updateData.courses = Array.isArray(courses) ? courses : [];
     }
     
-    // Handle classTeacherFor
     if (classTeacherFor !== undefined) {
       updateData.classTeacherFor = Array.isArray(classTeacherFor) ? classTeacherFor : [];
     }
 
     console.log('[UpdateTeacherProfile] Update data:', updateData);
 
-    // Validate class IDs if provided
     if (updateData.classes && updateData.classes.length > 0) {
       const validClasses = await Class.find({ 
         _id: { $in: updateData.classes },
@@ -336,7 +332,6 @@ export const updateTeacherProfile = async (req, res) => {
       }
     }
 
-    // Validate classTeacherFor IDs if provided
     if (updateData.classTeacherFor && updateData.classTeacherFor.length > 0) {
       const validClassTeacher = await Class.find({ 
         _id: { $in: updateData.classTeacherFor },
@@ -399,7 +394,7 @@ export const getMyClassStudents = async (req, res) => {
   }
 };
 
-// Get Students in Specific Class (with payment info)
+// Get Students in Specific Class
 export const getClassStudents = async (req, res) => {
   try {
     const { classId } = req.params;
@@ -450,12 +445,13 @@ export const getClassStudents = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch students.' });
   }
 };
+
+// Get Courses for Specific Class
 export const getClassCourses = async (req, res) => {
   try {
     const { classId } = req.params;
     const teacherSchoolId = req.user.schoolId;
     
-    // Verify class exists and belongs to teacher's school
     const classExists = await Class.findOne({ 
       _id: classId,
       schoolId: teacherSchoolId 
@@ -465,7 +461,6 @@ export const getClassCourses = async (req, res) => {
       return res.status(404).json({ message: 'Class not found or access denied.' });
     }
     
-    // Get courses for this class
     const courses = await Course.find({ 
       classes: classId,
       schoolId: teacherSchoolId 
@@ -483,8 +478,7 @@ export const getClassCourses = async (req, res) => {
   }
 };
 
-
-// Update Student (for teacher to edit student info including payment)
+// Update Student
 export const updateStudent = async (req, res) => {
   try {
     const { studentId } = req.params;
@@ -499,7 +493,6 @@ export const updateStudent = async (req, res) => {
       return res.status(404).json({ message: 'Student not found.' });
     }
 
-    // Verify teacher has access (must be class teacher)
     const teacher = await User.findById(req.user._id);
     const hasAccess = teacher.classTeacherFor?.some(
       classId => classId.toString() === student.classId.toString()
@@ -509,7 +502,6 @@ export const updateStudent = async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Not class teacher for this student.' });
     }
 
-    // Update fields
     if (name) student.name = name;
     if (regNo) student.regNo = regNo;
     if (parentPhone !== undefined) student.parentPhone = parentPhone;
