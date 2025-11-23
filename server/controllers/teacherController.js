@@ -10,6 +10,8 @@ import School from '../models/School.js';
 export const getTeacherDashboard = async (req, res) => {
   try {
     const teacherId = req.user._id;
+    const schoolId = req.user.schoolId;
+    
     const teacher = await User.findById(teacherId)
       .populate('classes', 'name')
       .populate('classTeacherFor', 'name');
@@ -18,20 +20,54 @@ export const getTeacherDashboard = async (req, res) => {
       return res.status(404).json({ message: 'Teacher not found.' });
     }
 
-    // ✅ FIXED: Fetch school information
-    const school = await School.findById(req.user.schoolId).select('name phone motto');
+    // ✅ Fetch school information
+    const school = await School.findById(schoolId).select('name phone motto');
 
+    // ✅ Fetch courses for this teacher in their school
     const courses = await Course.find({ 
       teacher: teacherId, 
-      schoolId: req.user.schoolId 
+      schoolId: schoolId 
     }).populate('classes', 'name');
 
+    // ✅ Get students in teacher's classes (only their school)
     let students = [];
     if (teacher.classTeacherFor && teacher.classTeacherFor.length > 0) {
       students = await Student.find({ 
         classId: { $in: teacher.classTeacherFor },
-        schoolId: req.user.schoolId 
+        schoolId: schoolId 
       }).populate('classId', 'name fee');
+    }
+
+    // ✅ NEW: Get results statistics for teacher's classes
+    const studentIds = students.map(s => s._id);
+    
+    let pendingResults = 0;
+    let submittedResults = 0;
+    let verifiedResults = 0;
+    
+    if (studentIds.length > 0) {
+      // Count results by status for students in teacher's classes
+      const [pending, submitted, verified] = await Promise.all([
+        Result.countDocuments({ 
+          student: { $in: studentIds },
+          teacher: teacherId,
+          status: 'draft'
+        }),
+        Result.countDocuments({ 
+          student: { $in: studentIds },
+          teacher: teacherId,
+          status: 'submitted'
+        }),
+        Result.countDocuments({ 
+          student: { $in: studentIds },
+          teacher: teacherId,
+          status: 'verified'
+        })
+      ]);
+      
+      pendingResults = pending;
+      submittedResults = submitted;
+      verifiedResults = verified;
     }
 
     res.json({
@@ -43,14 +79,21 @@ export const getTeacherDashboard = async (req, res) => {
         classTeacherFor: teacher.classTeacherFor,
         courses: teacher.courses
       },
-      // ✅ ADDED: School information
       school: {
         name: school?.name || '',
         phone: school?.phone || '',
         motto: school?.motto || ''
       },
       coursesDetailed: courses,
-      students
+      students,
+      // ✅ NEW: Results statistics
+      stats: {
+        totalStudents: students.length,
+        pendingResults,      // Draft results not yet submitted
+        submittedResults,    // Results submitted and awaiting approval
+        verifiedResults,     // Results approved by admin
+        classesTeaching: teacher.classes?.length || 0
+      }
     });
   } catch (err) {
     console.error('[GetTeacherDashboard]', err);
