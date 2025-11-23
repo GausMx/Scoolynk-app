@@ -1,4 +1,4 @@
-// src/components/Teacher/TeacherHome.js - WITH ACTUAL COURSES
+// src/components/Teacher/TeacherHome.js - WITH STATS FROM API
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +7,7 @@ import {
   Users, BookOpen, FileText, Clock, 
   TrendingUp, Award, Calendar, ChevronRight 
 } from 'lucide-react';
+import Loading from '../common/Loading';
 
 const { REACT_APP_API_URL } = process.env;
 
@@ -20,6 +21,7 @@ const TeacherHome = ({ teacherData, refreshData }) => {
     classesTeaching: 0
   });
   const [loading, setLoading] = useState(true);
+  const [loadingPercent, setLoadingPercent] = useState(0);
 
   const token = localStorage.getItem('accessToken');
 
@@ -30,18 +32,50 @@ const TeacherHome = ({ teacherData, refreshData }) => {
   const fetchCoursesAndStats = async () => {
     try {
       setLoading(true);
+      setLoadingPercent(10);
+
+      // ✅ Use stats from teacherData if available (from dashboard API)
+      if (teacherData.stats) {
+        setStats(teacherData.stats);
+        setLoadingPercent(40);
+      } else {
+        // Fallback: calculate stats manually
+        const totalStudents = teacherData.students?.length || 0;
+        const classesTeaching = teacherData.teacher.classes?.length || 0;
+        setStats({
+          totalStudents,
+          pendingResults: 0,
+          submittedResults: 0,
+          classesTeaching
+        });
+        setLoadingPercent(40);
+      }
 
       // Fetch courses for all classes the teacher teaches
       const classIds = teacherData.teacher.classes?.map(c => c._id) || [];
+      
+      if (classIds.length === 0) {
+        setCourses([]);
+        setLoadingPercent(100);
+        return;
+      }
+
+      setLoadingPercent(60);
+
       const coursePromises = classIds.map(classId =>
         axios.get(
           `${REACT_APP_API_URL}/api/teacher/class/${classId}/courses`,
           { headers: { Authorization: `Bearer ${token}` } }
-        ).catch(err => ({ data: { courses: [] } }))
+        ).catch(err => {
+          console.error(`Failed to fetch courses for class ${classId}:`, err);
+          return { data: { courses: [] } };
+        })
       );
 
       const courseResponses = await Promise.all(coursePromises);
       const allCourses = courseResponses.flatMap(res => res.data.courses || []);
+      
+      setLoadingPercent(80);
       
       // Remove duplicates based on course ID
       const uniqueCourses = Array.from(
@@ -49,40 +83,33 @@ const TeacherHome = ({ teacherData, refreshData }) => {
       );
       
       setCourses(uniqueCourses);
-
-      // Calculate stats
-      const totalStudents = teacherData.students?.length || 0;
-      const classesTeaching = teacherData.teacher.classes?.length || 0;
-
-      // You can fetch pending/submitted results count from API if needed
-      // For now, using placeholder values
-      setStats({
-        totalStudents,
-        pendingResults: 0, // TODO: Fetch from API
-        submittedResults: 0, // TODO: Fetch from API
-        classesTeaching
-      });
+      setLoadingPercent(100);
 
     } catch (err) {
       console.error('Failed to fetch courses and stats:', err);
+      setLoadingPercent(100);
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 300);
     }
   };
 
   const teacher = teacherData.teacher;
 
+  if (loading) {
+    return <Loading percentage={loadingPercent} />;
+  }
+
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
       {/* Welcome Header */}
       <div className="row mb-4">
         <div className="col-12">
-          <div className="d-flex justify-content-between align-items-center">
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
             <div>
               <h2 className="fw-bold text-primary mb-1">
                 Welcome back, {teacher.name}! 👋
               </h2>
-              <p className="text-muted mb-0">
+              <p className="text-muted mb-0 small">
                 Here's an overview of your teaching activities
               </p>
             </div>
@@ -178,12 +205,14 @@ const TeacherHome = ({ teacherData, refreshData }) => {
                   <Users size={20} className="me-2" />
                   My Classes
                 </h5>
-                <button 
-                  className="btn btn-sm btn-outline-primary rounded-3"
-                  onClick={() => navigate('/teacher/my-class')}
-                >
-                  View All <ChevronRight size={16} />
-                </button>
+                {teacher.classTeacherFor && teacher.classTeacherFor.length > 0 && (
+                  <button 
+                    className="btn btn-sm btn-outline-primary rounded-3"
+                    onClick={() => navigate('/teacher/my-class')}
+                  >
+                    View All <ChevronRight size={16} />
+                  </button>
+                )}
               </div>
 
               <div className="list-group list-group-flush">
@@ -238,60 +267,51 @@ const TeacherHome = ({ teacherData, refreshData }) => {
                 </span>
               </div>
 
-              {loading ? (
-                <div className="text-center py-4">
-                  <div className="spinner-border spinner-border-sm text-success" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                  </div>
-                  <p className="text-muted small mt-2 mb-0">Loading courses...</p>
-                </div>
-              ) : (
-                <div className="list-group list-group-flush">
-                  {courses.length > 0 ? (
-                    courses.map((course, index) => (
-                      <div 
-                        key={course._id} 
-                        className="list-group-item d-flex justify-content-between align-items-center px-0 py-3 border-bottom"
-                      >
-                        <div className="d-flex align-items-center">
-                          <div className="bg-success bg-opacity-10 rounded-3 p-2 me-3">
-                            <BookOpen size={20} className="text-success" />
-                          </div>
-                          <div>
-                            <h6 className="mb-0 fw-semibold">{course.name}</h6>
-                            <small className="text-muted">
-                              {course.classes?.length || 0} {course.classes?.length === 1 ? 'class' : 'classes'}
-                            </small>
-                          </div>
+              <div className="list-group list-group-flush">
+                {courses.length > 0 ? (
+                  courses.map((course, index) => (
+                    <div 
+                      key={course._id} 
+                      className="list-group-item d-flex justify-content-between align-items-center px-0 py-3 border-bottom"
+                    >
+                      <div className="d-flex align-items-center">
+                        <div className="bg-success bg-opacity-10 rounded-3 p-2 me-3">
+                          <BookOpen size={20} className="text-success" />
                         </div>
-                        <span className="badge bg-success-subtle text-success">Active</span>
-                      </div>
-                    ))
-                  ) : teacher.courses && teacher.courses.length > 0 ? (
-                    // Fallback to courses array from teacher profile if API fails
-                    teacher.courses.map((courseName, index) => (
-                      <div 
-                        key={index} 
-                        className="list-group-item d-flex justify-content-between align-items-center px-0 py-3 border-bottom"
-                      >
-                        <div className="d-flex align-items-center">
-                          <div className="bg-success bg-opacity-10 rounded-3 p-2 me-3">
-                            <BookOpen size={20} className="text-success" />
-                          </div>
-                          <div>
-                            <h6 className="mb-0 fw-semibold">{courseName}</h6>
-                          </div>
+                        <div>
+                          <h6 className="mb-0 fw-semibold">{course.name}</h6>
+                          <small className="text-muted">
+                            {course.classes?.length || 0} {course.classes?.length === 1 ? 'class' : 'classes'}
+                          </small>
                         </div>
-                        <span className="badge bg-success-subtle text-success">Active</span>
                       </div>
-                    ))
-                  ) : (
-                    <div className="alert alert-info mb-0">
-                      <p className="mb-0 small">No courses assigned yet</p>
+                      <span className="badge bg-success-subtle text-success">Active</span>
                     </div>
-                  )}
-                </div>
-              )}
+                  ))
+                ) : teacher.courses && teacher.courses.length > 0 ? (
+                  // Fallback to courses array from teacher profile if API fails
+                  teacher.courses.map((courseName, index) => (
+                    <div 
+                      key={index} 
+                      className="list-group-item d-flex justify-content-between align-items-center px-0 py-3 border-bottom"
+                    >
+                      <div className="d-flex align-items-center">
+                        <div className="bg-success bg-opacity-10 rounded-3 p-2 me-3">
+                          <BookOpen size={20} className="text-success" />
+                        </div>
+                        <div>
+                          <h6 className="mb-0 fw-semibold">{courseName}</h6>
+                        </div>
+                      </div>
+                      <span className="badge bg-success-subtle text-success">Active</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="alert alert-info mb-0">
+                    <p className="mb-0 small">No courses assigned yet</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
