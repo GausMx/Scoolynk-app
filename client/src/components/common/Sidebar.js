@@ -85,6 +85,10 @@ const Sidebar = ({ user, role }) => {
   const teacherLinks = [
     { path: "/teacher", label: "Dashboard" },
     ...(isClassTeacher ? [{ path: "/teacher/my-class", label: "My Class" }] : []),
+    // ...teacherClasses.map((cls) => ({
+    //   path: `/teacher/class/${cls._id}`,
+    //   label: cls.name,
+    // })),
     { path: "/teacher/teacher-profile", label: "My Profile" },
   ];
 

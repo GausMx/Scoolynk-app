@@ -1,0 +1,53 @@
+# Netlify headers file - prevents PWA from caching aggressively
+# Place this file in: client/public/_headers
+
+# HTML files - never cache
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/*.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+# Service Worker - never cache
+/service-worker.js
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+# Manifest - short cache
+/manifest.json
+  Cache-Control: public, max-age=300
+
+# Static assets (JS, CSS) - long cache but with fingerprinting
+/static/js/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/static/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/static/media/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Images and fonts
+*.jpg
+  Cache-Control: public, max-age=86400
+
+*.png
+  Cache-Control: public, max-age=86400
+
+*.svg
+  Cache-Control: public, max-age=86400
+
+*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+
+*.woff
+  Cache-Control: public, max-age=31536000, immutable
+
+# All other files - reasonable cache
+/*
+  Cache-Control: public, max-age=3600
