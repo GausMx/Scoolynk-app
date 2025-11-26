@@ -180,38 +180,7 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Payments */}
-      <div className="row g-3 g-md-4 mb-3 mb-md-4">
-        <div className="col-12">
-          <div className="card shadow-sm rounded-4 p-3 p-md-4">
-            <h5 className="fw-bold mb-3 mb-md-4 fs-6 fs-md-5">
-              <i className="bi-cash-stack me-2 text-success"></i> Payment Overview
-            </h5>
-            <div className="row g-3">
-              <div className="col-12 col-md-4">
-                <div className="border-start border-success border-4 ps-3">
-                  <small className="text-muted d-block mb-1">Fully Paid</small>
-                  <h4 className="fw-bold text-success mb-0 fs-5 fs-md-4">{stats.fullPaid}</h4>
-                </div>
-              </div>
-              <div className="col-12 col-md-4">
-                <div className="border-start border-warning border-4 ps-3">
-                  <small className="text-muted d-block mb-1">Partial Payment</small>
-                  <h4 className="fw-bold text-warning mb-0 fs-5 fs-md-4">{stats.partialPaid}</h4>
-                </div>
-              </div>
-              <div className="col-12 col-md-4">
-                <div className="border-start border-danger border-4 ps-3">
-                  <small className="text-muted d-block mb-1">Outstanding Fees</small>
-                  <h4 className="fw-bold text-danger mb-0 fs-5 fs-md-4">₦{stats.unpaidFeesAmount.toLocaleString()}</h4>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Results */}
+      {/* Results Overview - PAYMENT SECTION REMOVED */}
       <div className="row g-3 g-md-4 mb-3 mb-md-4">
         <div className="col-12">
           <div className="card shadow-sm rounded-4 p-3 p-md-4">
@@ -289,7 +258,7 @@ const Dashboard = () => {
               className="btn btn-outline-success w-100 rounded-3 py-3"
               onClick={() => navigate('/admin/settings')}
             >
-              <i className="bi-cash-stack fs-4 d-block mb-2"></i>
+              <i className="bi-gear-fill fs-4 d-block mb-2"></i>
               <span className="fw-semibold small">Settings</span>
             </button>
           </div>
