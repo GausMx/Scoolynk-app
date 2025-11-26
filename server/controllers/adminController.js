@@ -538,71 +538,99 @@ export const reviewResult = async (req, res) => {
 // Complete Fixed adminController.js - getAdminDashboard function
 // Fixed getAdminDashboard function for adminController.js
 
+// COMPLETE FIXED getAdminDashboard function for adminController.js
+// Replace the existing getAdminDashboard function with this
+
 export const getAdminDashboard = async (req, res) => {
   try {
     const schoolId = req.user.schoolId;
 
-    // Get all students for this school to use in result filtering
+    console.log('[AdminDashboard] Starting dashboard fetch for school:', schoolId);
+
+    // Get all students for this school
     const schoolStudents = await Student.find({ schoolId }).select('_id');
     const schoolStudentIds = schoolStudents.map(s => s._id);
 
-    console.log('[AdminDashboard] School ID:', schoolId);
-    console.log('[AdminDashboard] Total school students:', schoolStudentIds.length);
+    console.log('[AdminDashboard] Total students found:', schoolStudentIds.length);
 
-    // ✅ FIXED: Added detailed logging for result counts
-    const pendingResultsCount = await Result.countDocuments({ 
+    // Get counts
+    const totalStudents = await Student.countDocuments({ schoolId });
+    const totalTeachers = await User.countDocuments({ schoolId, role: 'teacher' });
+    const totalClasses = await Class.countDocuments({ schoolId });
+
+    console.log('[AdminDashboard] Counts - Students:', totalStudents, 'Teachers:', totalTeachers, 'Classes:', totalClasses);
+
+    // Get result counts with detailed logging
+    const pendingResults = await Result.countDocuments({ 
       student: { $in: schoolStudentIds },
       status: 'submitted' 
     });
-    console.log('[AdminDashboard] Pending results (submitted):', pendingResultsCount);
+    console.log('[AdminDashboard] Pending results (submitted):', pendingResults);
 
-    const approvedResultsCount = await Result.countDocuments({ 
+    const approvedResults = await Result.countDocuments({ 
       student: { $in: schoolStudentIds },
       status: 'verified' 
     });
-    console.log('[AdminDashboard] Approved results (verified):', approvedResultsCount);
+    console.log('[AdminDashboard] Approved results (verified):', approvedResults);
 
-    const rejectedResultsCount = await Result.countDocuments({ 
+    const rejectedResults = await Result.countDocuments({ 
       student: { $in: schoolStudentIds },
       status: 'rejected' 
     });
-    console.log('[AdminDashboard] Rejected results:', rejectedResultsCount);
+    console.log('[AdminDashboard] Rejected results:', rejectedResults);
 
-    // ✅ Additional debug: Check all result statuses
-    const allStatuses = await Result.distinct('status', { 
+    // Debug: Check all result statuses in DB
+    const allResultStatuses = await Result.distinct('status', { 
       student: { $in: schoolStudentIds } 
     });
-    console.log('[AdminDashboard] All result statuses in DB:', allStatuses);
+    console.log('[AdminDashboard] All result statuses in DB:', allResultStatuses);
 
-    const [
-      totalStudents,
-      totalTeachers,
-      totalClasses,
-      recentActivity
-    ] = await Promise.all([
-      Student.countDocuments({ schoolId }),
-      User.countDocuments({ schoolId, role: 'teacher' }),
-      Class.countDocuments({ schoolId }),
-      Result.find({ student: { $in: schoolStudentIds } })
-        .sort({ updatedAt: -1 })
-        .limit(5)
-        .populate('student', 'name regNo')
-        .populate('teacher', 'name')
-    ]);
+    // Debug: Get all results for this school
+    const allResults = await Result.find({ 
+      student: { $in: schoolStudentIds } 
+    }).select('status student');
+    console.log('[AdminDashboard] Total results for school:', allResults.length);
+    console.log('[AdminDashboard] Results breakdown:', {
+      submitted: allResults.filter(r => r.status === 'submitted').length,
+      verified: allResults.filter(r => r.status === 'verified').length,
+      rejected: allResults.filter(r => r.status === 'rejected').length,
+      draft: allResults.filter(r => r.status === 'draft').length,
+      other: allResults.filter(r => !['submitted', 'verified', 'rejected', 'draft'].includes(r.status)).length
+    });
 
-    // Payment stats - removed but kept for compatibility
+    // Get recent activity
+    const recentActivity = await Result.find({ student: { $in: schoolStudentIds } })
+      .sort({ updatedAt: -1 })
+      .limit(5)
+      .populate('student', 'name regNo')
+      .populate('teacher', 'name');
+
+    console.log('[AdminDashboard] Recent activity count:', recentActivity.length);
+
+    // Payment stats
     const students = await Student.find({ schoolId }).populate('classId', 'fee');
-    const fullPaid = students.filter(s => s.amountPaid >= (s.classId?.fee || 0)).length;
-    const partialPaid = students.filter(
-      s => s.amountPaid > 0 && s.amountPaid < (s.classId?.fee || 0)
-    ).length;
-    const unpaidFeesAmount = students
-      .filter(s => s.amountPaid < (s.classId?.fee || 0))
-      .reduce((sum, s) => sum + ((s.classId?.fee || 0) - s.amountPaid), 0);
+    
+    const fullPaid = students.filter(s => {
+      const fee = s.classId?.fee || 0;
+      return s.amountPaid >= fee && fee > 0;
+    }).length;
 
-    const activeStudents = students.filter(s => s.amountPaid > 0).length;
+    const partialPaid = students.filter(s => {
+      const fee = s.classId?.fee || 0;
+      return s.amountPaid > 0 && s.amountPaid < fee;
+    }).length;
 
-    // Results trend calculation
+    const unpaidFeesAmount = students.reduce((sum, s) => {
+      const fee = s.classId?.fee || 0;
+      const balance = fee - (s.amountPaid || 0);
+      return sum + (balance > 0 ? balance : 0);
+    }, 0);
+
+    const activeStudents = students.filter(s => (s.amountPaid || 0) > 0).length;
+
+    console.log('[AdminDashboard] Payment stats - Full:', fullPaid, 'Partial:', partialPaid, 'Unpaid:', unpaidFeesAmount);
+
+    // Results trend (last 6 months)
     const today = new Date();
     const resultsTrend = [];
     
@@ -618,14 +646,12 @@ export const getAdminDashboard = async (req, res) => {
       resultsTrend.push(monthlyResults);
     }
 
-    // Fees trend (simplified placeholder)
-    const feesTrend = [];
-    for (let i = 5; i >= 0; i--) {
-      const monthlyTotal = students.reduce((sum, s) => {
-        return sum + (s.amountPaid || 0);
-      }, 0) / 6;
-      feesTrend.push(Math.round(monthlyTotal));
-    }
+    console.log('[AdminDashboard] Results trend:', resultsTrend);
+
+    // Fees trend (simplified - distribute total fees across 6 months)
+    const totalFeesPaid = students.reduce((sum, s) => sum + (s.amountPaid || 0), 0);
+    const monthlyAverage = Math.round(totalFeesPaid / 6);
+    const feesTrend = Array(6).fill(monthlyAverage);
 
     const responseData = {
       totalStudents,
@@ -635,20 +661,24 @@ export const getAdminDashboard = async (req, res) => {
       unpaidFeesAmount,
       partialPaid,
       fullPaid,
-      pendingResults: pendingResultsCount,
-      approvedResults: approvedResultsCount,
-      rejectedResults: rejectedResultsCount,
+      pendingResults,
+      approvedResults,
+      rejectedResults,
       feesTrend,
       resultsTrend,
       recentActivity
     };
 
-    console.log('[AdminDashboard] Response data:', JSON.stringify(responseData, null, 2));
+    console.log('[AdminDashboard] Sending response:', JSON.stringify(responseData, null, 2));
     
     res.json(responseData);
   } catch (err) {
-    console.error('[AdminDashboardError]', err);
-    res.status(500).json({ message: 'Failed to fetch dashboard data.' });
+    console.error('[AdminDashboard] ERROR:', err);
+    console.error('[AdminDashboard] Stack trace:', err.stack);
+    res.status(500).json({ 
+      message: 'Failed to fetch dashboard data.',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
