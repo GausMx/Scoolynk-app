@@ -536,6 +536,7 @@ export const reviewResult = async (req, res) => {
   }
 };
 // Complete Fixed adminController.js - getAdminDashboard function
+// Fixed getAdminDashboard function for adminController.js
 
 export const getAdminDashboard = async (req, res) => {
   try {
@@ -545,32 +546,43 @@ export const getAdminDashboard = async (req, res) => {
     const schoolStudents = await Student.find({ schoolId }).select('_id');
     const schoolStudentIds = schoolStudents.map(s => s._id);
 
+    console.log('[AdminDashboard] School ID:', schoolId);
+    console.log('[AdminDashboard] Total school students:', schoolStudentIds.length);
+
+    // ✅ FIXED: Added detailed logging for result counts
+    const pendingResultsCount = await Result.countDocuments({ 
+      student: { $in: schoolStudentIds },
+      status: 'submitted' 
+    });
+    console.log('[AdminDashboard] Pending results (submitted):', pendingResultsCount);
+
+    const approvedResultsCount = await Result.countDocuments({ 
+      student: { $in: schoolStudentIds },
+      status: 'verified' 
+    });
+    console.log('[AdminDashboard] Approved results (verified):', approvedResultsCount);
+
+    const rejectedResultsCount = await Result.countDocuments({ 
+      student: { $in: schoolStudentIds },
+      status: 'rejected' 
+    });
+    console.log('[AdminDashboard] Rejected results:', rejectedResultsCount);
+
+    // ✅ Additional debug: Check all result statuses
+    const allStatuses = await Result.distinct('status', { 
+      student: { $in: schoolStudentIds } 
+    });
+    console.log('[AdminDashboard] All result statuses in DB:', allStatuses);
+
     const [
       totalStudents,
       totalTeachers,
       totalClasses,
-      pendingResults,
-      approvedResults,
-      rejectedResults,
       recentActivity
     ] = await Promise.all([
       Student.countDocuments({ schoolId }),
       User.countDocuments({ schoolId, role: 'teacher' }),
       Class.countDocuments({ schoolId }),
-      // ✅ FIXED: Filter results by students belonging to this school
-      Result.countDocuments({ 
-        student: { $in: schoolStudentIds },
-        status: 'submitted' 
-      }),
-      Result.countDocuments({ 
-        student: { $in: schoolStudentIds },
-        status: 'verified' 
-      }),
-      Result.countDocuments({ 
-        student: { $in: schoolStudentIds },
-        status: 'rejected' 
-      }),
-      // ✅ FIXED: Filter recent activity by school students
       Result.find({ student: { $in: schoolStudentIds } })
         .sort({ updatedAt: -1 })
         .limit(5)
@@ -578,7 +590,7 @@ export const getAdminDashboard = async (req, res) => {
         .populate('teacher', 'name')
     ]);
 
-    // Payment stats - filtered by school
+    // Payment stats - removed but kept for compatibility
     const students = await Student.find({ schoolId }).populate('classId', 'fee');
     const fullPaid = students.filter(s => s.amountPaid >= (s.classId?.fee || 0)).length;
     const partialPaid = students.filter(
@@ -590,29 +602,8 @@ export const getAdminDashboard = async (req, res) => {
 
     const activeStudents = students.filter(s => s.amountPaid > 0).length;
 
-    // ✅ REAL FEES TREND: Calculate actual monthly fees collected for this school
-    // Get the last 6 months of payment data
+    // Results trend calculation
     const today = new Date();
-    const sixMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 5, 1);
-    
-    // Initialize array for last 6 months
-    const feesTrend = [];
-    const monthNames = [];
-    
-    for (let i = 5; i >= 0; i--) {
-      const monthDate = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      monthNames.push(monthDate.toLocaleString('default', { month: 'short' }));
-      
-      // For now, calculate total fees paid so far (you can enhance this with payment history tracking)
-      // This is a simplified version - ideally you'd track payment timestamps
-      const monthlyTotal = students.reduce((sum, s) => {
-        return sum + (s.amountPaid || 0);
-      }, 0) / 6; // Distribute evenly across 6 months as placeholder
-      
-      feesTrend.push(Math.round(monthlyTotal));
-    }
-
-    // ✅ REAL RESULTS TREND: Calculate actual monthly results submissions for this school
     const resultsTrend = [];
     
     for (let i = 5; i >= 0; i--) {
@@ -627,7 +618,16 @@ export const getAdminDashboard = async (req, res) => {
       resultsTrend.push(monthlyResults);
     }
 
-    res.json({
+    // Fees trend (simplified placeholder)
+    const feesTrend = [];
+    for (let i = 5; i >= 0; i--) {
+      const monthlyTotal = students.reduce((sum, s) => {
+        return sum + (s.amountPaid || 0);
+      }, 0) / 6;
+      feesTrend.push(Math.round(monthlyTotal));
+    }
+
+    const responseData = {
       totalStudents,
       totalTeachers,
       totalClasses,
@@ -635,13 +635,17 @@ export const getAdminDashboard = async (req, res) => {
       unpaidFeesAmount,
       partialPaid,
       fullPaid,
-      pendingResults,
-      approvedResults,
-      rejectedResults,
+      pendingResults: pendingResultsCount,
+      approvedResults: approvedResultsCount,
+      rejectedResults: rejectedResultsCount,
       feesTrend,
       resultsTrend,
       recentActivity
-    });
+    };
+
+    console.log('[AdminDashboard] Response data:', JSON.stringify(responseData, null, 2));
+    
+    res.json(responseData);
   } catch (err) {
     console.error('[AdminDashboardError]', err);
     res.status(500).json({ message: 'Failed to fetch dashboard data.' });
