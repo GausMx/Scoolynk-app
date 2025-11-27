@@ -540,6 +540,8 @@ export const reviewResult = async (req, res) => {
 
 // COMPLETE FIXED getAdminDashboard function for adminController.js
 // Replace the existing getAdminDashboard function with this
+// COMPLETE FIXED getAdminDashboard function for adminController.js
+// Replace the existing getAdminDashboard function with this
 
 export const getAdminDashboard = async (req, res) => {
   try {
@@ -681,7 +683,6 @@ export const getAdminDashboard = async (req, res) => {
     });
   }
 };
-
 // -------------------------
 // Get school code
 // -------------------------
