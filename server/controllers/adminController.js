@@ -594,6 +594,8 @@ export const reviewResult = async (req, res) => {
     res.status(500).json({ message: 'Failed to review result.' });
   }
 };
+// COMPLETE FIXED getAdminDashboard function for adminController.js
+// Replace the existing getAdminDashboard function with this
 
 export const getAdminDashboard = async (req, res) => {
   try {
@@ -621,11 +623,12 @@ export const getAdminDashboard = async (req, res) => {
     });
     console.log('[AdminDashboard] Pending results (submitted):', pendingResults);
 
+    // ✅ FIXED: Look for 'approved' status instead of 'verified'
     const approvedResults = await Result.countDocuments({ 
       student: { $in: schoolStudentIds },
-      status: 'verified' 
+      status: 'approved' 
     });
-    console.log('[AdminDashboard] Approved results (verified):', approvedResults);
+    console.log('[AdminDashboard] Approved results:', approvedResults);
 
     const rejectedResults = await Result.countDocuments({ 
       student: { $in: schoolStudentIds },
