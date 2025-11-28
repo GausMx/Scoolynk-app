@@ -67,6 +67,8 @@ const Dashboard = () => {
       const data = res.data;
       
       console.log('Dashboard API Response:', data);
+      console.log('Month Labels from Backend:', data.monthLabels);
+      console.log('Results Trend from Backend:', data.resultsTrend);
 
       setStats({
         totalStudents: data.totalStudents || 0,
