@@ -93,7 +93,7 @@ const resultSchema = new mongoose.Schema({
   // Status tracking
   status: {
     type: String,
-    enum: ['draft', 'submitted', 'approved', 'rejected', 'sent'],
+    enum: ['draft', 'submitted', 'approved', 'rejected', 'sent', 'verified'],
     default: 'draft'
   },
   

@@ -521,27 +521,79 @@ export const getSubmittedResults = async (req, res) => {
 // -------------------------
 export const reviewResult = async (req, res) => {
   try {
-    const { resultId, action } = req.body;
-    const result = await Result.findById(resultId).populate('student');
-    if (!result) return res.status(404).json({ message: 'Result not found.' });
+    const { resultId } = req.params;
+    const { action, comments, rejectionReason } = req.body;
+
+    console.log('[ReviewResult] Processing:', { resultId, action });
+
+    // Find the result and populate student
+    const result = await Result.findById(resultId)
+      .populate('student')
+      .populate('classId', 'name');
+
+    if (!result) {
+      return res.status(404).json({ message: 'Result not found.' });
+    }
+
+    // Verify the result belongs to admin's school
     if (String(result.student.schoolId) !== String(req.user.schoolId)) {
       return res.status(403).json({ message: 'Not authorized for this school.' });
     }
-    result.status = action === 'verify' ? 'verified' : 'rejected';
-    await result.save();
-    res.json({ message: `Result ${action}ed.` });
+
+    // ✅ Handle both 'approve' and 'verify' actions
+    if (action === 'approve' || action === 'verify') {
+      result.status = 'verified'; // Always use 'verified' as the status
+      result.approvedAt = new Date();
+      result.approvedBy = req.user._id;
+      
+      // Update comments if provided
+      if (comments) {
+        result.comments = {
+          teacher: comments.teacher || result.comments?.teacher || '',
+          principal: comments.principal || result.comments?.principal || ''
+        };
+      }
+
+      await result.save();
+
+      console.log('[ReviewResult] Result approved/verified:', resultId);
+
+      // TODO: Send SMS to parent here if needed
+      // await SMSService.sendResultToParent(result);
+
+      return res.json({ 
+        message: 'Result approved and verified successfully.',
+        result 
+      });
+    } 
+    
+    else if (action === 'reject') {
+      result.status = 'rejected';
+      result.rejectionReason = rejectionReason || 'No reason provided';
+      result.rejectedAt = new Date();
+      result.rejectedBy = req.user._id;
+      
+      await result.save();
+
+      console.log('[ReviewResult] Result rejected:', resultId);
+
+      return res.json({ 
+        message: 'Result rejected and sent back to teacher.',
+        result 
+      });
+    } 
+    
+    else {
+      return res.status(400).json({ 
+        message: 'Invalid action. Use "approve", "verify", or "reject".' 
+      });
+    }
+
   } catch (err) {
-    console.error('[AdminReviewResult]', err);
+    console.error('[ReviewResult Error]', err);
     res.status(500).json({ message: 'Failed to review result.' });
   }
 };
-// Complete Fixed adminController.js - getAdminDashboard function
-// Fixed getAdminDashboard function for adminController.js
-
-// COMPLETE FIXED getAdminDashboard function for adminController.js
-// Replace the existing getAdminDashboard function with this
-// COMPLETE FIXED getAdminDashboard function for adminController.js
-// Replace the existing getAdminDashboard function with this
 
 export const getAdminDashboard = async (req, res) => {
   try {
