@@ -4,19 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'chart.js/auto';
+import Loading from '../common/Loading'
 
 const { REACT_APP_API_URL } = process.env;
-
-const Loading = ({ percentage }) => (
-  <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
-    <div className="text-center">
-      <div className="spinner-border text-primary" role="status">
-        <span className="visually-hidden">Loading...</span>
-      </div>
-      <p className="mt-3">Loading... {percentage}%</p>
-    </div>
-  </div>
-);
 
 const StatCard = ({ title, value, iconClass, bgClass, textClass, onClick }) => (
   <div className="col-12 col-md-6 col-lg-4">
@@ -53,6 +43,7 @@ const Dashboard = () => {
     rejectedResults: 0,
     feesTrend: [],
     resultsTrend: [],
+    monthLabels: [], // ✅ Dynamic month labels from backend
     recentActivity: []
   });
 
@@ -90,6 +81,7 @@ const Dashboard = () => {
         rejectedResults: data.rejectedResults || 0,
         feesTrend: data.feesTrend || [0, 0, 0, 0, 0, 0],
         resultsTrend: data.resultsTrend || [0, 0, 0, 0, 0, 0],
+        monthLabels: data.monthLabels || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], // ✅ Dynamic labels
         recentActivity: data.recentActivity || [],
       });
 
@@ -110,6 +102,7 @@ const Dashboard = () => {
         rejectedResults: 0,
         feesTrend: [0, 0, 0, 0, 0, 0],
         resultsTrend: [0, 0, 0, 0, 0, 0],
+        monthLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], // ✅ Fallback
         recentActivity: [],
       });
       setLoadingPercent(100);
@@ -119,7 +112,7 @@ const Dashboard = () => {
   };
 
   const barData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    labels: stats.monthLabels, // ✅ Dynamic labels
     datasets: [
       {
         label: 'Fees Collected (₦)',
@@ -132,7 +125,7 @@ const Dashboard = () => {
   };
 
   const sparklineData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    labels: stats.monthLabels, // ✅ Dynamic labels from backend
     datasets: [
       {
         label: 'Results Submitted',
@@ -196,7 +189,7 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Results */}
+      {/* Results Overview */}
       <div className="row g-3 g-md-4 mb-3 mb-md-4">
         <div className="col-12">
           <div className="card shadow-sm rounded-4 p-3 p-md-4">
