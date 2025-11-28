@@ -4,9 +4,19 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'chart.js/auto';
-import Loading from '../common/Loading'
 
 const { REACT_APP_API_URL } = process.env;
+
+const Loading = ({ percentage }) => (
+  <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+    <div className="text-center">
+      <div className="spinner-border text-primary" role="status">
+        <span className="visually-hidden">Loading...</span>
+      </div>
+      <p className="mt-3">Loading... {percentage}%</p>
+    </div>
+  </div>
+);
 
 const StatCard = ({ title, value, iconClass, bgClass, textClass, onClick }) => (
   <div className="col-12 col-md-6 col-lg-4">
@@ -125,12 +135,18 @@ const Dashboard = () => {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
     datasets: [
       {
-        label: 'Pending Results',
+        label: 'Results Submitted',
         data: stats.resultsTrend,
-        borderColor: 'rgba(255, 99, 132, 0.8)',
-        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+        borderColor: 'rgba(54, 162, 235, 1)', // Blue
+        backgroundColor: 'rgba(54, 162, 235, 0.2)',
         tension: 0.4,
         fill: true,
+        pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+        pointBorderColor: '#fff',
+        pointHoverBackgroundColor: '#fff',
+        pointHoverBorderColor: 'rgba(54, 162, 235, 1)',
+        pointRadius: 5,
+        pointHoverRadius: 7
       },
     ],
   };
@@ -180,7 +196,7 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Results Overview - PAYMENT SECTION REMOVED */}
+      {/* Results */}
       <div className="row g-3 g-md-4 mb-3 mb-md-4">
         <div className="col-12">
           <div className="card shadow-sm rounded-4 p-3 p-md-4">
@@ -219,6 +235,7 @@ const Dashboard = () => {
 
       {/* Charts */}
       <div className="row g-3 g-md-4 mb-3 mb-md-4">
+        {/* Fees Collection Trend - COMMENTED OUT 
         <div className="col-12 col-lg-6">
           <div className="card shadow-sm rounded-4 p-3 p-md-4">
             <h6 className="fw-bold mb-3 small">
@@ -227,13 +244,58 @@ const Dashboard = () => {
             <Bar data={barData} options={{ responsive: true, maintainAspectRatio: true }} />
           </div>
         </div>
+        */}
 
-        <div className="col-12 col-lg-6">
+        {/* Results Submission Trend - Full Width */}
+        <div className="col-12">
           <div className="card shadow-sm rounded-4 p-3 p-md-4">
             <h6 className="fw-bold mb-3 small">
-              <i className="bi-graph-up-arrow me-2 text-danger"></i> Results Submission Trend
+              <i className="bi-graph-up-arrow me-2 text-primary"></i> Results Submission Trend (Last 6 Months)
             </h6>
-            <Line data={sparklineData} options={{ responsive: true, maintainAspectRatio: true }} />
+            <div className="mb-2">
+              <small className="text-muted">
+                Shows the number of results submitted each month
+              </small>
+            </div>
+            <Line 
+              data={sparklineData} 
+              options={{ 
+                responsive: true, 
+                maintainAspectRatio: true,
+                plugins: {
+                  legend: {
+                    display: true,
+                    position: 'top'
+                  },
+                  tooltip: {
+                    callbacks: {
+                      label: function(context) {
+                        return `Submitted: ${context.parsed.y} result(s)`;
+                      }
+                    }
+                  }
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    ticks: {
+                      stepSize: 1,
+                      precision: 0
+                    },
+                    title: {
+                      display: true,
+                      text: 'Number of Results'
+                    }
+                  },
+                  x: {
+                    title: {
+                      display: true,
+                      text: 'Month'
+                    }
+                  }
+                }
+              }} 
+            />
           </div>
         </div>
       </div>
