@@ -594,11 +594,7 @@ export const reviewResult = async (req, res) => {
     res.status(500).json({ message: 'Failed to review result.' });
   }
 };
-// COMPLETE FIXED getAdminDashboard function for adminController.js
-// Replace the existing getAdminDashboard function with this
-// COMPLETE FIXED getAdminDashboard function for adminController.js
-// Replace the existing getAdminDashboard function with this
-
+// -------------------------
 export const getAdminDashboard = async (req, res) => {
   try {
     const schoolId = req.user.schoolId;
@@ -651,10 +647,11 @@ export const getAdminDashboard = async (req, res) => {
     console.log('[AdminDashboard] Total results for school:', allResults.length);
     console.log('[AdminDashboard] Results breakdown:', {
       submitted: allResults.filter(r => r.status === 'submitted').length,
+      approved: allResults.filter(r => r.status === 'approved').length,
       verified: allResults.filter(r => r.status === 'verified').length,
       rejected: allResults.filter(r => r.status === 'rejected').length,
       draft: allResults.filter(r => r.status === 'draft').length,
-      other: allResults.filter(r => !['submitted', 'verified', 'rejected', 'draft'].includes(r.status)).length
+      other: allResults.filter(r => !['submitted', 'approved', 'verified', 'rejected', 'draft'].includes(r.status)).length
     });
 
     // Get recent activity
@@ -689,28 +686,39 @@ export const getAdminDashboard = async (req, res) => {
 
     console.log('[AdminDashboard] Payment stats - Full:', fullPaid, 'Partial:', partialPaid, 'Unpaid:', unpaidFeesAmount);
 
-    // Results trend (last 6 months)
+    // ✅ FIXED: Results trend with dynamic month labels (last 6 months)
     const today = new Date();
     const resultsTrend = [];
+    const monthLabels = [];
+    
+    console.log('[AdminDashboard] Calculating results trend for last 6 months...');
+    console.log('[AdminDashboard] Current date:', today.toISOString());
     
     for (let i = 5; i >= 0; i--) {
       const monthStart = new Date(today.getFullYear(), today.getMonth() - i, 1);
       const monthEnd = new Date(today.getFullYear(), today.getMonth() - i + 1, 0, 23, 59, 59);
       
+      // Count results SUBMITTED in this month (using submittedAt field for accuracy)
       const monthlyResults = await Result.countDocuments({
         student: { $in: schoolStudentIds },
-        createdAt: { $gte: monthStart, $lte: monthEnd }
+        submittedAt: { $gte: monthStart, $lte: monthEnd },
+        status: { $in: ['submitted', 'approved', 'rejected', 'verified', 'sent'] }
       });
       
+      // Generate month label
+      const monthLabel = monthStart.toLocaleString('default', { month: 'short' });
+      
+      console.log(`[AdminDashboard] ${monthLabel} (${monthStart.toLocaleDateString()} - ${monthEnd.toLocaleDateString()}): ${monthlyResults} results`);
+      
       resultsTrend.push(monthlyResults);
+      monthLabels.push(monthLabel);
     }
 
-    console.log('[AdminDashboard] Results trend:', resultsTrend);
+    console.log('[AdminDashboard] Final Results trend:', resultsTrend);
+    console.log('[AdminDashboard] Final Month labels:', monthLabels);
 
-    // Fees trend (simplified - distribute total fees across 6 months)
-    const totalFeesPaid = students.reduce((sum, s) => sum + (s.amountPaid || 0), 0);
-    const monthlyAverage = Math.round(totalFeesPaid / 6);
-    const feesTrend = Array(6).fill(monthlyAverage);
+    // ✅ Fees trend (commented out - placeholder until payment history implemented)
+    const feesTrend = [0, 0, 0, 0, 0, 0]; // Placeholder
 
     const responseData = {
       totalStudents,
@@ -725,10 +733,12 @@ export const getAdminDashboard = async (req, res) => {
       rejectedResults,
       feesTrend,
       resultsTrend,
+      monthLabels, // ✅ NEW: Send dynamic month labels to frontend
       recentActivity
     };
 
-    console.log('[AdminDashboard] Sending response:', JSON.stringify(responseData, null, 2));
+    console.log('[AdminDashboard] Sending monthLabels:', responseData.monthLabels);
+    console.log('[AdminDashboard] Response ready');
     
     res.json(responseData);
   } catch (err) {
