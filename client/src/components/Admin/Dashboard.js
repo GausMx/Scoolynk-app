@@ -9,18 +9,18 @@ import Loading from '../common/Loading'
 const { REACT_APP_API_URL } = process.env;
 
 const StatCard = ({ title, value, iconClass, bgClass, textClass, onClick }) => (
-  <div className="col-12 col-md-6 col-lg-4">
+  <div className="col-12 col-sm-6 col-lg-4">
     <div
-      className={`card shadow-sm rounded-4 p-3 ${bgClass} hover:shadow-lg transition`}
+      className={`card shadow-sm rounded-4 p-2 p-sm-3 ${bgClass} hover:shadow-lg transition`}
       style={{ cursor: 'pointer' }}
       onClick={onClick}
     >
       <div className="d-flex align-items-center justify-content-between">
         <div>
-          <h6 className={`fw-bold mb-1 ${textClass} small`}>{title}</h6>
-          <p className="fs-4 fw-bold text-dark mb-0">{value}</p>
+          <h6 className={`fw-bold mb-1 ${textClass}`} style={{ fontSize: '0.75rem' }}>{title}</h6>
+          <p className="fs-4 fw-bold text-dark mb-0" style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)' }}>{value}</p>
         </div>
-        <i className={`${iconClass} fs-2 ${textClass}`}></i>
+        <i className={`${iconClass} ${textClass}`} style={{ fontSize: 'clamp(1.5rem, 6vw, 2rem)' }}></i>
       </div>
     </div>
   </div>
@@ -151,10 +151,10 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
-        <div>
-          <h2 className="fw-bold text-dark mb-1 fs-4 fs-md-3">School Admin Dashboard</h2>
+    <div className="container-fluid py-4 px-3 px-md-4" style={{ paddingTop: '100px', maxWidth: '100vw', overflowX: 'hidden' }}>
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 mb-md-4 gap-2 gap-md-3">
+        <div className="w-100 w-md-auto">
+          <h2 className="fw-bold text-dark mb-1 fs-5 fs-md-4 fs-lg-3">School Admin Dashboard</h2>
           <p className="text-muted mb-0 small">Welcome back! Here's what's happening in your school.</p>
         </div>
         <button className="btn btn-outline-primary rounded-3 w-100 w-md-auto" onClick={() => window.location.reload()}>
@@ -164,7 +164,7 @@ const Dashboard = () => {
       </div>
 
       {/* Overview Stats */}
-      <div className="row g-3 g-md-4 mb-3 mb-md-4">
+      <div className="row g-2 g-md-3 g-lg-4 mb-3 mb-md-4">
         <StatCard
           title="Total Students"
           value={stats.totalStudents}
@@ -192,35 +192,36 @@ const Dashboard = () => {
       </div>
 
       {/* Results Overview */}
-      <div className="row g-3 g-md-4 mb-3 mb-md-4">
+      <div className="row g-2 g-md-3 g-lg-4 mb-3 mb-md-4">
         <div className="col-12">
-          <div className="card shadow-sm rounded-4 p-3 p-md-4">
-            <h5 className="fw-bold mb-3 mb-md-4 fs-6 fs-md-5">
+          <div className="card shadow-sm rounded-4 p-2 p-sm-3 p-md-4">
+            <h5 className="fw-bold mb-2 mb-md-3 mb-lg-4 fs-6 fs-md-5">
               <i className="bi-file-earmark-text me-2 text-primary"></i> Results Overview
             </h5>
-            <div className="row g-3">
+            <div className="row g-2 g-md-3">
               <div className="col-12 col-md-4">
-                <div className="border-start border-warning border-4 ps-3">
-                  <small className="text-muted d-block mb-1">Pending Review</small>
-                  <h4 className="fw-bold text-warning mb-0 fs-5 fs-md-4">{stats.pendingResults}</h4>
+                <div className="border-start border-warning border-4 ps-2 ps-md-3">
+                  <small className="text-muted d-block mb-1" style={{ fontSize: '0.7rem' }}>Pending Review</small>
+                  <h4 className="fw-bold text-warning mb-0" style={{ fontSize: 'clamp(1.25rem, 5vw, 1.75rem)' }}>{stats.pendingResults}</h4>
                   <button
-                    className="btn btn-sm btn-warning mt-2 w-100 w-md-auto"
+                    className="btn btn-sm btn-warning mt-2 w-100"
                     onClick={() => navigate('/admin/result-management')}
+                    style={{ fontSize: '0.75rem' }}
                   >
                     Review Now
                   </button>
                 </div>
               </div>
               <div className="col-12 col-md-4">
-                <div className="border-start border-success border-4 ps-3">
-                  <small className="text-muted d-block mb-1">Approved</small>
-                  <h4 className="fw-bold text-success mb-0 fs-5 fs-md-4">{stats.approvedResults}</h4>
+                <div className="border-start border-success border-4 ps-2 ps-md-3">
+                  <small className="text-muted d-block mb-1" style={{ fontSize: '0.7rem' }}>Approved</small>
+                  <h4 className="fw-bold text-success mb-0" style={{ fontSize: 'clamp(1.25rem, 5vw, 1.75rem)' }}>{stats.approvedResults}</h4>
                 </div>
               </div>
               <div className="col-12 col-md-4">
-                <div className="border-start border-danger border-4 ps-3">
-                  <small className="text-muted d-block mb-1">Rejected</small>
-                  <h4 className="fw-bold text-danger mb-0 fs-5 fs-md-4">{stats.rejectedResults}</h4>
+                <div className="border-start border-danger border-4 ps-2 ps-md-3">
+                  <small className="text-muted d-block mb-1" style={{ fontSize: '0.7rem' }}>Rejected</small>
+                  <h4 className="fw-bold text-danger mb-0" style={{ fontSize: 'clamp(1.25rem, 5vw, 1.75rem)' }}>{stats.rejectedResults}</h4>
                 </div>
               </div>
             </div>
@@ -229,112 +230,133 @@ const Dashboard = () => {
       </div>
 
       {/* Charts */}
-      <div className="row g-3 g-md-4 mb-3 mb-md-4">
-        {/* Fees Collection Trend - COMMENTED OUT 
-        <div className="col-12 col-lg-6">
-          <div className="card shadow-sm rounded-4 p-3 p-md-4">
-            <h6 className="fw-bold mb-3 small">
-              <i className="bi-graph-up me-2 text-success"></i> Fees Collection Trend
-            </h6>
-            <Bar data={barData} options={{ responsive: true, maintainAspectRatio: true }} />
-          </div>
-        </div>
-        */}
-
+      <div className="row g-2 g-md-3 g-lg-4 mb-3 mb-md-4">
         {/* Results Submission Trend - Full Width */}
         <div className="col-12">
-          <div className="card shadow-sm rounded-4 p-3 p-md-4">
-            <h6 className="fw-bold mb-3 small">
+          <div className="card shadow-sm rounded-4 p-2 p-sm-3 p-md-4">
+            <h6 className="fw-bold mb-2 mb-md-3" style={{ fontSize: 'clamp(0.85rem, 2.5vw, 1rem)' }}>
               <i className="bi-graph-up-arrow me-2 text-primary"></i> Results Submission Trend (Last 6 Months)
             </h6>
             <div className="mb-2">
-              <small className="text-muted">
+              <small className="text-muted" style={{ fontSize: '0.7rem' }}>
                 Shows the number of results submitted each month
               </small>
             </div>
-            <Line 
-              data={sparklineData} 
-              options={{ 
-                responsive: true, 
-                maintainAspectRatio: true,
-                plugins: {
-                  legend: {
-                    display: true,
-                    position: 'top'
+            <div style={{ position: 'relative', height: '250px', width: '100%' }}>
+              <Line 
+                data={sparklineData} 
+                options={{ 
+                  responsive: true, 
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      display: true,
+                      position: 'top',
+                      labels: {
+                        font: {
+                          size: window.innerWidth < 768 ? 10 : 12
+                        },
+                        boxWidth: window.innerWidth < 768 ? 10 : 15
+                      }
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: function(context) {
+                          return `Submitted: ${context.parsed.y} result(s)`;
+                        }
+                      },
+                      titleFont: {
+                        size: window.innerWidth < 768 ? 11 : 13
+                      },
+                      bodyFont: {
+                        size: window.innerWidth < 768 ? 10 : 12
+                      }
+                    }
                   },
-                  tooltip: {
-                    callbacks: {
-                      label: function(context) {
-                        return `Submitted: ${context.parsed.y} result(s)`;
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      ticks: {
+                        stepSize: 1,
+                        precision: 0,
+                        font: {
+                          size: window.innerWidth < 768 ? 9 : 11
+                        }
+                      },
+                      title: {
+                        display: window.innerWidth >= 768,
+                        text: 'Number of Results',
+                        font: {
+                          size: 11
+                        }
+                      }
+                    },
+                    x: {
+                      ticks: {
+                        font: {
+                          size: window.innerWidth < 768 ? 9 : 11
+                        }
+                      },
+                      title: {
+                        display: window.innerWidth >= 768,
+                        text: 'Month',
+                        font: {
+                          size: 11
+                        }
                       }
                     }
                   }
-                },
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    ticks: {
-                      stepSize: 1,
-                      precision: 0
-                    },
-                    title: {
-                      display: true,
-                      text: 'Number of Results'
-                    }
-                  },
-                  x: {
-                    title: {
-                      display: true,
-                      text: 'Month'
-                    }
-                  }
-                }
-              }} 
-            />
+                }} 
+              />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="card shadow-sm rounded-4 p-3 p-md-4 mb-3 mb-md-4">
-        <h5 className="fw-bold mb-3 fs-6 fs-md-5">
+      <div className="card shadow-sm rounded-4 p-2 p-sm-3 p-md-4 mb-3 mb-md-4">
+        <h5 className="fw-bold mb-2 mb-md-3 fs-6 fs-md-5">
           <i className="bi-lightning-fill me-2 text-warning"></i> Quick Actions
         </h5>
-        <div className="row g-3">
+        <div className="row g-2 g-md-3">
           <div className="col-6 col-md-3">
             <button
-              className="btn btn-outline-primary w-100 rounded-3 py-3"
+              className="btn btn-outline-primary w-100 rounded-3 py-2 py-md-3"
               onClick={() => navigate('/admin/result-management')}
+              style={{ fontSize: 'clamp(0.7rem, 2vw, 0.875rem)' }}
             >
-              <i className="bi-file-earmark-check fs-4 d-block mb-2"></i>
-              <span className="fw-semibold small">View Results</span>
+              <i className="bi-file-earmark-check d-block mb-1 mb-md-2" style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)' }}></i>
+              <span className="fw-semibold">View Results</span>
             </button>
           </div>
           <div className="col-6 col-md-3">
             <button
-              className="btn btn-outline-success w-100 rounded-3 py-3"
+              className="btn btn-outline-success w-100 rounded-3 py-2 py-md-3"
               onClick={() => navigate('/admin/settings')}
+              style={{ fontSize: 'clamp(0.7rem, 2vw, 0.875rem)' }}
             >
-              <i className="bi-gear-fill fs-4 d-block mb-2"></i>
-              <span className="fw-semibold small">Settings</span>
+              <i className="bi-gear-fill d-block mb-1 mb-md-2" style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)' }}></i>
+              <span className="fw-semibold">Settings</span>
             </button>
           </div>
           <div className="col-6 col-md-3">
             <button
-              className="btn btn-outline-info w-100 rounded-3 py-3"
+              className="btn btn-outline-info w-100 rounded-3 py-2 py-md-3"
               onClick={() => navigate('/admin/manage-students')}
+              style={{ fontSize: 'clamp(0.7rem, 2vw, 0.875rem)' }}
             >
-              <i className="bi-people fs-4 d-block mb-2"></i>
-              <span className="fw-semibold small">Manage Students</span>
+              <i className="bi-people d-block mb-1 mb-md-2" style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)' }}></i>
+              <span className="fw-semibold">Manage Students</span>
             </button>
           </div>
           <div className="col-6 col-md-3">
             <button
-              className="btn btn-outline-warning w-100 rounded-3 py-3"
+              className="btn btn-outline-warning w-100 rounded-3 py-2 py-md-3"
               onClick={() => navigate('/admin/manage-teachers')}
+              style={{ fontSize: 'clamp(0.7rem, 2vw, 0.875rem)' }}
             >
-              <i className="bi-person-badge fs-4 d-block mb-2"></i>
-              <span className="fw-semibold small">Manage Teachers</span>
+              <i className="bi-person-badge d-block mb-1 mb-md-2" style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)' }}></i>
+              <span className="fw-semibold">Manage Teachers</span>
             </button>
           </div>
         </div>
@@ -342,18 +364,19 @@ const Dashboard = () => {
 
       {/* Alert */}
       {stats.pendingResults > 0 && (
-        <div className="alert alert-warning rounded-4">
-          <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3">
-            <i className="bi-exclamation-triangle-fill fs-4"></i>
+        <div className="alert alert-warning rounded-4 mb-4" style={{ fontSize: 'clamp(0.75rem, 2vw, 0.875rem)' }}>
+          <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2 gap-md-3">
+            <i className="bi-exclamation-triangle-fill" style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)' }}></i>
             <div className="flex-grow-1">
-              <h6 className="mb-1 small">Action Required!</h6>
-              <p className="mb-0 small">
+              <h6 className="mb-1" style={{ fontSize: 'clamp(0.8rem, 2.5vw, 0.95rem)' }}>Action Required!</h6>
+              <p className="mb-0" style={{ fontSize: 'clamp(0.7rem, 2vw, 0.85rem)' }}>
                 You have <strong>{stats.pendingResults}</strong> result(s) waiting for review.
               </p>
             </div>
             <button
               className="btn btn-warning w-100 w-md-auto"
               onClick={() => navigate('/admin/result-management')}
+              style={{ fontSize: 'clamp(0.75rem, 2vw, 0.875rem)' }}
             >
               Review Now
             </button>
