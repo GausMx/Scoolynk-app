@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'chart.js/auto';
-import Loading from '../common/Loading'
+import Loading from '../common/Loading';
 
 const { REACT_APP_API_URL } = process.env;
 
@@ -52,7 +52,7 @@ const Dashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, []);
-    
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
@@ -65,7 +65,7 @@ const Dashboard = () => {
       setLoadingPercent(70);
 
       const data = res.data;
-      
+
       console.log('Dashboard API Response:', data);
       console.log('Month Labels from Backend:', data.monthLabels);
       console.log('Results Trend from Backend:', data.resultsTrend);
@@ -141,7 +141,7 @@ const Dashboard = () => {
         pointHoverBackgroundColor: '#fff',
         pointHoverBorderColor: 'rgba(54, 162, 235, 1)',
         pointRadius: 5,
-        pointHoverRadius: 7
+        pointHoverRadius: 7,
       },
     ],
   };
@@ -243,10 +243,10 @@ const Dashboard = () => {
               </small>
             </div>
             <div style={{ position: 'relative', height: '250px', width: '100%' }}>
-              <Line 
-                data={sparklineData} 
-                options={{ 
-                  responsive: true, 
+              <Line
+                data={sparklineData}
+                options={{
+                  responsive: true,
                   maintainAspectRatio: false,
                   plugins: {
                     legend: {
@@ -254,24 +254,24 @@ const Dashboard = () => {
                       position: 'top',
                       labels: {
                         font: {
-                          size: window.innerWidth < 768 ? 10 : 12
+                          size: window.innerWidth < 768 ? 10 : 12,
                         },
-                        boxWidth: window.innerWidth < 768 ? 10 : 15
-                      }
+                        boxWidth: window.innerWidth < 768 ? 10 : 15,
+                      },
                     },
                     tooltip: {
                       callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                           return `Submitted: ${context.parsed.y} result(s)`;
-                        }
+                        },
                       },
                       titleFont: {
-                        size: window.innerWidth < 768 ? 11 : 13
+                        size: window.innerWidth < 768 ? 11 : 13,
                       },
                       bodyFont: {
-                        size: window.innerWidth < 768 ? 10 : 12
-                      }
-                    }
+                        size: window.innerWidth < 768 ? 10 : 12,
+                      },
+                    },
                   },
                   scales: {
                     y: {
@@ -280,33 +280,33 @@ const Dashboard = () => {
                         stepSize: 1,
                         precision: 0,
                         font: {
-                          size: window.innerWidth < 768 ? 9 : 11
-                        }
+                          size: window.innerWidth < 768 ? 9 : 11,
+                        },
                       },
                       title: {
                         display: window.innerWidth >= 768,
                         text: 'Number of Results',
                         font: {
-                          size: 11
-                        }
-                      }
+                          size: 11,
+                        },
+                      },
                     },
                     x: {
                       ticks: {
                         font: {
-                          size: window.innerWidth < 768 ? 9 : 11
-                        }
+                          size: window.innerWidth < 768 ? 9 : 11,
+                        },
                       },
                       title: {
                         display: window.innerWidth >= 768,
                         text: 'Month',
                         font: {
-                          size: 11
-                        }
-                      }
-                    }
-                  }
-                }} 
+                          size: 11,
+                        },
+                      },
+                    },
+                  },
+                }}
               />
             </div>
           </div>
@@ -396,15 +396,20 @@ const Dashboard = () => {
               padding-top: 140px !important; /* Increased top padding on mobile */
             }
 
-            /* Fix mobile navbar height and prevent it from drawing down */
+            /* Fix mobile navbar height and show hamburger toggler */
             nav.navbar {
               flex-wrap: nowrap !important;
               height: 56px; /* typical mobile navbar height */
-              overflow: hidden;
+              overflow: visible; /* allow toggler visibility */
+              position: relative;
+            }
+            nav.navbar .navbar-toggler {
+              display: block; /* show toggler */
+              z-index: 1051; /* above navbar-collapse */
             }
             nav.navbar .navbar-collapse {
-              max-height: 56px;
-              overflow-y: auto;
+              max-height: none; /* remove max-height limit */
+              overflow: visible;
             }
             nav.navbar .navbar-nav {
               flex-direction: row;
