@@ -14,14 +14,12 @@ const Sidebar = ({ user, role }) => {
   const [schoolName, setSchoolName] = useState('');
   const [userName, setUserName] = useState('');
 
-  const token = localStorage.getItem('accessToken'); // ✅ Use accessToken, not 'token'
+  const token = localStorage.getItem('accessToken');
 
-  // Fetch school name for both admin and teacher
   useEffect(() => {
     fetchSchoolName();
   }, [role]);
 
-  // Fetch teacher's classes if role is teacher
   useEffect(() => {
     if (role === 'teacher') {
       fetchTeacherClasses();
@@ -36,30 +34,26 @@ const Sidebar = ({ user, role }) => {
         const res = await axios.get(`${REACT_APP_API_URL}/api/admin/settings`, {
           headers: { Authorization: `Bearer ${authToken}` }
         });
-        console.log('Admin settings response:', res.data);
         setSchoolName(res.data.school?.name || '');
         setUserName(res.data.admin?.name || '');
       } else if (role === 'teacher') {
         const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/dashboard`, {
           headers: { Authorization: `Bearer ${authToken}` }
         });
-        console.log('Teacher dashboard response:', res.data);
         setSchoolName(res.data.school?.name || '');
         setUserName(res.data.teacher?.name || '');
       }
     } catch (err) {
       console.error('Failed to fetch school name:', err);
-      console.error('Error details:', err.response?.data);
     }
   };
 
   const fetchTeacherClasses = async () => {
     try {
-      const authToken = localStorage.getItem('accessToken'); // ✅ Use accessToken consistently
+      const authToken = localStorage.getItem('accessToken');
       const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/dashboard`, {
         headers: { Authorization: `Bearer ${authToken}` }
       });
-      
       const teacherData = res.data;
       setTeacherClasses(teacherData.teacher.classes || []);
       setIsClassTeacher(teacherData.teacher.classTeacherFor && teacherData.teacher.classTeacherFor.length > 0);
@@ -81,21 +75,15 @@ const Sidebar = ({ user, role }) => {
     { path: "/admin/template-builder", label: "Template Builder" }
   ];
 
-  // Dynamic teacher links based on their classes
   const teacherLinks = [
     { path: "/teacher", label: "Dashboard" },
     ...(isClassTeacher ? [{ path: "/teacher/my-class", label: "My Class" }] : []),
-    // ...teacherClasses.map((cls) => ({
-    //   path: `/teacher/class/${cls._id}`,
-    //   label: cls.name,
-    // })),
     { path: "/teacher/teacher-profile", label: "My Profile" },
   ];
 
   const links =
     role === "admin" ? adminLinks : role === "teacher" ? teacherLinks : [];
 
-  // Toggle collapse manually
   const toggleNav = () => setIsNavOpen(!isNavOpen);
   const closeNav = () => setIsNavOpen(false);
 
@@ -167,8 +155,39 @@ const Sidebar = ({ user, role }) => {
         </div>
       </nav>
 
-      {/* Add margin so page content doesn't hide under navbar */}
-      <div className="d-md-none" style={{ marginTop: "70px" }}></div>
+      {/* Mobile Spacer to prevent content hiding under navbar */}
+      <div className="d-md-none" style={{ marginTop: "90px" }}></div>
+
+      {/* ================= Global Mobile Fixes ================= */}
+      <style>{`
+        html, body, #root {
+          overflow-x: hidden !important;
+          width: 100%;
+        }
+
+        @media (max-width: 768px) {
+          nav.navbar {
+            height: auto !important;
+            padding-top: 6px;
+            padding-bottom: 6px;
+            overflow: visible !important;
+          }
+
+          .navbar-collapse.show {
+            background: #212529;
+            padding: 10px 0;
+          }
+
+          .navbar-nav {
+            flex-direction: column !important;
+          }
+
+          .navbar-nav .nav-link {
+            padding: 10px 20px !important;
+            white-space: nowrap;
+          }
+        }
+      `}</style>
     </>
   );
 };
