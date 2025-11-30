@@ -29,7 +29,6 @@ const Sidebar = ({ user, role }) => {
   const fetchSchoolName = async () => {
     try {
       const authToken = localStorage.getItem('accessToken');
-      
       if (role === 'admin') {
         const res = await axios.get(`${REACT_APP_API_URL}/api/admin/settings`, {
           headers: { Authorization: `Bearer ${authToken}` }
@@ -118,7 +117,7 @@ const Sidebar = ({ user, role }) => {
       </div>
 
       {/* ================= Mobile Navbar ================= */}
-      <nav className="navbar navbar-expand-sm bg-dark navbar-dark d-md-none fixed-top">
+      <nav className="navbar navbar-expand-sm bg-dark navbar-dark d-md-none fixed-top shadow-none border-0">
         <div className="container-fluid">
           <span className="navbar-brand">{schoolName || "Scoolynk"}</span>
           <button
@@ -156,7 +155,7 @@ const Sidebar = ({ user, role }) => {
       </nav>
 
       {/* Mobile Spacer to prevent content hiding under navbar */}
-      <div className="d-md-none" style={{ marginTop: "90px" }}></div>
+      <div className="d-md-none" style={{ marginTop: "110px" }}></div>
 
       {/* ================= Global Mobile Fixes ================= */}
       <style>{`
@@ -168,9 +167,11 @@ const Sidebar = ({ user, role }) => {
         @media (max-width: 768px) {
           nav.navbar {
             height: auto !important;
-            padding-top: 6px;
-            padding-bottom: 6px;
+            padding-top: 10px;
+            padding-bottom: 10px;
             overflow: visible !important;
+            border: none !important; /* remove any top/bottom border */
+            box-shadow: none !important; /* remove default shadow/line */
           }
 
           .navbar-collapse.show {
@@ -185,6 +186,10 @@ const Sidebar = ({ user, role }) => {
           .navbar-nav .nav-link {
             padding: 10px 20px !important;
             white-space: nowrap;
+          }
+
+          .navbar-toggler:focus {
+            box-shadow: none !important; /* remove blue outline */
           }
         }
       `}</style>
