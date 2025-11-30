@@ -386,41 +386,30 @@ const Dashboard = () => {
       <style>
         {`
           /* Prevent horizontal overflow on small devices */
-          @media (max-width: 767.98px) {
-            body, html, #root {
-              overflow-x: hidden !important;
-            }
-            .container-fluid {
-              padding-left: 1rem !important;
-              padding-right: 1rem !important;
-              padding-top: 140px !important; /* Increased top padding on mobile */
-            }
+/* FIXED MOBILE NAVBAR */
+@media (max-width: 767.98px) {
+  nav.navbar {
+    flex-wrap: nowrap !important;
+    height: auto; /* allow expansion */
+    overflow: visible; /* allow dropdown */
+  }
 
-            /* Fix mobile navbar height and prevent it from drawing down */
-            nav.navbar {
-              flex-wrap: nowrap !important;
-              height: 56px; /* typical mobile navbar height */
-              overflow: hidden;
-            }
-            nav.navbar .navbar-collapse {
-              max-height: 56px;
-              overflow-y: auto;
-            }
-            nav.navbar .navbar-nav {
-              flex-direction: row;
-              flex-wrap: nowrap;
-            }
-            nav.navbar .nav-link {
-              white-space: nowrap;
-              padding-left: 0.5rem;
-              padding-right: 0.5rem;
-            }
-          }
-          /* Ensure cards and buttons do not overflow */
-          .card, button.btn {
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-          }
+  nav.navbar .navbar-collapse {
+    max-height: none; /* allow full drop */
+    overflow-y: visible; 
+  }
+
+  nav.navbar .navbar-nav {
+    flex-direction: column; /* stack items vertically */
+    flex-wrap: wrap;
+  }
+
+  nav.navbar .nav-link {
+    white-space: nowrap;
+    padding: 0.75rem 1rem;
+  }
+}
+
         `}
       </style>
     </div>
