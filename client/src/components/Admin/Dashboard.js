@@ -151,7 +151,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="container-fluid py-4 px-3 px-md-4" style={{ paddingTop: '100px', maxWidth: '100vw', overflowX: 'hidden' }}>
+    <div className="container-fluid py-4 px-3 px-md-4" style={{ paddingTop: '140px', maxWidth: '100vw', overflowX: 'hidden' }}>
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 mb-md-4 gap-2 gap-md-3">
         <div className="w-100 w-md-auto">
           <h2 className="fw-bold text-dark mb-1 fs-5 fs-md-4 fs-lg-3">School Admin Dashboard</h2>
@@ -383,6 +383,26 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+      <style>
+        {`
+          /* Prevent horizontal overflow on small devices */
+          @media (max-width: 767.98px) {
+            body, html, #root {
+              overflow-x: hidden !important;
+            }
+            .container-fluid {
+              padding-left: 1rem !important;
+              padding-right: 1rem !important;
+              padding-top: 140px !important; /* Increased top padding on mobile */
+            }
+          }
+          /* Ensure cards and buttons do not overflow */
+          .card, button.btn {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+          }
+        `}
+      </style>
     </div>
   );
 };
