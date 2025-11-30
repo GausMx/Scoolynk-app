@@ -395,6 +395,26 @@ const Dashboard = () => {
               padding-right: 1rem !important;
               padding-top: 140px !important; /* Increased top padding on mobile */
             }
+
+            /* Fix mobile navbar height and prevent it from drawing down */
+            nav.navbar {
+              flex-wrap: nowrap !important;
+              height: 56px; /* typical mobile navbar height */
+              overflow: hidden;
+            }
+            nav.navbar .navbar-collapse {
+              max-height: 56px;
+              overflow-y: auto;
+            }
+            nav.navbar .navbar-nav {
+              flex-direction: row;
+              flex-wrap: nowrap;
+            }
+            nav.navbar .nav-link {
+              white-space: nowrap;
+              padding-left: 0.5rem;
+              padding-right: 0.5rem;
+            }
           }
           /* Ensure cards and buttons do not overflow */
           .card, button.btn {
