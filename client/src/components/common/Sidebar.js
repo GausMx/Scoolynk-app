@@ -169,7 +169,9 @@ const Sidebar = ({ user, role }) => {
             outline: none !important;
           }
           .navbar-toggler:focus { box-shadow: none !important; }
-          .navbar-collapse.show { background: #212529; }
+          .navbar-collapse.show { background: #212529; width: 100%; flex-direction: column !important; }
+          .navbar-nav { flex-direction: column !important; width: 100% !important; }
+          .navbar-nav .nav-item { margin-left: 0 !important; }
           nav.navbar:focus, nav.navbar *:focus { outline: none !important; }
         }
       `}</style>
