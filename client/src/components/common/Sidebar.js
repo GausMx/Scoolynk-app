@@ -24,16 +24,11 @@ const Sidebar = ({ user, role }) => {
   }, [role]);
 
   useEffect(() => {
-    if (role === 'teacher') {
-      fetchTeacherClasses();
-    }
+    if (role === 'teacher') fetchTeacherClasses();
   }, [role]);
 
   useEffect(() => {
-    // measure navbar height dynamically
-    if (navRef.current) {
-      setNavHeight(navRef.current.offsetHeight);
-    }
+    if (navRef.current) setNavHeight(navRef.current.offsetHeight);
   }, [schoolName, isNavOpen]);
 
   const fetchSchoolName = async () => {
@@ -101,7 +96,14 @@ const Sidebar = ({ user, role }) => {
       {/* ================= Desktop Sidebar ================= */}
       <div
         className="d-none d-md-flex flex-column flex-shrink-0 p-3 bg-dark text-white"
-        style={{ width: "250px", minHeight: "100vh", position: "sticky", top: 0 }}
+        style={{
+          width: "250px",
+          height: "100vh",
+          position: "fixed",
+          top: 0,
+          left: 0,
+          overflowY: "auto"
+        }}
       >
         <h5 className="mb-3">{schoolName || "SCOOLYNK"}</h5>
         <hr />
@@ -167,10 +169,10 @@ const Sidebar = ({ user, role }) => {
         </div>
       </nav>
 
-      {/* Mobile spacer dynamically set to navbar height */}
+      {/* Spacer for mobile content */}
       <div className="d-md-none" style={{ marginTop: navHeight + 10 }}></div>
 
-      {/* ================= Global Mobile Fixes ================= */}
+      {/* Global Styles */}
       <style>{`
         html, body, #root {
           overflow-x: hidden !important;
@@ -186,6 +188,13 @@ const Sidebar = ({ user, role }) => {
           }
           .navbar-collapse.show {
             background: #212529;
+          }
+        }
+
+        @media (min-width: 768px) {
+          /* Content container needs left margin to accommodate fixed sidebar */
+          .content-container {
+            margin-left: 250px;
           }
         }
       `}</style>
