@@ -101,6 +101,7 @@ const Sidebar = ({ user, role }) => {
           left: 0,
           height: "100vh",
           overflowY: "auto",
+          zIndex: 1030,
         }}
       >
         <h5 className="mb-3">{schoolName || "SCOOLYNK"}</h5>
@@ -126,6 +127,7 @@ const Sidebar = ({ user, role }) => {
       <nav
         ref={navRef}
         className="navbar navbar-expand-sm bg-dark navbar-dark d-md-none fixed-top"
+        style={{ zIndex: 1040 }}
       >
         <div className="container-fluid">
           <span className="navbar-brand">{schoolName || "Scoolynk"}</span>
@@ -140,8 +142,19 @@ const Sidebar = ({ user, role }) => {
             <span className="navbar-toggler-icon"></span>
           </button>
 
-          <div className={`collapse navbar-collapse ${isNavOpen ? "show" : ""}`} id="mobileNav">
-            <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+          <div 
+            className={`collapse navbar-collapse ${isNavOpen ? "show" : ""}`} 
+            id="mobileNav"
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              backgroundColor: '#212529',
+              zIndex: 1050,
+            }}
+          >
+            <ul className="navbar-nav me-auto mb-2 mb-lg-0 w-100">
               {links.map((link) => (
                 <li className="nav-item" key={link.path}>
                   <Link
@@ -158,21 +171,85 @@ const Sidebar = ({ user, role }) => {
         </div>
       </nav>
 
+      {/* Overlay for mobile when menu is open */}
+      {isNavOpen && (
+        <div
+          onClick={closeNav}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 1039,
+            display: window.innerWidth < 768 ? 'block' : 'none',
+          }}
+        />
+      )}
+
       {/* Global Styles */}
       <style>{`
-        html, body, #root { overflow-x: hidden !important; }
+        html, body, #root { 
+          overflow-x: hidden !important; 
+        }
 
         @media (max-width: 768px) {
           nav.navbar {
             border: none !important;
-            box-shadow: none !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
             outline: none !important;
           }
-          .navbar-toggler:focus { box-shadow: none !important; }
-          .navbar-collapse.show { background: #212529; width: 100%; flex-direction: column !important; }
-          .navbar-nav { flex-direction: column !important; width: 100% !important; }
-          .navbar-nav .nav-item { margin-left: 0 !important; }
-          nav.navbar:focus, nav.navbar *:focus { outline: none !important; }
+          
+          .navbar-toggler:focus { 
+            box-shadow: none !important; 
+          }
+          
+          .navbar-collapse {
+            max-height: calc(100vh - 56px);
+            overflow-y: auto;
+          }
+          
+          .navbar-collapse.show { 
+            background: #212529 !important; 
+            width: 100% !important; 
+            flex-direction: column !important;
+            padding: 0.5rem 0 !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
+          }
+          
+          .navbar-nav { 
+            flex-direction: column !important; 
+            width: 100% !important; 
+          }
+          
+          .navbar-nav .nav-item { 
+            margin-left: 0 !important; 
+            width: 100% !important;
+          }
+          
+          .navbar-nav .nav-link {
+            padding: 0.75rem 1rem !important;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+          }
+          
+          .navbar-nav .nav-link:hover {
+            background-color: rgba(255,255,255,0.1);
+          }
+          
+          .navbar-nav .nav-link.active {
+            background-color: rgba(255,255,255,0.2);
+          }
+          
+          nav.navbar:focus, nav.navbar *:focus { 
+            outline: none !important; 
+          }
+
+          /* Ensure main content doesn't overlap */
+          .container-fluid {
+            position: relative;
+            z-index: 1;
+          }
         }
       `}</style>
     </>
