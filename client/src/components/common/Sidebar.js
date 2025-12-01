@@ -1,5 +1,4 @@
 // src/components/common/Sidebar.js
-
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import axios from 'axios';
@@ -13,23 +12,28 @@ const Sidebar = ({ user, role }) => {
   const [isClassTeacher, setIsClassTeacher] = useState(false);
   const [schoolName, setSchoolName] = useState('');
   const [userName, setUserName] = useState('');
-  const [navHeight, setNavHeight] = useState(0);
-
   const navRef = useRef(null);
 
   const token = localStorage.getItem('accessToken');
 
-  useEffect(() => {
-    fetchSchoolName();
-  }, [role]);
+  useEffect(() => { fetchSchoolName(); }, [role]);
+  useEffect(() => { if (role === 'teacher') fetchTeacherClasses(); }, [role]);
 
   useEffect(() => {
-    if (role === 'teacher') fetchTeacherClasses();
-  }, [role]);
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        document.body.style.paddingLeft = "250px"; // desktop sidebar width
+        document.body.style.paddingTop = "0px";
+      } else {
+        document.body.style.paddingLeft = "0px";
+        document.body.style.paddingTop = `${navRef.current ? navRef.current.offsetHeight + 10 : 70}px`;
+      }
+    };
 
-  useEffect(() => {
-    if (navRef.current) setNavHeight(navRef.current.offsetHeight);
-  }, [schoolName, isNavOpen]);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const fetchSchoolName = async () => {
     try {
@@ -47,9 +51,7 @@ const Sidebar = ({ user, role }) => {
         setSchoolName(res.data.school?.name || '');
         setUserName(res.data.teacher?.name || '');
       }
-    } catch (err) {
-      console.error('Failed to fetch school name:', err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const fetchTeacherClasses = async () => {
@@ -61,9 +63,7 @@ const Sidebar = ({ user, role }) => {
       const teacherData = res.data;
       setTeacherClasses(teacherData.teacher.classes || []);
       setIsClassTeacher(teacherData.teacher.classTeacherFor && teacherData.teacher.classTeacherFor.length > 0);
-    } catch (err) {
-      console.error('Failed to fetch teacher classes:', err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const adminLinks = [
@@ -85,24 +85,22 @@ const Sidebar = ({ user, role }) => {
     { path: "/teacher/teacher-profile", label: "My Profile" },
   ];
 
-  const links =
-    role === "admin" ? adminLinks : role === "teacher" ? teacherLinks : [];
-
+  const links = role === "admin" ? adminLinks : role === "teacher" ? teacherLinks : [];
   const toggleNav = () => setIsNavOpen(!isNavOpen);
   const closeNav = () => setIsNavOpen(false);
 
   return (
     <>
-      {/* ================= Desktop Sidebar ================= */}
+      {/* Desktop Sidebar */}
       <div
         className="d-none d-md-flex flex-column flex-shrink-0 p-3 bg-dark text-white"
         style={{
           width: "250px",
-          height: "100vh",
           position: "fixed",
           top: 0,
           left: 0,
-          overflowY: "auto"
+          height: "100vh",
+          overflowY: "auto", // scroll only if content overflows
         }}
       >
         <h5 className="mb-3">{schoolName || "SCOOLYNK"}</h5>
@@ -113,9 +111,7 @@ const Sidebar = ({ user, role }) => {
               <Link
                 to={link.path}
                 className={`nav-link ${
-                  location.pathname === link.path
-                    ? "active text-white"
-                    : "text-white"
+                  location.pathname === link.path ? "active text-white" : "text-white"
                 }`}
               >
                 {link.label}
@@ -123,12 +119,10 @@ const Sidebar = ({ user, role }) => {
             </li>
           ))}
         </ul>
-        <div className="mt-auto">
-          <small>{userName || ''}</small>
-        </div>
+        <div className="mt-auto"><small>{userName || ''}</small></div>
       </div>
 
-      {/* ================= Mobile Navbar ================= */}
+      {/* Mobile Navbar */}
       <nav
         ref={navRef}
         className="navbar navbar-expand-sm bg-dark navbar-dark d-md-none fixed-top border-0 shadow-sm"
@@ -146,18 +140,13 @@ const Sidebar = ({ user, role }) => {
             <span className="navbar-toggler-icon"></span>
           </button>
 
-          <div
-            className={`collapse navbar-collapse ${isNavOpen ? "show" : ""}`}
-            id="mobileNav"
-          >
+          <div className={`collapse navbar-collapse ${isNavOpen ? "show" : ""}`} id="mobileNav">
             <ul className="navbar-nav me-auto mb-2 mb-lg-0">
               {links.map((link) => (
                 <li className="nav-item" key={link.path}>
                   <Link
                     to={link.path}
-                    className={`nav-link ${
-                      location.pathname === link.path ? "active" : ""
-                    }`}
+                    className={`nav-link ${location.pathname === link.path ? "active" : ""}`}
                     onClick={closeNav}
                   >
                     {link.label}
@@ -169,33 +158,14 @@ const Sidebar = ({ user, role }) => {
         </div>
       </nav>
 
-      {/* Spacer for mobile content */}
-      <div className="d-md-none" style={{ marginTop: navHeight + 10 }}></div>
-
       {/* Global Styles */}
       <style>{`
-        html, body, #root {
-          overflow-x: hidden !important;
-        }
+        html, body, #root { overflow-x: hidden !important; }
 
         @media (max-width: 768px) {
-          nav.navbar {
-            border: none !important;
-            box-shadow: none !important;
-          }
-          .navbar-toggler:focus {
-            box-shadow: none !important;
-          }
-          .navbar-collapse.show {
-            background: #212529;
-          }
-        }
-
-        @media (min-width: 768px) {
-          /* Content container needs left margin to accommodate fixed sidebar */
-          .content-container {
-            margin-left: 250px;
-          }
+          nav.navbar { border: none !important; box-shadow: none !important; }
+          .navbar-toggler:focus { box-shadow: none !important; }
+          .navbar-collapse.show { background: #212529; }
         }
       `}</style>
     </>
