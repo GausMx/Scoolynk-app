@@ -19,17 +19,17 @@ const Sidebar = ({ user, role }) => {
   useEffect(() => { fetchSchoolName(); }, [role]);
   useEffect(() => { if (role === 'teacher') fetchTeacherClasses(); }, [role]);
 
+  // Adjust page padding based on sidebar/navbar
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 768) {
-        document.body.style.paddingLeft = "250px"; // desktop sidebar width
+        document.body.style.paddingLeft = "250px"; // sidebar width
         document.body.style.paddingTop = "0px";
       } else {
         document.body.style.paddingLeft = "0px";
         document.body.style.paddingTop = `${navRef.current ? navRef.current.offsetHeight + 10 : 70}px`;
       }
     };
-
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -100,7 +100,7 @@ const Sidebar = ({ user, role }) => {
           top: 0,
           left: 0,
           height: "100vh",
-          overflowY: "auto", // scroll only if content overflows
+          overflowY: "auto",
         }}
       >
         <h5 className="mb-3">{schoolName || "SCOOLYNK"}</h5>
@@ -125,7 +125,7 @@ const Sidebar = ({ user, role }) => {
       {/* Mobile Navbar */}
       <nav
         ref={navRef}
-        className="navbar navbar-expand-sm bg-dark navbar-dark d-md-none fixed-top border-0 shadow-sm"
+        className="navbar navbar-expand-sm bg-dark navbar-dark d-md-none fixed-top"
       >
         <div className="container-fluid">
           <span className="navbar-brand">{schoolName || "Scoolynk"}</span>
@@ -163,9 +163,14 @@ const Sidebar = ({ user, role }) => {
         html, body, #root { overflow-x: hidden !important; }
 
         @media (max-width: 768px) {
-          nav.navbar { border: none !important; box-shadow: none !important; }
+          nav.navbar {
+            border: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+          }
           .navbar-toggler:focus { box-shadow: none !important; }
           .navbar-collapse.show { background: #212529; }
+          nav.navbar:focus, nav.navbar *:focus { outline: none !important; }
         }
       `}</style>
     </>
