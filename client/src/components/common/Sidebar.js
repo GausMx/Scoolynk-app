@@ -1,6 +1,6 @@
 // src/components/common/Sidebar.js
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import axios from 'axios';
 
@@ -13,6 +13,9 @@ const Sidebar = ({ user, role }) => {
   const [isClassTeacher, setIsClassTeacher] = useState(false);
   const [schoolName, setSchoolName] = useState('');
   const [userName, setUserName] = useState('');
+  const [navHeight, setNavHeight] = useState(0);
+
+  const navRef = useRef(null);
 
   const token = localStorage.getItem('accessToken');
 
@@ -25,6 +28,13 @@ const Sidebar = ({ user, role }) => {
       fetchTeacherClasses();
     }
   }, [role]);
+
+  useEffect(() => {
+    // measure navbar height dynamically
+    if (navRef.current) {
+      setNavHeight(navRef.current.offsetHeight);
+    }
+  }, [schoolName, isNavOpen]);
 
   const fetchSchoolName = async () => {
     try {
@@ -91,7 +101,7 @@ const Sidebar = ({ user, role }) => {
       {/* ================= Desktop Sidebar ================= */}
       <div
         className="d-none d-md-flex flex-column flex-shrink-0 p-3 bg-dark text-white"
-        style={{ width: "250px", height: "100vh", position: "sticky", top: 0 }}
+        style={{ width: "250px", minHeight: "100vh", position: "sticky", top: 0 }}
       >
         <h5 className="mb-3">{schoolName || "SCOOLYNK"}</h5>
         <hr />
@@ -117,7 +127,10 @@ const Sidebar = ({ user, role }) => {
       </div>
 
       {/* ================= Mobile Navbar ================= */}
-      <nav className="navbar navbar-expand-sm bg-dark navbar-dark d-md-none fixed-top shadow-none border-0">
+      <nav
+        ref={navRef}
+        className="navbar navbar-expand-sm bg-dark navbar-dark d-md-none fixed-top border-0 shadow-sm"
+      >
         <div className="container-fluid">
           <span className="navbar-brand">{schoolName || "Scoolynk"}</span>
           <button
@@ -154,42 +167,25 @@ const Sidebar = ({ user, role }) => {
         </div>
       </nav>
 
-      {/* Mobile Spacer to prevent content hiding under navbar */}
-      <div className="d-md-none" style={{ marginTop: "110px" }}></div>
+      {/* Mobile spacer dynamically set to navbar height */}
+      <div className="d-md-none" style={{ marginTop: navHeight + 10 }}></div>
 
       {/* ================= Global Mobile Fixes ================= */}
       <style>{`
         html, body, #root {
           overflow-x: hidden !important;
-          width: 100%;
         }
 
         @media (max-width: 768px) {
           nav.navbar {
-            height: auto !important;
-            padding-top: 10px;
-            padding-bottom: 10px;
-            overflow: visible !important;
-            border: none !important; /* remove any top/bottom border */
-            box-shadow: none !important; /* remove default shadow/line */
+            border: none !important;
+            box-shadow: none !important;
           }
-
+          .navbar-toggler:focus {
+            box-shadow: none !important;
+          }
           .navbar-collapse.show {
             background: #212529;
-            padding: 10px 0;
-          }
-
-          .navbar-nav {
-            flex-direction: column !important;
-          }
-
-          .navbar-nav .nav-link {
-            padding: 10px 20px !important;
-            white-space: nowrap;
-          }
-
-          .navbar-toggler:focus {
-            box-shadow: none !important; /* remove blue outline */
           }
         }
       `}</style>
