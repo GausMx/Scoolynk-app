@@ -293,7 +293,7 @@ const VisualTemplateBuilder = ({
   }
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-4" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
       {/* Header */}
       <div className="row mb-3">
         <div className="col-12">
@@ -316,8 +316,8 @@ const VisualTemplateBuilder = ({
       )}
 
       {/* Basic Info */}
-      <div className="row mb-4">
-        <div className="col-md-4">
+      <div className="row mb-4 gx-2">
+        <div className="col-12 col-md-4 mb-3 mb-md-0">
           <label className="form-label">Template Name *</label>
           <input
             type="text"
@@ -327,7 +327,7 @@ const VisualTemplateBuilder = ({
             placeholder="e.g., Primary 3 Result Sheet"
           />
         </div>
-        <div className="col-md-4">
+        <div className="col-12 col-md-4 mb-3 mb-md-0">
           <label className="form-label">Term *</label>
           <select className="form-select" value={term} onChange={(e) => setTerm(e.target.value)}>
             <option value="First Term">First Term</option>
@@ -335,7 +335,7 @@ const VisualTemplateBuilder = ({
             <option value="Third Term">Third Term</option>
           </select>
         </div>
-        <div className="col-md-4">
+        <div className="col-12 col-md-4">
           <label className="form-label">Session *</label>
           <input
             type="text"
@@ -360,15 +360,17 @@ const VisualTemplateBuilder = ({
         </div>
       </div>
 
-      <div className="row">
+      <div className="row gx-3">
         {/* Configuration Panel */}
-        <div className={showPreview ? 'col-lg-6' : 'col-12'}>
+        <div className={showPreview ? 'col-12 col-lg-6 mb-4 mb-lg-0' : 'col-12'}>
           <div className="card">
             <div className="card-header bg-primary text-white">
               <h6 className="mb-0">Template Components</h6>
             </div>
             <div className="card-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-              
+              {/* Sections: Header, Student Info, Scores Table, etc. */}
+              {/* Each section container uses responsive paddings and margins as needed */}
+
               {/* Header Section */}
               <div className="border rounded mb-3">
                 <div 
@@ -467,10 +469,10 @@ const VisualTemplateBuilder = ({
 
                     <label className="form-label small fw-bold">Score Columns</label>
                     {scoreColumns.map((col, index) => (
-                      <div key={index} className="d-flex gap-2 mb-2">
+                      <div key={index} className="d-flex gap-2 mb-2 flex-wrap">
                         <input
                           type="text"
-                          className="form-control form-control-sm"
+                          className="form-control form-control-sm flex-grow-1 min-w-100"
                           value={col.name}
                           onChange={(e) => updateScoreColumn(index, 'name', e.target.value)}
                           placeholder="Column name"
@@ -531,10 +533,10 @@ const VisualTemplateBuilder = ({
                   <div className="p-3">
                     <small className="text-muted d-block mb-2">Rating scale: 1-5</small>
                     {affectiveTraits.map((trait, index) => (
-                      <div key={index} className="d-flex gap-2 mb-2">
+                      <div key={index} className="d-flex gap-2 mb-2 flex-wrap">
                         <input
                           type="text"
-                          className="form-control form-control-sm"
+                          className="form-control form-control-sm flex-grow-1 min-w-100"
                           value={trait.name}
                           onChange={(e) => updateAffectiveTrait(index, e.target.value)}
                           placeholder="Trait name"
@@ -582,10 +584,10 @@ const VisualTemplateBuilder = ({
                 {expanded.fees && components.fees && (
                   <div className="p-3">
                     {feeTypes.map((fee, index) => (
-                      <div key={index} className="d-flex gap-2 mb-2">
+                      <div key={index} className="d-flex gap-2 mb-2 flex-wrap">
                         <input
                           type="text"
-                          className="form-control form-control-sm"
+                          className="form-control form-control-sm flex-grow-1 min-w-100"
                           value={fee.name}
                           onChange={(e) => updateFeeType(index, e.target.value)}
                           placeholder="Fee type"
@@ -715,7 +717,7 @@ const VisualTemplateBuilder = ({
 
         {/* Live Preview Panel */}
         {showPreview && (
-          <div className="col-lg-6">
+          <div className="col-12 col-lg-6">
             <div className="card sticky-top" style={{ top: '20px' }}>
               <div className="card-header bg-info text-white">
                 <h6 className="mb-0">Live Preview</h6>
@@ -881,6 +883,22 @@ const VisualTemplateBuilder = ({
           </div>
         )}
       </div>
+
+      <style>{`
+        /* Responsive tweaks */
+        @media (max-width: 767.98px) {
+          .d-flex.gap-2.mb-2.flex-wrap > input.form-control {
+            min-width: 100% !important;
+          }
+          .d-flex.gap-2.mb-2.flex-wrap > button.btn {
+            width: 100% !important;
+            margin-top: 0.25rem;
+          }
+          .row.gx-3 > div {
+            margin-bottom: 1rem;
+          }
+        }
+      `}</style>
     </div>
   );
 };
