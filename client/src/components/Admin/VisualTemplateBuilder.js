@@ -42,7 +42,6 @@ const VisualTemplateBuilder = ({
   onClose, 
   existingTemplate = null 
 }) => {
-  // Get token from props or localStorage (like Settings.js does)
   const token = propToken || localStorage.getItem('accessToken');
   
   const [loading, setLoading] = useState(true);
@@ -51,14 +50,12 @@ const VisualTemplateBuilder = ({
   const [term, setTerm] = useState(existingTemplate?.term || 'First Term');
   const [session, setSession] = useState(existingTemplate?.session || '');
   
-  // School info state
   const [schoolInfo, setSchoolInfo] = useState({
     name: '',
     address: '',
     motto: ''
   });
   
-  // Component toggles
   const [components, setComponents] = useState({
     header: existingTemplate?.components?.header?.enabled ?? true,
     studentInfo: existingTemplate?.components?.studentInfo?.enabled ?? true,
@@ -70,7 +67,6 @@ const VisualTemplateBuilder = ({
     signatures: existingTemplate?.components?.signatures?.enabled ?? false
   });
 
-  // Expandable sections
   const [expanded, setExpanded] = useState({
     header: false,
     studentInfo: false,
@@ -82,7 +78,6 @@ const VisualTemplateBuilder = ({
     signatures: false
   });
 
-  // Score table configuration
   const [scoreColumns, setScoreColumns] = useState(
     existingTemplate?.components?.scoresTable?.columns || DEFAULT_SCORE_COLUMNS
   );
@@ -90,17 +85,14 @@ const VisualTemplateBuilder = ({
     existingTemplate?.components?.scoresTable?.defaultSubjects || 12
   );
 
-  // Affective traits configuration
   const [affectiveTraits, setAffectiveTraits] = useState(
     existingTemplate?.components?.affectiveTraits?.traits || DEFAULT_AFFECTIVE_TRAITS
   );
 
-  // Fee types configuration
   const [feeTypes, setFeeTypes] = useState(
     existingTemplate?.components?.fees?.types || DEFAULT_FEE_TYPES
   );
 
-  // Comments configuration
   const [enableTeacherComment, setEnableTeacherComment] = useState(
     existingTemplate?.components?.comments?.teacher ?? true
   );
@@ -112,7 +104,6 @@ const VisualTemplateBuilder = ({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Fetch school info on mount
   useEffect(() => {
     const fetchSchoolInfo = async () => {
       try {
@@ -135,7 +126,6 @@ const VisualTemplateBuilder = ({
         setLoadingPercent(100);
       } catch (err) {
         console.error('Failed to fetch school info:', err);
-        // Use default values if fetch fails
         setSchoolInfo({
           name: 'Your School Name',
           address: 'School Address, City, State',
@@ -218,7 +208,6 @@ const VisualTemplateBuilder = ({
       setSaving(true);
       setError('');
 
-      // Validate token
       if (!token) {
         setError('Authentication token is missing. Please log in again.');
         setSaving(false);
@@ -268,7 +257,6 @@ const VisualTemplateBuilder = ({
 
       const method = existingTemplate ? 'put' : 'post';
 
-      // Check if token already has "Bearer" prefix
       const authHeader = token.startsWith('Bearer ') 
         ? token 
         : `Bearer ${token}`;
@@ -296,15 +284,13 @@ const VisualTemplateBuilder = ({
     <div className="container-fluid py-4" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
       {/* Header */}
       <div className="row mb-3">
-        <div className="col-12">
-          <div className="d-flex justify-content-between align-items-center">
-            <h4>
-              {existingTemplate ? 'Edit' : 'Create'} Result Template
-            </h4>
-            <button className="btn btn-outline-secondary" onClick={onClose}>
-              <X size={18} />
-            </button>
-          </div>
+        <div className="col-12 d-flex justify-content-between align-items-center">
+          <h4>
+            {existingTemplate ? 'Edit' : 'Create'} Result Template
+          </h4>
+          <button className="btn btn-outline-secondary" onClick={onClose}>
+            <X size={18} />
+          </button>
         </div>
       </div>
 
@@ -351,7 +337,7 @@ const VisualTemplateBuilder = ({
       <div className="row mb-3">
         <div className="col-12">
           <button 
-            className="btn btn-sm btn-outline-primary"
+            className="btn btn-sm btn-outline-primary d-flex align-items-center"
             onClick={() => setShowPreview(!showPreview)}
           >
             {showPreview ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -363,30 +349,30 @@ const VisualTemplateBuilder = ({
       <div className="row gx-3">
         {/* Configuration Panel */}
         <div className={showPreview ? 'col-12 col-lg-6 mb-4 mb-lg-0' : 'col-12'}>
-          <div className="card">
+          <div className="card h-100 d-flex flex-column">
             <div className="card-header bg-primary text-white">
               <h6 className="mb-0">Template Components</h6>
             </div>
-            <div className="card-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+            <div className="card-body overflow-auto flex-grow-1">
               {/* Sections: Header, Student Info, Scores Table, etc. */}
-              {/* Each section container uses responsive paddings and margins as needed */}
 
               {/* Header Section */}
               <div className="border rounded mb-3">
                 <div 
                   className="d-flex justify-content-between align-items-center p-3 bg-light"
-                  style={{ cursor: 'pointer' }}
+                  role="button"
                   onClick={() => toggleExpanded('header')}
                 >
-                  <div className="form-check">
+                  <div className="form-check mb-0">
                     <input
                       className="form-check-input"
                       type="checkbox"
                       checked={components.header}
                       onChange={() => toggleComponent('header')}
                       onClick={(e) => e.stopPropagation()}
+                      id="headerToggle"
                     />
-                    <label className="form-check-label fw-bold">
+                    <label className="form-check-label fw-bold" htmlFor="headerToggle">
                       School Header
                     </label>
                   </div>
@@ -405,18 +391,19 @@ const VisualTemplateBuilder = ({
               <div className="border rounded mb-3">
                 <div 
                   className="d-flex justify-content-between align-items-center p-3 bg-light"
-                  style={{ cursor: 'pointer' }}
+                  role="button"
                   onClick={() => toggleExpanded('studentInfo')}
                 >
-                  <div className="form-check">
+                  <div className="form-check mb-0">
                     <input
                       className="form-check-input"
                       type="checkbox"
                       checked={components.studentInfo}
                       onChange={() => toggleComponent('studentInfo')}
                       onClick={(e) => e.stopPropagation()}
+                      id="studentInfoToggle"
                     />
-                    <label className="form-check-label fw-bold">
+                    <label className="form-check-label fw-bold" htmlFor="studentInfoToggle">
                       Student Information
                     </label>
                   </div>
@@ -435,18 +422,19 @@ const VisualTemplateBuilder = ({
               <div className="border rounded mb-3">
                 <div 
                   className="d-flex justify-content-between align-items-center p-3 bg-light"
-                  style={{ cursor: 'pointer' }}
+                  role="button"
                   onClick={() => toggleExpanded('scoresTable')}
                 >
-                  <div className="form-check">
+                  <div className="form-check mb-0">
                     <input
                       className="form-check-input"
                       type="checkbox"
                       checked={components.scoresTable}
                       onChange={() => toggleComponent('scoresTable')}
                       onClick={(e) => e.stopPropagation()}
+                      id="scoresTableToggle"
                     />
-                    <label className="form-check-label fw-bold">
+                    <label className="form-check-label fw-bold" htmlFor="scoresTableToggle">
                       Subject Scores Table
                     </label>
                   </div>
@@ -464,15 +452,15 @@ const VisualTemplateBuilder = ({
                         min="1"
                         max="20"
                       />
-                      <small className="text-muted">Teachers can add/remove rows as needed</small>
+                      <small className="text-muted d-block">Teachers can add/remove rows as needed</small>
                     </div>
 
                     <label className="form-label small fw-bold">Score Columns</label>
                     {scoreColumns.map((col, index) => (
-                      <div key={index} className="d-flex gap-2 mb-2 flex-wrap">
+                      <div key={index} className="d-flex flex-column flex-sm-row gap-2 mb-2">
                         <input
                           type="text"
-                          className="form-control form-control-sm flex-grow-1 min-w-100"
+                          className="form-control form-control-sm flex-grow-1"
                           value={col.name}
                           onChange={(e) => updateScoreColumn(index, 'name', e.target.value)}
                           placeholder="Column name"
@@ -484,13 +472,14 @@ const VisualTemplateBuilder = ({
                           value={col.maxScore}
                           onChange={(e) => updateScoreColumn(index, 'maxScore', Number(e.target.value))}
                           placeholder="Max"
-                          style={{ width: '80px' }}
+                          style={{ minWidth: '80px' }}
                           disabled={col.calculated}
                         />
                         {!col.calculated && (
                           <button
                             className="btn btn-sm btn-outline-danger"
                             onClick={() => removeScoreColumn(index)}
+                            type="button"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -500,6 +489,7 @@ const VisualTemplateBuilder = ({
                     <button
                       className="btn btn-sm btn-outline-primary mt-2"
                       onClick={addScoreColumn}
+                      type="button"
                     >
                       <Plus size={14} className="me-1" />
                       Add Column
@@ -512,18 +502,19 @@ const VisualTemplateBuilder = ({
               <div className="border rounded mb-3">
                 <div 
                   className="d-flex justify-content-between align-items-center p-3 bg-light"
-                  style={{ cursor: 'pointer' }}
+                  role="button"
                   onClick={() => toggleExpanded('affectiveTraits')}
                 >
-                  <div className="form-check">
+                  <div className="form-check mb-0">
                     <input
                       className="form-check-input"
                       type="checkbox"
                       checked={components.affectiveTraits}
                       onChange={() => toggleComponent('affectiveTraits')}
                       onClick={(e) => e.stopPropagation()}
+                      id="affectiveTraitsToggle"
                     />
-                    <label className="form-check-label fw-bold">
+                    <label className="form-check-label fw-bold" htmlFor="affectiveTraitsToggle">
                       Affective Traits
                     </label>
                   </div>
@@ -533,10 +524,10 @@ const VisualTemplateBuilder = ({
                   <div className="p-3">
                     <small className="text-muted d-block mb-2">Rating scale: 1-5</small>
                     {affectiveTraits.map((trait, index) => (
-                      <div key={index} className="d-flex gap-2 mb-2 flex-wrap">
+                      <div key={index} className="d-flex flex-column flex-sm-row gap-2 mb-2">
                         <input
                           type="text"
-                          className="form-control form-control-sm flex-grow-1 min-w-100"
+                          className="form-control form-control-sm flex-grow-1"
                           value={trait.name}
                           onChange={(e) => updateAffectiveTrait(index, e.target.value)}
                           placeholder="Trait name"
@@ -544,6 +535,7 @@ const VisualTemplateBuilder = ({
                         <button
                           className="btn btn-sm btn-outline-danger"
                           onClick={() => removeAffectiveTrait(index)}
+                          type="button"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -552,6 +544,7 @@ const VisualTemplateBuilder = ({
                     <button
                       className="btn btn-sm btn-outline-primary mt-2"
                       onClick={addAffectiveTrait}
+                      type="button"
                     >
                       <Plus size={14} className="me-1" />
                       Add Trait
@@ -564,18 +557,19 @@ const VisualTemplateBuilder = ({
               <div className="border rounded mb-3">
                 <div 
                   className="d-flex justify-content-between align-items-center p-3 bg-light"
-                  style={{ cursor: 'pointer' }}
+                  role="button"
                   onClick={() => toggleExpanded('fees')}
                 >
-                  <div className="form-check">
+                  <div className="form-check mb-0">
                     <input
                       className="form-check-input"
                       type="checkbox"
                       checked={components.fees}
                       onChange={() => toggleComponent('fees')}
                       onClick={(e) => e.stopPropagation()}
+                      id="feesToggle"
                     />
-                    <label className="form-check-label fw-bold">
+                    <label className="form-check-label fw-bold" htmlFor="feesToggle">
                       School Fees
                     </label>
                   </div>
@@ -584,10 +578,10 @@ const VisualTemplateBuilder = ({
                 {expanded.fees && components.fees && (
                   <div className="p-3">
                     {feeTypes.map((fee, index) => (
-                      <div key={index} className="d-flex gap-2 mb-2 flex-wrap">
+                      <div key={index} className="d-flex flex-column flex-sm-row gap-2 mb-2">
                         <input
                           type="text"
-                          className="form-control form-control-sm flex-grow-1 min-w-100"
+                          className="form-control form-control-sm flex-grow-1"
                           value={fee.name}
                           onChange={(e) => updateFeeType(index, e.target.value)}
                           placeholder="Fee type"
@@ -595,6 +589,7 @@ const VisualTemplateBuilder = ({
                         <button
                           className="btn btn-sm btn-outline-danger"
                           onClick={() => removeFeeType(index)}
+                          type="button"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -603,6 +598,7 @@ const VisualTemplateBuilder = ({
                     <button
                       className="btn btn-sm btn-outline-primary mt-2"
                       onClick={addFeeType}
+                      type="button"
                     >
                       <Plus size={14} className="me-1" />
                       Add Fee Type
@@ -614,14 +610,15 @@ const VisualTemplateBuilder = ({
               {/* Attendance Section */}
               <div className="border rounded mb-3">
                 <div className="d-flex justify-content-between align-items-center p-3 bg-light">
-                  <div className="form-check">
+                  <div className="form-check mb-0">
                     <input
                       className="form-check-input"
                       type="checkbox"
                       checked={components.attendance}
                       onChange={() => toggleComponent('attendance')}
+                      id="attendanceToggle"
                     />
-                    <label className="form-check-label fw-bold">
+                    <label className="form-check-label fw-bold" htmlFor="attendanceToggle">
                       Attendance
                     </label>
                   </div>
@@ -632,18 +629,19 @@ const VisualTemplateBuilder = ({
               <div className="border rounded mb-3">
                 <div 
                   className="d-flex justify-content-between align-items-center p-3 bg-light"
-                  style={{ cursor: 'pointer' }}
+                  role="button"
                   onClick={() => toggleExpanded('comments')}
                 >
-                  <div className="form-check">
+                  <div className="form-check mb-0">
                     <input
                       className="form-check-input"
                       type="checkbox"
                       checked={components.comments}
                       onChange={() => toggleComponent('comments')}
                       onClick={(e) => e.stopPropagation()}
+                      id="commentsToggle"
                     />
-                    <label className="form-check-label fw-bold">
+                    <label className="form-check-label fw-bold" htmlFor="commentsToggle">
                       Comments
                     </label>
                   </div>
@@ -657,8 +655,9 @@ const VisualTemplateBuilder = ({
                         type="checkbox"
                         checked={enableTeacherComment}
                         onChange={(e) => setEnableTeacherComment(e.target.checked)}
+                        id="teacherCommentToggle"
                       />
-                      <label className="form-check-label">Teacher's Comment</label>
+                      <label className="form-check-label" htmlFor="teacherCommentToggle">Teacher's Comment</label>
                     </div>
                     <div className="form-check">
                       <input
@@ -666,8 +665,9 @@ const VisualTemplateBuilder = ({
                         type="checkbox"
                         checked={enablePrincipalComment}
                         onChange={(e) => setEnablePrincipalComment(e.target.checked)}
+                        id="principalCommentToggle"
                       />
-                      <label className="form-check-label">Principal's Comment</label>
+                      <label className="form-check-label" htmlFor="principalCommentToggle">Principal's Comment</label>
                     </div>
                   </div>
                 )}
@@ -676,14 +676,15 @@ const VisualTemplateBuilder = ({
               {/* Signatures Section */}
               <div className="border rounded mb-3">
                 <div className="d-flex justify-content-between align-items-center p-3 bg-light">
-                  <div className="form-check">
+                  <div className="form-check mb-0">
                     <input
                       className="form-check-input"
                       type="checkbox"
                       checked={components.signatures}
                       onChange={() => toggleComponent('signatures')}
+                      id="signaturesToggle"
                     />
-                    <label className="form-check-label fw-bold">
+                    <label className="form-check-label fw-bold" htmlFor="signaturesToggle">
                       Signatures
                     </label>
                   </div>
@@ -699,10 +700,11 @@ const VisualTemplateBuilder = ({
               className="btn btn-success btn-lg w-100"
               onClick={handleSave}
               disabled={saving}
+              type="button"
             >
               {saving ? (
                 <>
-                  <span className="spinner-border spinner-border-sm me-2"></span>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                   Saving...
                 </>
               ) : (
@@ -883,22 +885,6 @@ const VisualTemplateBuilder = ({
           </div>
         )}
       </div>
-
-      <style>{`
-        /* Responsive tweaks */
-        @media (max-width: 767.98px) {
-          .d-flex.gap-2.mb-2.flex-wrap > input.form-control {
-            min-width: 100% !important;
-          }
-          .d-flex.gap-2.mb-2.flex-wrap > button.btn {
-            width: 100% !important;
-            margin-top: 0.25rem;
-          }
-          .row.gx-3 > div {
-            margin-bottom: 1rem;
-          }
-        }
-      `}</style>
     </div>
   );
 };
