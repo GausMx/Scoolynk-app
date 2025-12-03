@@ -1,4 +1,4 @@
-// src/components/Admin/Settings.js - WITHOUT FEES TAB
+// src/components/Admin/Settings.js - Mobile Responsive Version
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -254,7 +254,7 @@ const Settings = () => {
     <form onSubmit={handleProfileUpdate}>
       <div className="row g-4">
         <div className="col-12">
-          <div className="card border-0 shadow-sm rounded-4 p-4">
+          <div className="card border-0 shadow-sm rounded-4 p-3 p-md-4">
             <h5 className="text-primary mb-4">
               <User size={20} className="me-2" />
               School Information
@@ -298,7 +298,7 @@ const Settings = () => {
         </div>
 
         <div className="col-12">
-          <div className="card border-0 shadow-sm rounded-4 p-4 bg-light">
+          <div className="card border-0 shadow-sm rounded-4 p-3 p-md-4 bg-light">
             <h5 className="text-secondary mb-4">
               <User size={20} className="me-2" />
               Administrator Details (Read-only)
@@ -333,13 +333,13 @@ const Settings = () => {
         </div>
 
         <div className="col-12">
-          <div className="card border-0 shadow-sm rounded-4 p-4 border-start border-primary border-5">
+          <div className="card border-0 shadow-sm rounded-4 p-3 p-md-4 border-start border-primary border-5">
             <h5 className="text-primary mb-3">
               <Lock size={20} className="me-2" />
               School Registration Code
             </h5>
             
-            <div className="d-flex align-items-center gap-2 mb-3">
+            <div className="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 mb-3">
               <input
                 type={showCode ? 'text' : 'password'}
                 className="form-control rounded-3 bg-light"
@@ -347,22 +347,24 @@ const Settings = () => {
                 readOnly
                 style={{ fontFamily: 'monospace', fontSize: '1.1rem', letterSpacing: '2px' }}
               />
-              <button
-                type="button"
-                className="btn btn-outline-secondary rounded-3"
-                onClick={() => setShowCode(!showCode)}
-                title={showCode ? 'Hide code' : 'Show code'}
-              >
-                {showCode ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary rounded-3"
-                onClick={copySchoolCode}
-                title="Copy code"
-              >
-                {copied ? <Check size={18} /> : <Copy size={18} />}
-              </button>
+              <div className="d-flex gap-2">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary rounded-3 flex-fill flex-sm-grow-0"
+                  onClick={() => setShowCode(!showCode)}
+                  title={showCode ? 'Hide code' : 'Show code'}
+                >
+                  {showCode ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary rounded-3 flex-fill flex-sm-grow-0"
+                  onClick={copySchoolCode}
+                  title="Copy code"
+                >
+                  {copied ? <Check size={18} /> : <Copy size={18} />}
+                </button>
+              </div>
             </div>
             
             <div className="alert alert-info rounded-3 mb-0">
@@ -378,7 +380,7 @@ const Settings = () => {
           <div className="d-flex justify-content-end">
             <button
               type="submit"
-              className="btn btn-primary rounded-3 px-4"
+              className="btn btn-primary rounded-3 px-4 w-100 w-sm-auto"
               disabled={loading}
             >
               {loading ? (
@@ -401,7 +403,7 @@ const Settings = () => {
     <form onSubmit={handleSecurityUpdate}>
       <div className="row justify-content-center">
         <div className="col-lg-8">
-          <div className="card border-0 shadow-sm rounded-4 p-4">
+          <div className="card border-0 shadow-sm rounded-4 p-3 p-md-4">
             <h5 className="text-primary mb-4">
               <Lock size={20} className="me-2" />
               Change Password
@@ -489,10 +491,10 @@ const Settings = () => {
               )}
             </div>
 
-            <div className="d-flex justify-content-end gap-2">
+            <div className="d-flex flex-column flex-sm-row justify-content-end gap-2">
               <button
                 type="button"
-                className="btn btn-outline-secondary rounded-3"
+                className="btn btn-outline-secondary rounded-3 w-100 w-sm-auto"
                 onClick={() => {
                   setSecurity({ currentPassword: '', newPassword: '', confirmPassword: '' });
                   setShowPasswords({ current: false, new: false, confirm: false });
@@ -502,7 +504,7 @@ const Settings = () => {
               </button>
               <button
                 type="submit"
-                className="btn btn-primary rounded-3 px-4"
+                className="btn btn-primary rounded-3 px-4 w-100 w-sm-auto"
                 disabled={loading || security.newPassword !== security.confirmPassword || security.newPassword.length < 6}
               >
                 {loading ? (
@@ -521,7 +523,7 @@ const Settings = () => {
     </form>
   );
 
-  // Payments Section WITH BULK SEND FEATURE
+  // Payments Section WITH BULK SEND FEATURE - MOBILE RESPONSIVE
   const renderPaymentsSection = () => {
     
     // SMS Balance Warning Component
@@ -530,8 +532,8 @@ const Settings = () => {
 
       return (
         <div className="alert alert-warning border-0 shadow-sm rounded-4 mb-4">
-          <div className="d-flex align-items-start">
-            <AlertTriangle size={24} className="text-warning me-3 mt-1 flex-shrink-0" />
+          <div className="d-flex flex-column flex-md-row align-items-start">
+            <AlertTriangle size={24} className="text-warning me-0 me-md-3 mb-2 mb-md-0 flex-shrink-0" />
             <div className="flex-grow-1">
               <h5 className="alert-heading mb-2">SMS Service Needs Attention</h5>
               <p className="mb-3">{smsError.error}</p>
@@ -596,15 +598,15 @@ const Settings = () => {
     };
 
     const renderStudentList = (students, title, badgeClass, category) => (
-      <div className="card border-0 shadow-sm rounded-4 p-4 mb-4">
-        <div className="d-flex justify-content-between align-items-center mb-3">
+      <div className="card border-0 shadow-sm rounded-4 p-3 p-md-4 mb-4">
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-3">
           <h5 className="mb-0">
             <span className={`badge ${badgeClass} me-2`}>{students.length}</span>
             {title}
           </h5>
           {students.length > 0 && (
             <button
-              className="btn btn-sm btn-success rounded-3"
+              className="btn btn-sm btn-success rounded-3 w-100 w-md-auto"
               onClick={() => sendPaymentReminders(category)}
               disabled={sendingMessages}
             >
@@ -615,56 +617,113 @@ const Settings = () => {
         </div>
 
         {students.length > 0 ? (
-          <div className="table-responsive">
-            <table className="table table-hover align-middle">
-              <thead className="table-light">
-                <tr>
-                  <th>Student Name</th>
-                  <th>Class</th>
-                  <th>Parent Phone</th>
-                  <th>Fee</th>
-                  <th>Amount Paid</th>
-                  <th className="text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+          <>
+            {/* Mobile Card View */}
+            <div className="d-md-none">
+              <div className="row g-3">
                 {students.map((student) => {
                   const balance = (student.classFee || 0) - (student.amountPaid || 0);
                   
                   return (
-                    <tr key={student._id}>
-                      <td className="fw-semibold">{student.name}</td>
-                      <td>
-                        <span className="badge bg-info text-dark">{student.classId?.name}</span>
-                      </td>
-                      <td>
-                        <small className="text-muted">
-                          {student.parentPhone || 'Not provided'}
-                        </small>
-                      </td>
-                      <td>₦{student.classFee?.toLocaleString()}</td>
-                      <td>
-                        <span className={student.amountPaid > 0 ? 'text-success' : 'text-muted'}>
-                          ₦{student.amountPaid?.toLocaleString() || 0}
-                        </span>
-                      </td>
-                      <td className="text-center">
-                        <button
-                          className="btn btn-sm btn-primary rounded-3"
-                          onClick={() => handleSendPaymentLink(student)}
-                          disabled={balance <= 0}
-                          title={balance > 0 ? 'Send payment link' : 'No outstanding balance'}
-                        >
-                          <Send size={14} className="me-1" />
-                          Send Link
-                        </button>
-                      </td>
-                    </tr>
+                    <div key={student._id} className="col-12">
+                      <div className="card border-0 shadow-sm rounded-3">
+                        <div className="card-body p-3">
+                          <div className="d-flex justify-content-between align-items-start mb-2">
+                            <div className="flex-grow-1">
+                              <h6 className="mb-1 fw-bold">{student.name}</h6>
+                              <span className="badge bg-info text-dark">{student.classId?.name}</span>
+                            </div>
+                          </div>
+
+                          <div className="row g-2 mb-3">
+                            <div className="col-6">
+                              <small className="text-muted d-block">Parent Phone</small>
+                              <span className="small">{student.parentPhone || 'Not provided'}</span>
+                            </div>
+                            <div className="col-6">
+                              <small className="text-muted d-block">Fee</small>
+                              <span className="small fw-semibold">₦{student.classFee?.toLocaleString()}</span>
+                            </div>
+                            <div className="col-6">
+                              <small className="text-muted d-block">Paid</small>
+                              <span className={`small fw-semibold ${student.amountPaid > 0 ? 'text-success' : 'text-muted'}`}>
+                                ₦{student.amountPaid?.toLocaleString() || 0}
+                              </span>
+                            </div>
+                            <div className="col-6">
+                              <small className="text-muted d-block">Balance</small>
+                              <span className="small fw-bold text-danger">₦{balance.toLocaleString()}</span>
+                            </div>
+                          </div>
+
+                          <button
+                            className="btn btn-sm btn-primary rounded-3 w-100"
+                            onClick={() => handleSendPaymentLink(student)}
+                            disabled={balance <= 0}
+                          >
+                            <Send size={14} className="me-1" />
+                            {balance > 0 ? 'Send Payment Link' : 'No Outstanding Balance'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="d-none d-md-block table-responsive">
+              <table className="table table-hover align-middle">
+                <thead className="table-light">
+                  <tr>
+                    <th>Student Name</th>
+                    <th>Class</th>
+                    <th>Parent Phone</th>
+                    <th>Fee</th>
+                    <th>Amount Paid</th>
+                    <th className="text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {students.map((student) => {
+                    const balance = (student.classFee || 0) - (student.amountPaid || 0);
+                    
+                    return (
+                      <tr key={student._id}>
+                        <td className="fw-semibold">{student.name}</td>
+                        <td>
+                          <span className="badge bg-info text-dark">{student.classId?.name}</span>
+                        </td>
+                        <td>
+                          <small className="text-muted">
+                            {student.parentPhone || 'Not provided'}
+                          </small>
+                        </td>
+                        <td>₦{student.classFee?.toLocaleString()}</td>
+                        <td>
+                          <span className={student.amountPaid > 0 ? 'text-success' : 'text-muted'}>
+                            ₦{student.amountPaid?.toLocaleString() || 0}
+                          </span>
+                        </td>
+                        <td className="text-center">
+                          <button
+                            className="btn btn-sm btn-primary rounded-3"
+                            onClick={() => handleSendPaymentLink(student)}
+                            disabled={balance <= 0}
+                            title={balance > 0 ? 'Send payment link' : 'No outstanding balance'}
+                          >
+                            <Send size={14} className="me-1" />
+                            Send Link
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         ) : (
           <div className="alert alert-info mb-0">
             No students in this category.
@@ -678,23 +737,23 @@ const Settings = () => {
         {/* SMS Balance Warning */}
         <SMSBalanceWarning />
         
-        {/* NEW: Bulk Send Payment Links Banner */}
+        {/* Bulk Send Payment Links Banner - Mobile Responsive */}
         <div className="card border-0 shadow-sm rounded-4 mb-4 bg-gradient" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-          <div className="card-body p-4 text-white">
-            <div className="row align-items-center">
-              <div className="col-md-8">
+          <div className="card-body p-3 p-md-4 text-white">
+            <div className="row align-items-center g-3">
+              <div className="col-12 col-md-8">
                 <h5 className="mb-2">
                   <Send size={24} className="me-2" />
                   Send Payment Links to All Students
                 </h5>
-                <p className="mb-0 opacity-75">
+                <p className="mb-0 opacity-75 small">
                   Send payment links via SMS to ALL students with outstanding balance. 
                   Links remain valid until payment is completed (no expiry).
                 </p>
               </div>
-              <div className="col-md-4 text-end">
+              <div className="col-12 col-md-4 text-md-end">
                 <button
-                  className="btn btn-light btn-lg rounded-3 px-4"
+                  className="btn btn-light btn-lg rounded-3 px-4 w-100 w-md-auto"
                   onClick={sendBulkPaymentLinks}
                   disabled={sendingMessages}
                 >
@@ -715,38 +774,41 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="row g-3 mb-4">
-          <div className="col-md-4">
+        {/* Stats Cards - Mobile Responsive */}
+        <div className="row g-2 g-md-3 mb-4">
+          <div className="col-12 col-md-4">
             <div className="card bg-success text-white shadow-sm rounded-4 p-3">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h6 className="mb-1">Paid in Full</h6>
+                  <h6 className="mb-1 small">Paid in Full</h6>
                   <h3 className="mb-0">{payments.paid.length}</h3>
                 </div>
-                <Check size={40} />
+                <Check size={32} className="d-none d-md-block" />
+                <Check size={24} className="d-md-none" />
               </div>
             </div>
           </div>
-          <div className="col-md-4">
+          <div className="col-12 col-md-4">
             <div className="card bg-warning text-white shadow-sm rounded-4 p-3">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h6 className="mb-1">Partial Payment</h6>
+                  <h6 className="mb-1 small">Partial Payment</h6>
                   <h3 className="mb-0">{payments.partial.length}</h3>
                 </div>
-                <DollarSign size={40} />
+                <DollarSign size={32} className="d-none d-md-block" />
+                <DollarSign size={24} className="d-md-none" />
               </div>
             </div>
           </div>
-          <div className="col-md-4">
+          <div className="col-12 col-md-4">
             <div className="card bg-danger text-white shadow-sm rounded-4 p-3">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h6 className="mb-1">Not Paid</h6>
+                  <h6 className="mb-1 small">Not Paid</h6>
                   <h3 className="mb-0">{payments.unpaid.length}</h3>
                 </div>
-                <Users size={40} />
+                <Users size={32} className="d-none d-md-block" />
+                <Users size={24} className="d-md-none" />
               </div>
             </div>
           </div>
@@ -782,27 +844,27 @@ const Settings = () => {
           )}
 
           <ul className="nav nav-pills mb-4 gap-2 flex-column flex-md-row">
-            <li className="nav-item">
+            <li className="nav-item w-100 w-md-auto">
               <button
-                className={`nav-link rounded-3 w-100 w-md-auto ${activeTab === 'profile' ? 'active' : ''}`}
+                className={`nav-link rounded-3 w-100 ${activeTab === 'profile' ? 'active' : ''}`}
                 onClick={() => setActiveTab('profile')}
               >
                 <User size={18} className="me-2" />
                 Profile
               </button>
             </li>
-            <li className="nav-item">
+            <li className="nav-item w-100 w-md-auto">
               <button
-                className={`nav-link rounded-3 w-100 w-md-auto ${activeTab === 'security' ? 'active' : ''}`}
+                className={`nav-link rounded-3 w-100 ${activeTab === 'security' ? 'active' : ''}`}
                 onClick={() => setActiveTab('security')}
               >
                 <Lock size={18} className="me-2" />
                 Security
               </button>
             </li>
-            <li className="nav-item">
+            <li className="nav-item w-100 w-md-auto">
               <button
-                className={`nav-link rounded-3 w-100 w-md-auto ${activeTab === 'payments' ? 'active' : ''}`}
+                className={`nav-link rounded-3 w-100 ${activeTab === 'payments' ? 'active' : ''}`}
                 onClick={() => setActiveTab('payments')}
               >
                 <DollarSign size={18} className="me-2" />
@@ -830,4 +892,4 @@ const Settings = () => {
   );
 };
 
-export default Settings;      
+export default Settings;
