@@ -1,4 +1,4 @@
-// src/components/Admin/PaymentSetup.js - WITH LOADING ANIMATION
+// src/components/Admin/PaymentSetup.js - WITH LOADING ANIMATION & MOBILE FIX
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -241,7 +241,7 @@ const PaymentSetup = () => {
                   )}
                 </div>
 
-                {/* Account Number */}
+                {/* Account Number - FIXED FOR MOBILE */}
                 <div className="mb-3">
                   <label className="form-label fw-semibold small">
                     Account Number *
@@ -260,10 +260,10 @@ const PaymentSetup = () => {
                       </small>
                     </>
                   ) : (
-                    <div className="input-group flex-column flex-md-row">
+                    <>
                       <input
                         type="text"
-                        className="form-control rounded-3 rounded-md-start-3 rounded-md-end-0 mb-2 mb-md-0"
+                        className="form-control rounded-3 mb-2"
                         value={formData.accountNumber}
                         onChange={(e) => setFormData({ 
                           ...formData, 
@@ -276,7 +276,7 @@ const PaymentSetup = () => {
                       />
                       <button
                         type="button"
-                        className="btn btn-primary rounded-3 rounded-md-start-0 rounded-md-end-3 w-100 w-md-auto"
+                        className="btn btn-primary rounded-3 w-100"
                         onClick={verifyAccount}
                         disabled={loading || !formData.bankCode || formData.accountNumber.length !== 10}
                       >
@@ -286,10 +286,10 @@ const PaymentSetup = () => {
                             Verifying...
                           </>
                         ) : (
-                          'Verify'
+                          'Verify Account'
                         )}
                       </button>
-                    </div>
+                    </>
                   )}
                 </div>
 
