@@ -595,10 +595,10 @@ const AllResultsTab = ({
   return (
     <>
       {/* Filters - Mobile Optimized */}
-      <div className="row g-3 mb-4">
-        <div className="col-12 col-md-3 col-lg-2">
+      <div className="row g-2 g-md-3 mb-4">
+        <div className="col-6 col-md-3 col-lg-2">
           <select 
-            className="form-select rounded-3" 
+            className="form-select form-select-sm rounded-3" 
             value={selectedTerm} 
             onChange={(e) => setSelectedTerm(e.target.value)}
           >
@@ -608,10 +608,10 @@ const AllResultsTab = ({
             <option value="Third Term">Third Term</option>
           </select>
         </div>
-        <div className="col-12 col-md-3 col-lg-2">
+        <div className="col-6 col-md-3 col-lg-2">
           <input 
             type="text" 
-            className="form-control rounded-3" 
+            className="form-control form-control-sm rounded-3" 
             placeholder="Session"
             value={selectedSession}
             onChange={(e) => setSelectedSession(e.target.value)}
@@ -619,7 +619,7 @@ const AllResultsTab = ({
         </div>
         <div className="col-12 col-md-3 col-lg-2">
           <select 
-            className="form-select rounded-3"
+            className="form-select form-select-sm rounded-3"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -634,11 +634,11 @@ const AllResultsTab = ({
         <div className="col-12 col-md-3 col-lg-6 text-md-end">
           {selectedResults.length > 0 && (
             <button 
-              className="btn btn-success rounded-3 w-100 w-md-auto"
+              className="btn btn-sm btn-success rounded-3 w-100 w-md-auto"
               onClick={sendMultipleResults}
             >
-              <Send size={18} className="me-2" />
-              Send {selectedResults.length} to Parents
+              <Send size={16} className="me-2" />
+              <span className="d-none d-sm-inline">Send </span>{selectedResults.length}<span className="d-none d-sm-inline"> to Parents</span>
             </button>
           )}
         </div>
@@ -647,94 +647,187 @@ const AllResultsTab = ({
       {loading ? (
         <Loading percentage={100} />
       ) : (
-        <div className="table-responsive">
-          <table className="table table-hover align-middle">
-            <thead className="table-light">
-              <tr>
-                <th style={{ width: '40px' }}>
-                  <input 
-                    type="checkbox"
-                    className="form-check-input"
-                    checked={selectedResults.length === approvedResults.length && approvedResults.length > 0}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedResults(approvedResults.map(r => r._id));
-                      } else {
-                        setSelectedResults([]);
-                      }
-                    }}
-                    aria-label="Select all approved results"
-                  />
-                </th>
-                <th className="small">Student</th>
-                <th className="small d-none d-md-table-cell">Class</th>
-                <th className="small d-none d-lg-table-cell">Term</th>
-                <th className="small d-none d-lg-table-cell">Session</th>
-                <th className="small">Overall</th>
-                <th className="small">Grade</th>
-                <th className="small">Status</th>
-                <th className="small d-none d-lg-table-cell">Teacher</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredResults.map(result => (
-                <tr key={result._id}>
-                  <td>
-                    {result.status === 'approved' && (
-                      <input 
-                        type="checkbox"
-                        className="form-check-input"
-                        checked={selectedResults.includes(result._id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedResults([...selectedResults, result._id]);
-                          } else {
-                            setSelectedResults(selectedResults.filter(id => id !== result._id));
-                          }
-                        }}
-                        aria-label={`Select result for student ${result.student.name}`}
-                      />
-                    )}
-                  </td>
-                  <td>
-                    <div className="fw-semibold small">{result.student.name}</div>
-                    <small className="text-muted d-block d-md-none">{result.student.regNo}</small>
-                    <div className="d-md-none mt-1">
-                      <span className="badge bg-info">{result.classId.name}</span>
+        <>
+          {/* Mobile Card View */}
+          <div className="d-md-none">
+            {filteredResults.length === 0 ? (
+              <div className="alert alert-info rounded-3">
+                <AlertCircle size={20} className="me-2" />
+                No results found matching your filters.
+              </div>
+            ) : (
+              <div className="row g-3">
+                {filteredResults.map(result => (
+                  <div key={result._id} className="col-12">
+                    <div className="card border-0 shadow-sm rounded-3">
+                      <div className="card-body p-3">
+                        {/* Header with checkbox */}
+                        <div className="d-flex justify-content-between align-items-start mb-3">
+                          <div className="flex-grow-1">
+                            <div className="d-flex align-items-start gap-2">
+                              {result.status === 'approved' && (
+                                <input 
+                                  type="checkbox"
+                                  className="form-check-input mt-1"
+                                  checked={selectedResults.includes(result._id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedResults([...selectedResults, result._id]);
+                                    } else {
+                                      setSelectedResults(selectedResults.filter(id => id !== result._id));
+                                    }
+                                  }}
+                                  aria-label={`Select result for ${result.student.name}`}
+                                />
+                              )}
+                              <div>
+                                <h6 className="mb-1 fw-bold">{result.student.name}</h6>
+                                <small className="text-muted d-block">{result.student.regNo}</small>
+                              </div>
+                            </div>
+                          </div>
+                          <span className={`badge bg-${
+                            result.status === 'draft' ? 'secondary' :
+                            result.status === 'submitted' ? 'primary' :
+                            result.status === 'approved' ? 'success' :
+                            result.status === 'rejected' ? 'danger' : 'info'
+                          }`}>
+                            {result.status}
+                          </span>
+                        </div>
+
+                        {/* Details Grid */}
+                        <div className="row g-2 mb-3">
+                          <div className="col-6">
+                            <small className="text-muted d-block">Class</small>
+                            <span className="badge bg-info">{result.classId.name}</span>
+                          </div>
+                          <div className="col-6">
+                            <small className="text-muted d-block">Grade</small>
+                            <span className={`badge bg-${
+                              result.overallGrade === 'A' ? 'success' :
+                              result.overallGrade === 'B' ? 'primary' :
+                              result.overallGrade === 'C' ? 'info' :
+                              result.overallGrade === 'D' ? 'warning' : 'danger'
+                            }`}>
+                              {result.overallGrade}
+                            </span>
+                          </div>
+                          <div className="col-6">
+                            <small className="text-muted d-block">Overall Score</small>
+                            <span className="fw-bold">{result.overallTotal}</span>
+                          </div>
+                          <div className="col-6">
+                            <small className="text-muted d-block">Term</small>
+                            <span className="small">{result.term}</span>
+                          </div>
+                          <div className="col-6">
+                            <small className="text-muted d-block">Session</small>
+                            <span className="small">{result.session}</span>
+                          </div>
+                          <div className="col-6">
+                            <small className="text-muted d-block">Teacher</small>
+                            <span className="small">{result.teacher.name}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </td>
-                  <td className="d-none d-md-table-cell"><span className="badge bg-info">{result.classId.name}</span></td>
-                  <td className="d-none d-lg-table-cell small">{result.term}</td>
-                  <td className="d-none d-lg-table-cell small">{result.session}</td>
-                  <td className="fw-bold small">{result.overallTotal}</td>
-                  <td>
-                    <span className={`badge bg-${
-                      result.overallGrade === 'A' ? 'success' :
-                      result.overallGrade === 'B' ? 'primary' :
-                      result.overallGrade === 'C' ? 'info' :
-                      result.overallGrade === 'D' ? 'warning' : 'danger'
-                    }`}>
-                      {result.overallGrade}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`badge bg-${
-                      result.status === 'draft' ? 'secondary' :
-                      result.status === 'submitted' ? 'primary' :
-                      result.status === 'approved' ? 'success' :
-                      result.status === 'rejected' ? 'danger' : 'info'
-                    }`}>
-                      {result.status}
-                    </span>
-                  </td>
-                  <td className="d-none d-lg-table-cell">
-                    <small>{result.teacher.name}</small>
-                  </td>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="d-none d-md-block table-responsive">
+            <table className="table table-hover align-middle">
+              <thead className="table-light">
+                <tr>
+                  <th style={{ width: '40px' }}>
+                    <input 
+                      type="checkbox"
+                      className="form-check-input"
+                      checked={selectedResults.length === approvedResults.length && approvedResults.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedResults(approvedResults.map(r => r._id));
+                        } else {
+                          setSelectedResults([]);
+                        }
+                      }}
+                      aria-label="Select all approved results"
+                    />
+                  </th>
+                  <th className="small">Student</th>
+                  <th className="small">Class</th>
+                  <th className="small d-none d-lg-table-cell">Term</th>
+                  <th className="small d-none d-lg-table-cell">Session</th>
+                  <th className="small">Overall</th>
+                  <th className="small">Grade</th>
+                  <th className="small">Status</th>
+                  <th className="small d-none d-lg-table-cell">Teacher</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filteredResults.map(result => (
+                  <tr key={result._id}>
+                    <td>
+                      {result.status === 'approved' && (
+                        <input 
+                          type="checkbox"
+                          className="form-check-input"
+                          checked={selectedResults.includes(result._id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedResults([...selectedResults, result._id]);
+                            } else {
+                              setSelectedResults(selectedResults.filter(id => id !== result._id));
+                            }
+                          }}
+                          aria-label={`Select result for student ${result.student.name}`}
+                        />
+                      )}
+                    </td>
+                    <td>
+                      <div className="fw-semibold small">{result.student.name}</div>
+                      <small className="text-muted d-block d-md-none">{result.student.regNo}</small>
+                      <div className="d-md-none mt-1">
+                        <span className="badge bg-info">{result.classId.name}</span>
+                      </div>
+                    </td>
+                    <td className="d-none d-md-table-cell"><span className="badge bg-info">{result.classId.name}</span></td>
+                    <td className="d-none d-lg-table-cell small">{result.term}</td>
+                    <td className="d-none d-lg-table-cell small">{result.session}</td>
+                    <td className="fw-bold small">{result.overallTotal}</td>
+                    <td>
+                      <span className={`badge bg-${
+                        result.overallGrade === 'A' ? 'success' :
+                        result.overallGrade === 'B' ? 'primary' :
+                        result.overallGrade === 'C' ? 'info' :
+                        result.overallGrade === 'D' ? 'warning' : 'danger'
+                      }`}>
+                        {result.overallGrade}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`badge bg-${
+                        result.status === 'draft' ? 'secondary' :
+                        result.status === 'submitted' ? 'primary' :
+                        result.status === 'approved' ? 'success' :
+                        result.status === 'rejected' ? 'danger' : 'info'
+                      }`}>
+                        {result.status}
+                      </span>
+                    </td>
+                    <td className="d-none d-lg-table-cell">
+                      <small>{result.teacher.name}</small>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </>
   );
