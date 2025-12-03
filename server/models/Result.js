@@ -13,15 +13,10 @@ const subjectSchema = new mongoose.Schema({
 }, { _id: false });
 
 const resultSchema = new mongoose.Schema({
-    pdfPath: {
+  pdfBase64: {
     type: String,
-    default: null // Local file system path
+    default: null
   },
-  pdfUrl: {
-    type: String,
-    default: null // Public URL path for download
-  },
-  
   student: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Student',

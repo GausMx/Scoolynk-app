@@ -1,28 +1,14 @@
-// server/services/pdfResultService.js - NEW FILE
+// server/services/pdfResultService.js - MONGODB VERSION (NO FILES!)
 
 import PDFDocument from 'pdfkit';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 /**
- * Generate a PDF result for a student
+ * Generate a PDF result and return as Base64 string (stored in MongoDB)
  */
-export const generateResultPDF = async (result, school) => {
+export const generateResultPDFBase64 = async (result, school) => {
   return new Promise((resolve, reject) => {
     try {
-      // Create uploads directory if it doesn't exist
-      const uploadsDir = path.join(__dirname, '../../uploads/results');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-
-      // Generate unique filename
-      const filename = `result_${result.student.regNo}_${result.term.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
-      const filepath = path.join(uploadsDir, filename);
+      const chunks = [];
 
       // Create PDF document
       const doc = new PDFDocument({ 
@@ -30,10 +16,25 @@ export const generateResultPDF = async (result, school) => {
         margins: { top: 50, bottom: 50, left: 50, right: 50 }
       });
 
-      // Pipe to file
-      const stream = fs.createWriteStream(filepath);
-      doc.pipe(stream);
+      // Collect PDF data in memory (no file writing!)
+      doc.on('data', (chunk) => chunks.push(chunk));
+      
+      doc.on('end', () => {
+        const pdfBuffer = Buffer.concat(chunks);
+        const base64PDF = pdfBuffer.toString('base64');
+        resolve({
+          success: true,
+          base64: base64PDF,
+          size: pdfBuffer.length
+        });
+      });
 
+      doc.on('error', (error) => {
+        reject(error);
+      });
+
+      // ========== PDF CONTENT ==========
+      
       // Header - School Info
       doc.fontSize(20)
          .font('Helvetica-Bold')
@@ -58,7 +59,7 @@ export const generateResultPDF = async (result, school) => {
       
       doc.moveDown(1.5);
 
-      // Student Information Box
+      // Student Information
       const startY = doc.y;
       doc.fontSize(11)
          .font('Helvetica-Bold')
@@ -129,7 +130,6 @@ export const generateResultPDF = async (result, school) => {
       doc.font('Helvetica');
 
       result.subjects.forEach((subject, index) => {
-        // Add new page if needed
         if (rowY > 700) {
           doc.addPage();
           rowY = 50;
@@ -149,15 +149,11 @@ export const generateResultPDF = async (result, school) => {
       });
 
       // Draw line after subjects
-      doc.moveTo(col1, rowY)
-         .lineTo(560, rowY)
-         .stroke();
-
+      doc.moveTo(col1, rowY).lineTo(560, rowY).stroke();
       rowY += 10;
 
       // Overall Summary
-      doc.fontSize(10)
-         .font('Helvetica-Bold');
+      doc.fontSize(10).font('Helvetica-Bold');
       
       doc.text('TOTAL SCORE:', col1, rowY);
       doc.text(`${result.overallTotal}/${result.subjects.length * 100}`, col5, rowY);
@@ -172,7 +168,7 @@ export const generateResultPDF = async (result, school) => {
 
       rowY += 30;
 
-      // Affective Traits (if available)
+      // Affective Traits
       if (result.affectiveTraits && result.affectiveTraits.length > 0) {
         doc.fontSize(11)
            .font('Helvetica-Bold')
@@ -190,9 +186,8 @@ export const generateResultPDF = async (result, school) => {
         rowY += 10;
       }
 
-      // Comments Section
+      // Comments
       if (result.comments?.teacher || result.comments?.principal) {
-        // Add new page if needed
         if (rowY > 650) {
           doc.addPage();
           rowY = 50;
@@ -232,8 +227,7 @@ export const generateResultPDF = async (result, school) => {
         rowY = 50;
       }
 
-      doc.fontSize(9)
-         .font('Helvetica');
+      doc.fontSize(9).font('Helvetica');
       
       doc.text('_____________________', 50, rowY);
       doc.text('_____________________', 350, rowY);
@@ -255,25 +249,8 @@ export const generateResultPDF = async (result, school) => {
       // Finalize PDF
       doc.end();
 
-      stream.on('finish', () => {
-        resolve({
-          success: true,
-          filename,
-          filepath,
-          url: `/uploads/results/${filename}` // URL path for download
-        });
-      });
-
-      stream.on('error', (error) => {
-        reject(error);
-      });
-
     } catch (error) {
       reject(error);
     }
   });
-};
-
-export default {
-  generateResultPDF
 };

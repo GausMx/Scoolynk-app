@@ -5,8 +5,7 @@ import ResultTemplate from '../models/ResultTemplate.js';
 import Student from '../models/Student.js';
 import School from '../models/School.js';
 import SMSService from '../services/smsService.js';
-import { generateResultPDF } from '../services/pdfResultService.js';
-import fs from 'fs';  
+import { generateResultPDFBase64 } from '../services/pdfResultService.js';
 // ✅ CREATE RESULT TEMPLATE (Visual Builder)
 export const createResultTemplate = async (req, res) => {
   try {
@@ -347,25 +346,24 @@ export const sendResultToParent = async (req, res) => {
     const school = await School.findById(req.user.schoolId).select('name phone address');
 
     try {
-      // Generate PDF
+      // Generate PDF as Base64 (stored in memory, then in MongoDB)
       console.log('[SendResultToParent] Generating PDF...');
-      const pdfResult = await generateResultPDF(result, school);
+      const pdfResult = await generateResultPDFBase64(result, school);
 
       if (!pdfResult.success) {
         throw new Error('Failed to generate PDF');
       }
 
-      console.log('[SendResultToParent] PDF generated:', pdfResult.filename);
+      console.log('[SendResultToParent] PDF generated, size:', pdfResult.size, 'bytes');
 
-      // Store PDF path in result
-      result.pdfPath = pdfResult.filepath;
-      result.pdfUrl = pdfResult.url;
+      // Store Base64 PDF in MongoDB (no files!)
+      result.pdfBase64 = pdfResult.base64;
 
-      // Create download link (use your actual domain)
-      const baseUrl = process.env.APP_URL || 'https://yourschool.com';
+      // Create download link
+      const baseUrl = process.env.APP_URL || 'http://localhost:5000';
       const downloadLink = `${baseUrl}/api/results/download/${result._id}`;
 
-      // Prepare SMS message with download link
+      // Prepare SMS message
       const message = `Dear ${student.parentName || 'Parent'},\n\n` +
         `${result.term} result for ${student.name} (${result.classId.name}) is ready.\n\n` +
         `Overall: ${result.overallTotal}/${result.subjects.length * 100} (${result.overallAverage}%) - Grade ${result.overallGrade}\n` +
@@ -389,14 +387,15 @@ export const sendResultToParent = async (req, res) => {
         message: 'Result PDF generated and download link sent to parent successfully.',
         sentTo: student.parentPhone,
         pdfGenerated: true,
+        pdfSize: pdfResult.size,
         downloadLink
       });
 
-    } catch (smsError) {
-      console.error('[SMS Error]', smsError);
+    } catch (error) {
+      console.error('[SMS/PDF Error]', error);
       return res.status(500).json({ 
         message: 'Failed to send result to parent.',
-        error: smsError.message
+        error: error.message
       });
     }
   } catch (err) {
@@ -405,6 +404,7 @@ export const sendResultToParent = async (req, res) => {
   }
 };
 
+// REPLACE YOUR EXISTING sendMultipleResultsToParents FUNCTION WITH THIS:
 export const sendMultipleResultsToParents = async (req, res) => {
   try {
     const { resultIds } = req.body;
@@ -426,13 +426,12 @@ export const sendMultipleResultsToParents = async (req, res) => {
     }
 
     const school = await School.findById(req.user.schoolId).select('name phone address');
-    const baseUrl = process.env.APP_URL || 'https://yourschool.com';
+    const baseUrl = process.env.APP_URL || 'http://localhost:5000';
     
     const messages = [];
     const successfulSends = [];
     const failedSends = [];
 
-    // Generate PDFs for all results first
     console.log(`[SendMultipleResults] Generating ${results.length} PDFs...`);
     
     for (const result of results) {
@@ -447,8 +446,8 @@ export const sendMultipleResultsToParents = async (req, res) => {
       }
 
       try {
-        // Generate PDF
-        const pdfResult = await generateResultPDF(result, school);
+        // Generate PDF as Base64
+        const pdfResult = await generateResultPDFBase64(result, school);
 
         if (!pdfResult.success) {
           failedSends.push({
@@ -458,15 +457,14 @@ export const sendMultipleResultsToParents = async (req, res) => {
           continue;
         }
 
-        // Store PDF path in result
-        result.pdfPath = pdfResult.filepath;
-        result.pdfUrl = pdfResult.url;
+        // Store in MongoDB
+        result.pdfBase64 = pdfResult.base64;
         await result.save();
 
         // Create download link
         const downloadLink = `${baseUrl}/api/results/download/${result._id}`;
 
-        // Prepare SMS message
+        // Prepare SMS
         const message = `Dear ${student.parentName || 'Parent'},\n\n` +
           `${result.term} result for ${student.name} (${result.classId.name}) is ready.\n\n` +
           `Overall: ${result.overallTotal}/${result.subjects.length * 100} (${result.overallAverage}%) - Grade ${result.overallGrade}\n` +
@@ -526,6 +524,8 @@ export const sendMultipleResultsToParents = async (req, res) => {
     res.status(500).json({ message: 'Failed to send results to parents.' });
   }
 };
+
+// ADD THIS NEW FUNCTION (or replace if you have it):
 export const downloadResultPDF = async (req, res) => {
   try {
     const { resultId } = req.params;
@@ -539,29 +539,31 @@ export const downloadResultPDF = async (req, res) => {
       return res.status(404).json({ message: 'Result not found.' });
     }
 
-    if (!result.pdfPath || !fs.existsSync(result.pdfPath)) {
+    if (!result.pdfBase64) {
       return res.status(404).json({ 
-        message: 'PDF file not found. Please contact school to regenerate.' 
+        message: 'PDF not available. Please contact school to regenerate.' 
       });
     }
+
+    // Convert Base64 back to Buffer
+    const pdfBuffer = Buffer.from(result.pdfBase64, 'base64');
 
     // Set headers for PDF download
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition', 
-      `attachment; filename="Result_${result.student.regNo}_${result.term}.pdf"`
+      `attachment; filename="Result_${result.student.regNo}_${result.term.replace(/\s+/g, '_')}.pdf"`
     );
+    res.setHeader('Content-Length', pdfBuffer.length);
 
-    // Stream the file
-    const fileStream = fs.createReadStream(result.pdfPath);
-    fileStream.pipe(res);
+    // Send the PDF
+    res.send(pdfBuffer);
 
   } catch (err) {
     console.error('[DownloadResultPDF]', err);
     res.status(500).json({ message: 'Failed to download result PDF.' });
   }
-};
-// Get all results (for admin overview)
+};// Get all results (for admin overview)
 export const getAllResults = async (req, res) => {
   try {
     const { term, session, status, classId } = req.query;

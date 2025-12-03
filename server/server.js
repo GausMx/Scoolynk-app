@@ -79,21 +79,6 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // -----------------------------------------------------
-// 📁 SERVE STATIC FILES (Uploads Directory)
-// -----------------------------------------------------
-// Serve uploaded files (PDFs, images, etc.)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
-  maxAge: '1d', // Cache for 1 day
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.pdf')) {
-      res.set('Content-Type', 'application/pdf');
-    }
-  }
-}));
-
-console.log('📁 Static files served from:', path.join(__dirname, 'uploads'));
-
-// -----------------------------------------------------
 // 🚫 PREVENT API CACHING (CRITICAL FOR PWA)
 // -----------------------------------------------------
 app.use('/api', (req, res, next) => {
@@ -241,8 +226,8 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`🔥 Server running on port ${PORT}`);
-  console.log(`📁 Uploads directory: ${path.join(__dirname, 'uploads')}`);
   console.log(`🌐 CORS enabled for: ${allowedOrigins.join(', ')}`);
+  console.log(`📄 PDF storage: MongoDB (no file system)`);
 });
 
 // Handle unhandled promise rejections
