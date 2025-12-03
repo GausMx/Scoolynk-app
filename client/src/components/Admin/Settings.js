@@ -1,4 +1,4 @@
-// src/components/Admin/Settings.js - WITH MOBILE RESPONSIVE PAYMENT TAB USING BOOTSTRAP CLASSES
+// src/components/Admin/Settings.js - WITHOUT FEES TAB
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -252,20 +252,276 @@ const Settings = () => {
   // Profile Section
   const renderProfileSection = () => (
     <form onSubmit={handleProfileUpdate}>
-      {/* Profile form code unchanged */}
-      {/* ... */}
+      <div className="row g-4">
+        <div className="col-12">
+          <div className="card border-0 shadow-sm rounded-4 p-4">
+            <h5 className="text-primary mb-4">
+              <User size={20} className="me-2" />
+              School Information
+            </h5>
+            
+            <div className="row g-3">
+              <div className="col-md-6">
+                <label className="form-label fw-semibold">School Name *</label>
+                <input
+                  type="text"
+                  className="form-control rounded-3"
+                  value={profile.schoolName}
+                  onChange={(e) => setProfile({ ...profile, schoolName: e.target.value })}
+                  required
+                />
+              </div>
+              
+              <div className="col-md-6">
+                <label className="form-label fw-semibold">Phone Number *</label>
+                <input
+                  type="tel"
+                  className="form-control rounded-3"
+                  value={profile.phone}
+                  onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="col-12">
+                <label className="form-label fw-semibold">School Motto</label>
+                <textarea
+                  className="form-control rounded-3"
+                  rows="2"
+                  value={profile.motto}
+                  onChange={(e) => setProfile({ ...profile, motto: e.target.value })}
+                  placeholder="Enter your school motto..."
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-12">
+          <div className="card border-0 shadow-sm rounded-4 p-4 bg-light">
+            <h5 className="text-secondary mb-4">
+              <User size={20} className="me-2" />
+              Administrator Details (Read-only)
+            </h5>
+            
+            <div className="row g-3">
+              <div className="col-md-6">
+                <label className="form-label fw-semibold text-muted">Admin Name</label>
+                <input
+                  type="text"
+                  className="form-control rounded-3 bg-white"
+                  value={profile.name}
+                  disabled
+                />
+              </div>
+              
+              <div className="col-md-6">
+                <label className="form-label fw-semibold text-muted">Admin Email</label>
+                <input
+                  type="email"
+                  className="form-control rounded-3 bg-white"
+                  value={profile.email}
+                  disabled
+                />
+              </div>
+            </div>
+            <small className="text-muted mt-2">
+              <Lock size={14} className="me-1" />
+              Admin credentials cannot be changed from settings
+            </small>
+          </div>
+        </div>
+
+        <div className="col-12">
+          <div className="card border-0 shadow-sm rounded-4 p-4 border-start border-primary border-5">
+            <h5 className="text-primary mb-3">
+              <Lock size={20} className="me-2" />
+              School Registration Code
+            </h5>
+            
+            <div className="d-flex align-items-center gap-2 mb-3">
+              <input
+                type={showCode ? 'text' : 'password'}
+                className="form-control rounded-3 bg-light"
+                value={schoolCode}
+                readOnly
+                style={{ fontFamily: 'monospace', fontSize: '1.1rem', letterSpacing: '2px' }}
+              />
+              <button
+                type="button"
+                className="btn btn-outline-secondary rounded-3"
+                onClick={() => setShowCode(!showCode)}
+                title={showCode ? 'Hide code' : 'Show code'}
+              >
+                {showCode ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary rounded-3"
+                onClick={copySchoolCode}
+                title="Copy code"
+              >
+                {copied ? <Check size={18} /> : <Copy size={18} />}
+              </button>
+            </div>
+            
+            <div className="alert alert-info rounded-3 mb-0">
+              <small>
+                <strong>Note:</strong> Share this code with teachers and staff to register in your school. 
+                Keep it secure and don't share publicly.
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-12">
+          <div className="d-flex justify-content-end">
+            <button
+              type="submit"
+              className="btn btn-primary rounded-3 px-4"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
     </form>
   );
 
   // Security Section
   const renderSecuritySection = () => (
     <form onSubmit={handleSecurityUpdate}>
-      {/* Security form code unchanged */}
-      {/* ... */}
+      <div className="row justify-content-center">
+        <div className="col-lg-8">
+          <div className="card border-0 shadow-sm rounded-4 p-4">
+            <h5 className="text-primary mb-4">
+              <Lock size={20} className="me-2" />
+              Change Password
+            </h5>
+
+            <div className="alert alert-warning rounded-3 mb-4">
+              <small>
+                <strong>Password Requirements:</strong>
+                <ul className="mb-0 mt-2">
+                  <li>At least 6 characters long</li>
+                  <li>Mix of letters and numbers recommended</li>
+                  <li>Avoid using easily guessable passwords</li>
+                </ul>
+              </small>
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label fw-semibold">Current Password *</label>
+              <div className="input-group">
+                <input
+                  type={showPasswords.current ? 'text' : 'password'}
+                  className="form-control rounded-start-3"
+                  value={security.currentPassword}
+                  onChange={(e) => setSecurity({ ...security, currentPassword: e.target.value })}
+                  placeholder="Enter your current password"
+                  required
+                />
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary rounded-end-3"
+                  onClick={() => togglePasswordVisibility('current')}
+                >
+                  {showPasswords.current ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label fw-semibold">New Password *</label>
+              <div className="input-group">
+                <input
+                  type={showPasswords.new ? 'text' : 'password'}
+                  className="form-control rounded-start-3"
+                  value={security.newPassword}
+                  onChange={(e) => setSecurity({ ...security, newPassword: e.target.value })}
+                  placeholder="Enter new password"
+                  minLength={6}
+                  required
+                />
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary rounded-end-3"
+                  onClick={() => togglePasswordVisibility('new')}
+                >
+                  {showPasswords.new ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              {security.newPassword && security.newPassword.length < 6 && (
+                <small className="text-danger">Password must be at least 6 characters</small>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <label className="form-label fw-semibold">Confirm New Password *</label>
+              <div className="input-group">
+                <input
+                  type={showPasswords.confirm ? 'text' : 'password'}
+                  className="form-control rounded-start-3"
+                  value={security.confirmPassword}
+                  onChange={(e) => setSecurity({ ...security, confirmPassword: e.target.value })}
+                  placeholder="Confirm new password"
+                  minLength={6}
+                  required
+                />
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary rounded-end-3"
+                  onClick={() => togglePasswordVisibility('confirm')}
+                >
+                  {showPasswords.confirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              {security.confirmPassword && security.newPassword !== security.confirmPassword && (
+                <small className="text-danger">Passwords do not match</small>
+              )}
+            </div>
+
+            <div className="d-flex justify-content-end gap-2">
+              <button
+                type="button"
+                className="btn btn-outline-secondary rounded-3"
+                onClick={() => {
+                  setSecurity({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                  setShowPasswords({ current: false, new: false, confirm: false });
+                }}
+              >
+                Clear
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary rounded-3 px-4"
+                disabled={loading || security.newPassword !== security.confirmPassword || security.newPassword.length < 6}
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Updating...
+                  </>
+                ) : (
+                  'Change Password'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </form>
   );
 
-  // Payments Section WITH MOBILE RESPONSIVE BOOTSTRAP CLASSES
+  // Payments Section WITH BULK SEND FEATURE
   const renderPaymentsSection = () => {
     
     // SMS Balance Warning Component
@@ -339,11 +595,10 @@ const Settings = () => {
       }
     };
 
-    // Render student list with responsive table and Bootstrap classes
     const renderStudentList = (students, title, badgeClass, category) => (
       <div className="card border-0 shadow-sm rounded-4 p-4 mb-4">
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3">
-          <h5 className="mb-3 mb-md-0">
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h5 className="mb-0">
             <span className={`badge ${badgeClass} me-2`}>{students.length}</span>
             {title}
           </h5>
@@ -423,13 +678,13 @@ const Settings = () => {
         {/* SMS Balance Warning */}
         <SMSBalanceWarning />
         
-        {/* Bulk Send Payment Links Banner */}
+        {/* NEW: Bulk Send Payment Links Banner */}
         <div className="card border-0 shadow-sm rounded-4 mb-4 bg-gradient" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
           <div className="card-body p-4 text-white">
             <div className="row align-items-center">
-              <div className="col-12 col-md-8 mb-3 mb-md-0">
-                <h5 className="mb-2 d-flex align-items-center gap-2">
-                  <Send size={24} />
+              <div className="col-md-8">
+                <h5 className="mb-2">
+                  <Send size={24} className="me-2" />
                   Send Payment Links to All Students
                 </h5>
                 <p className="mb-0 opacity-75">
@@ -437,9 +692,9 @@ const Settings = () => {
                   Links remain valid until payment is completed (no expiry).
                 </p>
               </div>
-              <div className="col-12 col-md-4 text-md-end">
+              <div className="col-md-4 text-end">
                 <button
-                  className="btn btn-light btn-lg rounded-3 px-4 w-100 w-md-auto"
+                  className="btn btn-light btn-lg rounded-3 px-4"
                   onClick={sendBulkPaymentLinks}
                   disabled={sendingMessages}
                 >
@@ -462,7 +717,7 @@ const Settings = () => {
 
         {/* Stats Cards */}
         <div className="row g-3 mb-4">
-          <div className="col-12 col-md-4">
+          <div className="col-md-4">
             <div className="card bg-success text-white shadow-sm rounded-4 p-3">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
@@ -473,7 +728,7 @@ const Settings = () => {
               </div>
             </div>
           </div>
-          <div className="col-12 col-md-4">
+          <div className="col-md-4">
             <div className="card bg-warning text-white shadow-sm rounded-4 p-3">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
@@ -484,7 +739,7 @@ const Settings = () => {
               </div>
             </div>
           </div>
-          <div className="col-12 col-md-4">
+          <div className="col-md-4">
             <div className="card bg-danger text-white shadow-sm rounded-4 p-3">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
@@ -575,4 +830,4 @@ const Settings = () => {
   );
 };
 
-export default Settings;
+export default Settings;      
