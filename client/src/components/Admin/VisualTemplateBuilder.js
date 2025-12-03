@@ -1,5 +1,5 @@
 // src/components/Admin/VisualTemplateBuilder.js
-// Visual drag-and-drop template builder for non-tech admins
+// Visual drag-and-drop template builder for non-tech admins - Mobile Responsive
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -100,7 +100,7 @@ const VisualTemplateBuilder = ({
     existingTemplate?.components?.comments?.principal ?? true
   );
 
-  const [showPreview, setShowPreview] = useState(true);
+  const [showPreview, setShowPreview] = useState(false); // Changed default to false for mobile
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -281,14 +281,14 @@ const VisualTemplateBuilder = ({
   }
 
   return (
-    <div className="container-fluid py-4" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
-      {/* Header */}
+    <div className="container-fluid py-3 py-md-4" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
+      {/* Header - Mobile Optimized */}
       <div className="row mb-3">
         <div className="col-12 d-flex justify-content-between align-items-center">
-          <h4>
-            {existingTemplate ? 'Edit' : 'Create'} Result Template
+          <h4 className="mb-0 fs-5 fs-md-4">
+            {existingTemplate ? 'Edit' : 'Create'} Template
           </h4>
-          <button className="btn btn-outline-secondary" onClick={onClose}>
+          <button className="btn btn-outline-secondary btn-sm" onClick={onClose}>
             <X size={18} />
           </button>
         </div>
@@ -301,65 +301,64 @@ const VisualTemplateBuilder = ({
         </div>
       )}
 
-      {/* Basic Info */}
-      <div className="row mb-4 gx-2">
-        <div className="col-12 col-md-4 mb-3 mb-md-0">
-          <label className="form-label">Template Name *</label>
+      {/* Basic Info - Mobile Optimized */}
+      <div className="row g-2 g-md-3 mb-3 mb-md-4">
+        <div className="col-12 col-md-4">
+          <label className="form-label small fw-semibold">Template Name *</label>
           <input
             type="text"
-            className="form-control"
+            className="form-control form-control-sm"
             value={templateName}
             onChange={(e) => setTemplateName(e.target.value)}
             placeholder="e.g., Primary 3 Result Sheet"
           />
         </div>
-        <div className="col-12 col-md-4 mb-3 mb-md-0">
-          <label className="form-label">Term *</label>
-          <select className="form-select" value={term} onChange={(e) => setTerm(e.target.value)}>
+        <div className="col-6 col-md-4">
+          <label className="form-label small fw-semibold">Term *</label>
+          <select className="form-select form-select-sm" value={term} onChange={(e) => setTerm(e.target.value)}>
             <option value="First Term">First Term</option>
             <option value="Second Term">Second Term</option>
             <option value="Third Term">Third Term</option>
           </select>
         </div>
-        <div className="col-12 col-md-4">
-          <label className="form-label">Session *</label>
+        <div className="col-6 col-md-4">
+          <label className="form-label small fw-semibold">Session *</label>
           <input
             type="text"
-            className="form-control"
+            className="form-control form-control-sm"
             value={session}
             onChange={(e) => setSession(e.target.value)}
-            placeholder="e.g., 2024/2025"
+            placeholder="2024/2025"
           />
         </div>
       </div>
 
-      {/* Toggle Preview */}
+      {/* Toggle Preview - Mobile Optimized */}
       <div className="row mb-3">
         <div className="col-12">
           <button 
-            className="btn btn-sm btn-outline-primary d-flex align-items-center"
+            className="btn btn-sm btn-outline-primary d-flex align-items-center w-100 w-md-auto justify-content-center"
             onClick={() => setShowPreview(!showPreview)}
           >
             {showPreview ? <EyeOff size={16} /> : <Eye size={16} />}
-            <span className="ms-1">{showPreview ? 'Hide' : 'Show'} Preview</span>
+            <span className="ms-2">{showPreview ? 'Hide' : 'Show'} Preview</span>
           </button>
         </div>
       </div>
 
-      <div className="row gx-3">
+      <div className="row g-2 g-md-3">
         {/* Configuration Panel */}
-        <div className={showPreview ? 'col-12 col-lg-6 mb-4 mb-lg-0' : 'col-12'}>
+        <div className={showPreview ? 'col-12 col-lg-6 mb-3 mb-lg-0' : 'col-12'}>
           <div className="card h-100 d-flex flex-column">
-            <div className="card-header bg-primary text-white">
-              <h6 className="mb-0">Template Components</h6>
+            <div className="card-header bg-primary text-white py-2">
+              <h6 className="mb-0 small">Template Components</h6>
             </div>
-            <div className="card-body overflow-auto flex-grow-1">
-              {/* Sections: Header, Student Info, Scores Table, etc. */}
-
+            <div className="card-body overflow-auto flex-grow-1 p-2 p-md-3">
+              
               {/* Header Section */}
-              <div className="border rounded mb-3">
+              <div className="border rounded mb-2 mb-md-3">
                 <div 
-                  className="d-flex justify-content-between align-items-center p-3 bg-light"
+                  className="d-flex justify-content-between align-items-center p-2 p-md-3 bg-light"
                   role="button"
                   onClick={() => toggleExpanded('header')}
                 >
@@ -372,14 +371,14 @@ const VisualTemplateBuilder = ({
                       onClick={(e) => e.stopPropagation()}
                       id="headerToggle"
                     />
-                    <label className="form-check-label fw-bold" htmlFor="headerToggle">
+                    <label className="form-check-label fw-bold small" htmlFor="headerToggle">
                       School Header
                     </label>
                   </div>
-                  {expanded.header ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  {expanded.header ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </div>
                 {expanded.header && components.header && (
-                  <div className="p-3">
+                  <div className="p-2 p-md-3">
                     <small className="text-muted">
                       Includes school name, logo, address, and motto
                     </small>
@@ -388,9 +387,9 @@ const VisualTemplateBuilder = ({
               </div>
 
               {/* Student Info Section */}
-              <div className="border rounded mb-3">
+              <div className="border rounded mb-2 mb-md-3">
                 <div 
-                  className="d-flex justify-content-between align-items-center p-3 bg-light"
+                  className="d-flex justify-content-between align-items-center p-2 p-md-3 bg-light"
                   role="button"
                   onClick={() => toggleExpanded('studentInfo')}
                 >
@@ -403,14 +402,14 @@ const VisualTemplateBuilder = ({
                       onClick={(e) => e.stopPropagation()}
                       id="studentInfoToggle"
                     />
-                    <label className="form-check-label fw-bold" htmlFor="studentInfoToggle">
+                    <label className="form-check-label fw-bold small" htmlFor="studentInfoToggle">
                       Student Information
                     </label>
                   </div>
-                  {expanded.studentInfo ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  {expanded.studentInfo ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </div>
                 {expanded.studentInfo && components.studentInfo && (
-                  <div className="p-3">
+                  <div className="p-2 p-md-3">
                     <small className="text-muted">
                       Includes name, registration number, class, and session
                     </small>
@@ -419,9 +418,9 @@ const VisualTemplateBuilder = ({
               </div>
 
               {/* Scores Table Section */}
-              <div className="border rounded mb-3">
+              <div className="border rounded mb-2 mb-md-3">
                 <div 
-                  className="d-flex justify-content-between align-items-center p-3 bg-light"
+                  className="d-flex justify-content-between align-items-center p-2 p-md-3 bg-light"
                   role="button"
                   onClick={() => toggleExpanded('scoresTable')}
                 >
@@ -434,14 +433,14 @@ const VisualTemplateBuilder = ({
                       onClick={(e) => e.stopPropagation()}
                       id="scoresTableToggle"
                     />
-                    <label className="form-check-label fw-bold" htmlFor="scoresTableToggle">
+                    <label className="form-check-label fw-bold small" htmlFor="scoresTableToggle">
                       Subject Scores Table
                     </label>
                   </div>
-                  {expanded.scoresTable ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  {expanded.scoresTable ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </div>
                 {expanded.scoresTable && components.scoresTable && (
-                  <div className="p-3">
+                  <div className="p-2 p-md-3">
                     <div className="mb-3">
                       <label className="form-label small">Default Number of Subject Rows</label>
                       <input
@@ -457,7 +456,7 @@ const VisualTemplateBuilder = ({
 
                     <label className="form-label small fw-bold">Score Columns</label>
                     {scoreColumns.map((col, index) => (
-                      <div key={index} className="d-flex flex-column flex-sm-row gap-2 mb-2">
+                      <div key={index} className="d-flex gap-2 mb-2">
                         <input
                           type="text"
                           className="form-control form-control-sm flex-grow-1"
@@ -472,12 +471,12 @@ const VisualTemplateBuilder = ({
                           value={col.maxScore}
                           onChange={(e) => updateScoreColumn(index, 'maxScore', Number(e.target.value))}
                           placeholder="Max"
-                          style={{ minWidth: '80px' }}
+                          style={{ width: '70px' }}
                           disabled={col.calculated}
                         />
                         {!col.calculated && (
                           <button
-                            className="btn btn-sm btn-outline-danger"
+                            className="btn btn-sm btn-outline-danger px-2"
                             onClick={() => removeScoreColumn(index)}
                             type="button"
                           >
@@ -487,7 +486,7 @@ const VisualTemplateBuilder = ({
                       </div>
                     ))}
                     <button
-                      className="btn btn-sm btn-outline-primary mt-2"
+                      className="btn btn-sm btn-outline-primary mt-2 w-100"
                       onClick={addScoreColumn}
                       type="button"
                     >
@@ -499,9 +498,9 @@ const VisualTemplateBuilder = ({
               </div>
 
               {/* Affective Traits Section */}
-              <div className="border rounded mb-3">
+              <div className="border rounded mb-2 mb-md-3">
                 <div 
-                  className="d-flex justify-content-between align-items-center p-3 bg-light"
+                  className="d-flex justify-content-between align-items-center p-2 p-md-3 bg-light"
                   role="button"
                   onClick={() => toggleExpanded('affectiveTraits')}
                 >
@@ -514,17 +513,17 @@ const VisualTemplateBuilder = ({
                       onClick={(e) => e.stopPropagation()}
                       id="affectiveTraitsToggle"
                     />
-                    <label className="form-check-label fw-bold" htmlFor="affectiveTraitsToggle">
+                    <label className="form-check-label fw-bold small" htmlFor="affectiveTraitsToggle">
                       Affective Traits
                     </label>
                   </div>
-                  {expanded.affectiveTraits ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  {expanded.affectiveTraits ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </div>
                 {expanded.affectiveTraits && components.affectiveTraits && (
-                  <div className="p-3">
+                  <div className="p-2 p-md-3">
                     <small className="text-muted d-block mb-2">Rating scale: 1-5</small>
                     {affectiveTraits.map((trait, index) => (
-                      <div key={index} className="d-flex flex-column flex-sm-row gap-2 mb-2">
+                      <div key={index} className="d-flex gap-2 mb-2">
                         <input
                           type="text"
                           className="form-control form-control-sm flex-grow-1"
@@ -533,7 +532,7 @@ const VisualTemplateBuilder = ({
                           placeholder="Trait name"
                         />
                         <button
-                          className="btn btn-sm btn-outline-danger"
+                          className="btn btn-sm btn-outline-danger px-2"
                           onClick={() => removeAffectiveTrait(index)}
                           type="button"
                         >
@@ -542,7 +541,7 @@ const VisualTemplateBuilder = ({
                       </div>
                     ))}
                     <button
-                      className="btn btn-sm btn-outline-primary mt-2"
+                      className="btn btn-sm btn-outline-primary mt-2 w-100"
                       onClick={addAffectiveTrait}
                       type="button"
                     >
@@ -554,9 +553,9 @@ const VisualTemplateBuilder = ({
               </div>
 
               {/* Fees Section */}
-              <div className="border rounded mb-3">
+              <div className="border rounded mb-2 mb-md-3">
                 <div 
-                  className="d-flex justify-content-between align-items-center p-3 bg-light"
+                  className="d-flex justify-content-between align-items-center p-2 p-md-3 bg-light"
                   role="button"
                   onClick={() => toggleExpanded('fees')}
                 >
@@ -569,16 +568,16 @@ const VisualTemplateBuilder = ({
                       onClick={(e) => e.stopPropagation()}
                       id="feesToggle"
                     />
-                    <label className="form-check-label fw-bold" htmlFor="feesToggle">
+                    <label className="form-check-label fw-bold small" htmlFor="feesToggle">
                       School Fees
                     </label>
                   </div>
-                  {expanded.fees ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  {expanded.fees ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </div>
                 {expanded.fees && components.fees && (
-                  <div className="p-3">
+                  <div className="p-2 p-md-3">
                     {feeTypes.map((fee, index) => (
-                      <div key={index} className="d-flex flex-column flex-sm-row gap-2 mb-2">
+                      <div key={index} className="d-flex gap-2 mb-2">
                         <input
                           type="text"
                           className="form-control form-control-sm flex-grow-1"
@@ -587,7 +586,7 @@ const VisualTemplateBuilder = ({
                           placeholder="Fee type"
                         />
                         <button
-                          className="btn btn-sm btn-outline-danger"
+                          className="btn btn-sm btn-outline-danger px-2"
                           onClick={() => removeFeeType(index)}
                           type="button"
                         >
@@ -596,7 +595,7 @@ const VisualTemplateBuilder = ({
                       </div>
                     ))}
                     <button
-                      className="btn btn-sm btn-outline-primary mt-2"
+                      className="btn btn-sm btn-outline-primary mt-2 w-100"
                       onClick={addFeeType}
                       type="button"
                     >
@@ -608,8 +607,8 @@ const VisualTemplateBuilder = ({
               </div>
 
               {/* Attendance Section */}
-              <div className="border rounded mb-3">
-                <div className="d-flex justify-content-between align-items-center p-3 bg-light">
+              <div className="border rounded mb-2 mb-md-3">
+                <div className="d-flex justify-content-between align-items-center p-2 p-md-3 bg-light">
                   <div className="form-check mb-0">
                     <input
                       className="form-check-input"
@@ -618,7 +617,7 @@ const VisualTemplateBuilder = ({
                       onChange={() => toggleComponent('attendance')}
                       id="attendanceToggle"
                     />
-                    <label className="form-check-label fw-bold" htmlFor="attendanceToggle">
+                    <label className="form-check-label fw-bold small" htmlFor="attendanceToggle">
                       Attendance
                     </label>
                   </div>
@@ -626,9 +625,9 @@ const VisualTemplateBuilder = ({
               </div>
 
               {/* Comments Section */}
-              <div className="border rounded mb-3">
+              <div className="border rounded mb-2 mb-md-3">
                 <div 
-                  className="d-flex justify-content-between align-items-center p-3 bg-light"
+                  className="d-flex justify-content-between align-items-center p-2 p-md-3 bg-light"
                   role="button"
                   onClick={() => toggleExpanded('comments')}
                 >
@@ -641,14 +640,14 @@ const VisualTemplateBuilder = ({
                       onClick={(e) => e.stopPropagation()}
                       id="commentsToggle"
                     />
-                    <label className="form-check-label fw-bold" htmlFor="commentsToggle">
+                    <label className="form-check-label fw-bold small" htmlFor="commentsToggle">
                       Comments
                     </label>
                   </div>
-                  {expanded.comments ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  {expanded.comments ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </div>
                 {expanded.comments && components.comments && (
-                  <div className="p-3">
+                  <div className="p-2 p-md-3">
                     <div className="form-check mb-2">
                       <input
                         className="form-check-input"
@@ -657,7 +656,7 @@ const VisualTemplateBuilder = ({
                         onChange={(e) => setEnableTeacherComment(e.target.checked)}
                         id="teacherCommentToggle"
                       />
-                      <label className="form-check-label" htmlFor="teacherCommentToggle">Teacher's Comment</label>
+                      <label className="form-check-label small" htmlFor="teacherCommentToggle">Teacher's Comment</label>
                     </div>
                     <div className="form-check">
                       <input
@@ -667,15 +666,15 @@ const VisualTemplateBuilder = ({
                         onChange={(e) => setEnablePrincipalComment(e.target.checked)}
                         id="principalCommentToggle"
                       />
-                      <label className="form-check-label" htmlFor="principalCommentToggle">Principal's Comment</label>
+                      <label className="form-check-label small" htmlFor="principalCommentToggle">Principal's Comment</label>
                     </div>
                   </div>
                 )}
               </div>
 
               {/* Signatures Section */}
-              <div className="border rounded mb-3">
-                <div className="d-flex justify-content-between align-items-center p-3 bg-light">
+              <div className="border rounded mb-2 mb-md-3">
+                <div className="d-flex justify-content-between align-items-center p-2 p-md-3 bg-light">
                   <div className="form-check mb-0">
                     <input
                       className="form-check-input"
@@ -684,7 +683,7 @@ const VisualTemplateBuilder = ({
                       onChange={() => toggleComponent('signatures')}
                       id="signaturesToggle"
                     />
-                    <label className="form-check-label fw-bold" htmlFor="signaturesToggle">
+                    <label className="form-check-label fw-bold small" htmlFor="signaturesToggle">
                       Signatures
                     </label>
                   </div>
@@ -694,10 +693,10 @@ const VisualTemplateBuilder = ({
             </div>
           </div>
 
-          {/* Save Button */}
-          <div className="mt-3">
+          {/* Save Button - Mobile Optimized */}
+          <div className="mt-2 mt-md-3">
             <button 
-              className="btn btn-success btn-lg w-100"
+              className="btn btn-success w-100 py-2"
               onClick={handleSave}
               disabled={saving}
               type="button"
@@ -717,31 +716,31 @@ const VisualTemplateBuilder = ({
           </div>
         </div>
 
-        {/* Live Preview Panel */}
+        {/* Live Preview Panel - Mobile Optimized */}
         {showPreview && (
           <div className="col-12 col-lg-6">
-            <div className="card sticky-top" style={{ top: '20px' }}>
-              <div className="card-header bg-info text-white">
-                <h6 className="mb-0">Live Preview</h6>
+            <div className="card position-sticky" style={{ top: '20px' }}>
+              <div className="card-header bg-info text-white py-2">
+                <h6 className="mb-0 small">Live Preview</h6>
               </div>
-              <div className="card-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-                <div className="border p-4 bg-white" style={{ fontSize: '14px' }}>
+              <div className="card-body p-2 p-md-4" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                <div className="border p-2 p-md-4 bg-white" style={{ fontSize: '12px' }}>
                   
                   {/* Header */}
                   {components.header && (
-                    <div className="text-center mb-4 pb-3 border-bottom">
-                      <h5 className="fw-bold mb-1">{schoolInfo.name}</h5>
-                      <small className="text-muted">{schoolInfo.address}</small>
+                    <div className="text-center mb-3 pb-2 border-bottom">
+                      <h6 className="fw-bold mb-1 small">{schoolInfo.name}</h6>
+                      <small className="text-muted" style={{ fontSize: '10px' }}>{schoolInfo.address}</small>
                       {schoolInfo.motto && (
-                        <div className="fst-italic text-muted small mt-1">"{schoolInfo.motto}"</div>
+                        <div className="fst-italic text-muted" style={{ fontSize: '10px' }}>"{schoolInfo.motto}"</div>
                       )}
-                      <div className="mt-2 fw-bold">{term} Report Card - {session}</div>
+                      <div className="mt-1 fw-bold" style={{ fontSize: '11px' }}>{term} Report - {session}</div>
                     </div>
                   )}
 
                   {/* Student Info */}
                   {components.studentInfo && (
-                    <div className="row mb-3">
+                    <div className="row mb-2" style={{ fontSize: '10px' }}>
                       <div className="col-6">
                         <small><strong>Name:</strong> Student Name</small>
                       </div>
@@ -759,49 +758,51 @@ const VisualTemplateBuilder = ({
 
                   {/* Scores Table */}
                   {components.scoresTable && (
-                    <div className="mb-3">
-                      <h6 className="fw-bold mb-2">Academic Performance</h6>
-                      <table className="table table-sm table-bordered">
-                        <thead className="table-light">
-                          <tr>
-                            <th>Subject</th>
-                            {scoreColumns.filter(c => c.enabled).map((col, i) => (
-                              <th key={i} className="text-center">
-                                {col.name}
-                                {col.maxScore > 0 && <small className="d-block text-muted">({col.maxScore})</small>}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>Mathematics</td>
-                            {scoreColumns.filter(c => c.enabled).map((col, i) => (
-                              <td key={i} className="text-center">-</td>
-                            ))}
-                          </tr>
-                          <tr>
-                            <td>English</td>
-                            {scoreColumns.filter(c => c.enabled).map((col, i) => (
-                              <td key={i} className="text-center">-</td>
-                            ))}
-                          </tr>
-                          <tr>
-                            <td colSpan={scoreColumns.filter(c => c.enabled).length + 1} className="text-muted text-center">
-                              <small>+ More subjects...</small>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                    <div className="mb-2">
+                      <h6 className="fw-bold mb-1 small">Academic Performance</h6>
+                      <div className="table-responsive">
+                        <table className="table table-sm table-bordered" style={{ fontSize: '10px' }}>
+                          <thead className="table-light">
+                            <tr>
+                              <th>Subject</th>
+                              {scoreColumns.filter(c => c.enabled).slice(0, 3).map((col, i) => (
+                                <th key={i} className="text-center">
+                                  {col.name}
+                                  {col.maxScore > 0 && <small className="d-block text-muted">({col.maxScore})</small>}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td>Mathematics</td>
+                              {scoreColumns.filter(c => c.enabled).slice(0, 3).map((col, i) => (
+                                <td key={i} className="text-center">-</td>
+                              ))}
+                            </tr>
+                            <tr>
+                              <td>English</td>
+                              {scoreColumns.filter(c => c.enabled).slice(0, 3).map((col, i) => (
+                                <td key={i} className="text-center">-</td>
+                              ))}
+                            </tr>
+                            <tr>
+                              <td colSpan={scoreColumns.filter(c => c.enabled).slice(0, 3).length + 1} className="text-muted text-center">
+                                <small>+ More subjects...</small>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   )}
 
                   {/* Affective Traits */}
                   {components.affectiveTraits && affectiveTraits.length > 0 && (
-                    <div className="mb-3">
-                      <h6 className="fw-bold mb-2">Affective Traits (1-5)</h6>
-                      <div className="row">
-                        {affectiveTraits.map((trait, i) => (
+                    <div className="mb-2">
+                      <h6 className="fw-bold mb-1 small">Affective Traits (1-5)</h6>
+                      <div className="row" style={{ fontSize: '10px' }}>
+                        {affectiveTraits.slice(0, 6).map((trait, i) => (
                           <div key={i} className="col-6 mb-1">
                             <small>{trait.name}: ___</small>
                           </div>
@@ -812,10 +813,10 @@ const VisualTemplateBuilder = ({
 
                   {/* Fees */}
                   {components.fees && feeTypes.length > 0 && (
-                    <div className="mb-3">
-                      <h6 className="fw-bold mb-2">School Fees</h6>
-                      {feeTypes.map((fee, i) => (
-                        <div key={i} className="d-flex justify-content-between mb-1">
+                    <div className="mb-2">
+                      <h6 className="fw-bold mb-1 small">School Fees</h6>
+                      {feeTypes.slice(0, 4).map((fee, i) => (
+                        <div key={i} className="d-flex justify-content-between mb-1" style={{ fontSize: '10px' }}>
                           <small>{fee.name}:</small>
                           <small>₦ ________</small>
                         </div>
@@ -825,9 +826,9 @@ const VisualTemplateBuilder = ({
 
                   {/* Attendance */}
                   {components.attendance && (
-                    <div className="mb-3">
-                      <h6 className="fw-bold mb-2">Attendance</h6>
-                      <div className="row">
+                    <div className="mb-2">
+                      <h6 className="fw-bold mb-1 small">Attendance</h6>
+                      <div className="row" style={{ fontSize: '10px' }}>
                         <div className="col-4">
                           <small>Opened: ___</small>
                         </div>
@@ -843,11 +844,11 @@ const VisualTemplateBuilder = ({
 
                   {/* Comments */}
                   {components.comments && (
-                    <div className="mb-3">
+                    <div className="mb-2">
                       {enableTeacherComment && (
                         <div className="mb-2">
                           <small className="fw-bold">Teacher's Comment:</small>
-                          <div className="border p-2 mt-1" style={{ minHeight: '40px' }}>
+                          <div className="border p-2 mt-1" style={{ minHeight: '30px', fontSize: '10px' }}>
                             <small className="text-muted">Comment text will appear here...</small>
                           </div>
                         </div>
@@ -855,7 +856,7 @@ const VisualTemplateBuilder = ({
                       {enablePrincipalComment && (
                         <div>
                           <small className="fw-bold">Principal's Comment:</small>
-                          <div className="border p-2 mt-1" style={{ minHeight: '40px' }}>
+                          <div className="border p-2 mt-1" style={{ minHeight: '30px', fontSize: '10px' }}>
                             <small className="text-muted">Comment text will appear here...</small>
                           </div>
                         </div>
@@ -865,7 +866,7 @@ const VisualTemplateBuilder = ({
 
                   {/* Signatures */}
                   {components.signatures && (
-                    <div className="row mt-4">
+                    <div className="row mt-3" style={{ fontSize: '10px' }}>
                       <div className="col-6">
                         <div className="border-top pt-2">
                           <small>Teacher's Signature</small>
