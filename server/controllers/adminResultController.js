@@ -5,7 +5,8 @@ import ResultTemplate from '../models/ResultTemplate.js';
 import Student from '../models/Student.js';
 import School from '../models/School.js';
 import SMSService from '../services/smsService.js';
-
+import { generateResultPDF } from '../services/pdfResultService.js';
+import fs from 'fs';  
 // ✅ CREATE RESULT TEMPLATE (Visual Builder)
 export const createResultTemplate = async (req, res) => {
   try {
@@ -317,7 +318,6 @@ export const reviewResult = async (req, res) => {
   }
 };
 
-// Send approved result to parent via SMS
 export const sendResultToParent = async (req, res) => {
   try {
     const { resultId } = req.params;
@@ -344,32 +344,58 @@ export const sendResultToParent = async (req, res) => {
       });
     }
 
-    const school = await School.findById(req.user.schoolId).select('name phone');
-
-    // Prepare SMS message
-    const message = `Dear ${student.parentName || 'Parent'},\n\n` +
-      `${result.term} result for ${student.name} (${result.classId.name}) is ready.\n\n` +
-      `Overall: ${result.overallTotal}/${result.subjects.length * 100} (${result.overallAverage}%) - ${result.overallGrade}\n` +
-      `Position: ${result.overallPosition || 'N/A'}\n\n` +
-      `Teacher's Comment: ${result.comments.teacher || 'N/A'}\n\n` +
-      `Visit school for full result.\n\n` +
-      `${school.name}\n${school.phone}`;
+    const school = await School.findById(req.user.schoolId).select('name phone address');
 
     try {
-      await SMSService.sendMessage(student.parentPhone, message, school);
+      // Generate PDF
+      console.log('[SendResultToParent] Generating PDF...');
+      const pdfResult = await generateResultPDF(result, school);
+
+      if (!pdfResult.success) {
+        throw new Error('Failed to generate PDF');
+      }
+
+      console.log('[SendResultToParent] PDF generated:', pdfResult.filename);
+
+      // Store PDF path in result
+      result.pdfPath = pdfResult.filepath;
+      result.pdfUrl = pdfResult.url;
+
+      // Create download link (use your actual domain)
+      const baseUrl = process.env.APP_URL || 'https://yourschool.com';
+      const downloadLink = `${baseUrl}/api/results/download/${result._id}`;
+
+      // Prepare SMS message with download link
+      const message = `Dear ${student.parentName || 'Parent'},\n\n` +
+        `${result.term} result for ${student.name} (${result.classId.name}) is ready.\n\n` +
+        `Overall: ${result.overallTotal}/${result.subjects.length * 100} (${result.overallAverage}%) - Grade ${result.overallGrade}\n` +
+        `Position: ${result.overallPosition || 'N/A'}\n\n` +
+        `Download full result PDF:\n${downloadLink}\n\n` +
+        `Or visit school to collect printed copy.\n\n` +
+        `${school.name}\n${school.phone}`;
+
+      // Send SMS
+      const smsResult = await SMSService.sendSMS(student.parentPhone, message);
+
+      if (!smsResult.success) {
+        throw new Error(smsResult.error || 'Failed to send SMS');
+      }
 
       result.status = 'sent';
       result.sentToParentAt = new Date();
       await result.save();
 
       res.json({ 
-        message: 'Result sent to parent successfully.',
-        sentTo: student.parentPhone
+        message: 'Result PDF generated and download link sent to parent successfully.',
+        sentTo: student.parentPhone,
+        pdfGenerated: true,
+        downloadLink
       });
+
     } catch (smsError) {
       console.error('[SMS Error]', smsError);
       return res.status(500).json({ 
-        message: 'Failed to send SMS to parent.',
+        message: 'Failed to send result to parent.',
         error: smsError.message
       });
     }
@@ -379,7 +405,6 @@ export const sendResultToParent = async (req, res) => {
   }
 };
 
-// Send multiple approved results to parents
 export const sendMultipleResultsToParents = async (req, res) => {
   try {
     const { resultIds } = req.body;
@@ -400,11 +425,16 @@ export const sendMultipleResultsToParents = async (req, res) => {
       return res.status(404).json({ message: 'No approved results found.' });
     }
 
-    const school = await School.findById(req.user.schoolId).select('name phone');
+    const school = await School.findById(req.user.schoolId).select('name phone address');
+    const baseUrl = process.env.APP_URL || 'https://yourschool.com';
+    
     const messages = [];
     const successfulSends = [];
     const failedSends = [];
 
+    // Generate PDFs for all results first
+    console.log(`[SendMultipleResults] Generating ${results.length} PDFs...`);
+    
     for (const result of results) {
       const student = result.student;
 
@@ -416,20 +446,51 @@ export const sendMultipleResultsToParents = async (req, res) => {
         continue;
       }
 
-      const message = `Dear ${student.parentName || 'Parent'},\n\n` +
-        `${result.term} result for ${student.name} (${result.classId.name}) is ready.\n\n` +
-        `Overall: ${result.overallTotal}/${result.subjects.length * 100} (${result.overallAverage}%) - ${result.overallGrade}\n` +
-        `Position: ${result.overallPosition || 'N/A'}\n\n` +
-        `Teacher's Comment: ${result.comments.teacher || 'N/A'}\n\n` +
-        `Visit school for full result.\n\n` +
-        `${school.name}\n${school.phone}`;
+      try {
+        // Generate PDF
+        const pdfResult = await generateResultPDF(result, school);
 
-      messages.push({
-        to: student.parentPhone,
-        message,
-        resultId: result._id
-      });
+        if (!pdfResult.success) {
+          failedSends.push({
+            studentName: student.name,
+            reason: 'PDF generation failed'
+          });
+          continue;
+        }
+
+        // Store PDF path in result
+        result.pdfPath = pdfResult.filepath;
+        result.pdfUrl = pdfResult.url;
+        await result.save();
+
+        // Create download link
+        const downloadLink = `${baseUrl}/api/results/download/${result._id}`;
+
+        // Prepare SMS message
+        const message = `Dear ${student.parentName || 'Parent'},\n\n` +
+          `${result.term} result for ${student.name} (${result.classId.name}) is ready.\n\n` +
+          `Overall: ${result.overallTotal}/${result.subjects.length * 100} (${result.overallAverage}%) - Grade ${result.overallGrade}\n` +
+          `Position: ${result.overallPosition || 'N/A'}\n\n` +
+          `Download full result PDF:\n${downloadLink}\n\n` +
+          `Or visit school to collect printed copy.\n\n` +
+          `${school.name}\n${school.phone}`;
+
+        messages.push({
+          to: student.parentPhone,
+          message,
+          resultId: result._id
+        });
+
+      } catch (pdfError) {
+        console.error('[PDF Generation Error]', pdfError);
+        failedSends.push({
+          studentName: student.name,
+          reason: 'PDF generation error: ' + pdfError.message
+        });
+      }
     }
+
+    console.log(`[SendMultipleResults] Sending ${messages.length} SMS messages...`);
 
     // Send all messages
     const smsResults = await SMSService.sendBulkMessages(messages);
@@ -448,15 +509,16 @@ export const sendMultipleResultsToParents = async (req, res) => {
       } else {
         failedSends.push({
           resultId: messageData.resultId,
-          reason: smsResult.error || 'Unknown error'
+          reason: smsResult.error || 'Unknown SMS error'
         });
       }
     }
 
     res.json({
-      message: `Sent ${successfulSends.length}/${messages.length} results successfully.`,
+      message: `Sent ${successfulSends.length}/${messages.length} results with PDF links successfully.`,
       successCount: successfulSends.length,
       failureCount: failedSends.length,
+      pdfsGenerated: messages.length,
       failed: failedSends
     });
   } catch (err) {
@@ -464,7 +526,41 @@ export const sendMultipleResultsToParents = async (req, res) => {
     res.status(500).json({ message: 'Failed to send results to parents.' });
   }
 };
+export const downloadResultPDF = async (req, res) => {
+  try {
+    const { resultId } = req.params;
 
+    const result = await Result.findOne({
+      _id: resultId,
+      status: { $in: ['approved', 'sent'] }
+    }).populate('student', 'name regNo');
+
+    if (!result) {
+      return res.status(404).json({ message: 'Result not found.' });
+    }
+
+    if (!result.pdfPath || !fs.existsSync(result.pdfPath)) {
+      return res.status(404).json({ 
+        message: 'PDF file not found. Please contact school to regenerate.' 
+      });
+    }
+
+    // Set headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition', 
+      `attachment; filename="Result_${result.student.regNo}_${result.term}.pdf"`
+    );
+
+    // Stream the file
+    const fileStream = fs.createReadStream(result.pdfPath);
+    fileStream.pipe(res);
+
+  } catch (err) {
+    console.error('[DownloadResultPDF]', err);
+    res.status(500).json({ message: 'Failed to download result PDF.' });
+  }
+};
 // Get all results (for admin overview)
 export const getAllResults = async (req, res) => {
   try {

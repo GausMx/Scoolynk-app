@@ -41,7 +41,8 @@ import {
   reviewResult,
   sendResultToParent,
   sendMultipleResultsToParents,
-  getAllResults
+  getAllResults,
+  downloadResultPDF
 } from '../controllers/adminResultController.js';
 
 const router = express.Router();
@@ -55,6 +56,8 @@ router.post('/templates', protect, requireRole('admin'), createResultTemplate);
 
 // Get all templates
 router.get('/templates', protect, requireRole('admin'), getResultTemplates);
+
+router.get('/results/download/:resultId', downloadResultPDF);
 
 // Get single template by ID
 router.get('/templates/:id', protect, requireRole('admin'), getResultTemplate);

@@ -4,18 +4,19 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Security
-import helmet from "helmet";
-import rateLimit from "express-rate-limit";
-import hpp from "hpp";
-
 // Routes
+import resultRoutes from './routes/resultRoutes.js';
 import teacherRoutes from "./routes/teacherRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import subaccountRoutes from "./routes/subaccountRoutes.js";
 import ocrRoutes from "./routes/ocrRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+
+// Security
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import hpp from "hpp";
 
 import connectDB from "./config/db.js";
 
@@ -33,6 +34,7 @@ const __dirname = path.dirname(__filename);
 // -----------------------------------------------------
 const allowedOrigins = [
   "https://scoolynk-app.netlify.app",
+  "https://scoolynk-app.onrender.com",
   "http://localhost:3000",
   "http://localhost:5173",
 ];
@@ -75,6 +77,21 @@ app.use((req, res, next) => {
 // -----------------------------------------------------
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// -----------------------------------------------------
+// 📁 SERVE STATIC FILES (Uploads Directory)
+// -----------------------------------------------------
+// Serve uploaded files (PDFs, images, etc.)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  maxAge: '1d', // Cache for 1 day
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.pdf')) {
+      res.set('Content-Type', 'application/pdf');
+    }
+  }
+}));
+
+console.log('📁 Static files served from:', path.join(__dirname, 'uploads'));
 
 // -----------------------------------------------------
 // 🚫 PREVENT API CACHING (CRITICAL FOR PWA)
@@ -184,6 +201,9 @@ app.use("/api/subaccount", subaccountRoutes);
 app.use("/api/ocr", ocrRoutes);
 app.use("/api/payments", paymentRoutes);
 
+// ✅ PUBLIC RESULT ROUTES (For parent PDF downloads - no auth required)
+app.use("/api/results", resultRoutes);
+
 // Test route
 app.post("/test", (req, res) => {
   res.json({ message: "Test route working!", body: req.body });
@@ -221,6 +241,8 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`🔥 Server running on port ${PORT}`);
+  console.log(`📁 Uploads directory: ${path.join(__dirname, 'uploads')}`);
+  console.log(`🌐 CORS enabled for: ${allowedOrigins.join(', ')}`);
 });
 
 // Handle unhandled promise rejections
