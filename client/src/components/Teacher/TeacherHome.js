@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
-  Users, BookOpen, FileText, Clock, 
+  Users, BookOpen, FileText, 
   TrendingUp, Award, Calendar, ChevronRight 
 } from 'lucide-react';
 import Loading from '../common/Loading';
@@ -16,8 +16,6 @@ const TeacherHome = ({ teacherData, refreshData }) => {
   const [courses, setCourses] = useState([]);
   const [stats, setStats] = useState({
     totalStudents: 0,
-    pendingResults: 0,
-    submittedResults: 0,
     classesTeaching: 0
   });
   const [loading, setLoading] = useState(true);
@@ -36,7 +34,9 @@ const TeacherHome = ({ teacherData, refreshData }) => {
 
       // ✅ Use stats from teacherData if available (from dashboard API)
       if (teacherData.stats) {
-        setStats(teacherData.stats);
+        // Remove pendingResults and submittedResults from stats
+        const { totalStudents, classesTeaching } = teacherData.stats;
+        setStats({ totalStudents, classesTeaching });
         setLoadingPercent(40);
       } else {
         // Fallback: calculate stats manually
@@ -44,8 +44,6 @@ const TeacherHome = ({ teacherData, refreshData }) => {
         const classesTeaching = teacherData.teacher.classes?.length || 0;
         setStats({
           totalStudents,
-          pendingResults: 0,
-          submittedResults: 0,
           classesTeaching
         });
         setLoadingPercent(40);
@@ -130,7 +128,7 @@ const TeacherHome = ({ teacherData, refreshData }) => {
 
       {/* Stats Cards */}
       <div className="row g-3 mb-4">
-        <div className="col-6 col-lg-3">
+        <div className="col-6 col-lg-4">
           <div className="card border-0 shadow-sm rounded-4 bg-primary text-white h-100">
             <div className="card-body p-3">
               <div className="d-flex justify-content-between align-items-start">
@@ -146,7 +144,7 @@ const TeacherHome = ({ teacherData, refreshData }) => {
           </div>
         </div>
 
-        <div className="col-6 col-lg-3">
+        <div className="col-6 col-lg-4">
           <div className="card border-0 shadow-sm rounded-4 bg-success text-white h-100">
             <div className="card-body p-3">
               <div className="d-flex justify-content-between align-items-start">
@@ -162,37 +160,8 @@ const TeacherHome = ({ teacherData, refreshData }) => {
           </div>
         </div>
 
-        <div className="col-6 col-lg-3">
-          <div className="card border-0 shadow-sm rounded-4 bg-warning text-white h-100">
-            <div className="card-body p-3">
-              <div className="d-flex justify-content-between align-items-start">
-                <div>
-                  <p className="mb-1 opacity-75 small">Pending Results</p>
-                  <h3 className="fw-bold mb-0">{stats.pendingResults}</h3>
-                </div>
-                <div className="bg-white bg-opacity-25 rounded-3 p-2">
-                  <Clock size={24} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Removed Pending Results and Submitted Results cards */}
 
-        <div className="col-6 col-lg-3">
-          <div className="card border-0 shadow-sm rounded-4 bg-info text-white h-100">
-            <div className="card-body p-3">
-              <div className="d-flex justify-content-between align-items-start">
-                <div>
-                  <p className="mb-1 opacity-75 small">Submitted Results</p>
-                  <h3 className="fw-bold mb-0">{stats.submittedResults}</h3>
-                </div>
-                <div className="bg-white bg-opacity-25 rounded-3 p-2">
-                  <FileText size={24} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <div className="row g-4">
@@ -359,7 +328,7 @@ const TeacherHome = ({ teacherData, refreshData }) => {
                     className="btn btn-outline-warning w-100 rounded-3 py-3 h-100"
                     onClick={() => navigate('/teacher/my-class')}
                   >
-                    <Clock size={24} className="mb-2 d-block mx-auto" />
+                    <Calendar size={24} className="mb-2 d-block mx-auto" />
                     <small className="fw-semibold">View History</small>
                   </button>
                 </div>
