@@ -9,7 +9,7 @@ import ResultPreviewModal from './ResultPreviewModal';
 const { REACT_APP_API_URL } = process.env;
 
 const MyClassWithResults = () => {
-  const [activeTab, setActiveTab] = useState('students'); // students, results, history
+  const [activeTab, setActiveTab] = useState('students');
   const [students, setStudents] = useState([]);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -79,47 +79,47 @@ const MyClassWithResults = () => {
   );
 
   return (
-    <div className="container-fluid">
-      {/* Header */}
-      <div className="row mb-4">
+    <div className="container-fluid py-3 py-md-4">
+      {/* Header - Mobile Optimized */}
+      <div className="row mb-3 mb-md-4">
         <div className="col-12">
-          <h2 className="mb-3">
-            <Users className="me-2" size={32} />
+          <h2 className="mb-2 mb-md-3 fs-4 fs-md-3">
+            <Users className="me-2" size={28} />
             My Class Management
           </h2>
-          <p className="text-muted">
-            You are class teacher for: {classTeacherFor.map(c => c.name).join(', ') || 'No classes assigned'}
+          <p className="text-muted small">
+            Class teacher for: {classTeacherFor.map(c => c.name).join(', ') || 'No classes assigned'}
           </p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <ul className="nav nav-tabs mb-4">
-        <li className="nav-item">
+      {/* Tabs - Mobile Optimized */}
+      <ul className="nav nav-pills mb-3 mb-md-4 gap-2 flex-column flex-md-row">
+        <li className="nav-item w-100 w-md-auto">
           <button 
-            className={`nav-link ${activeTab === 'students' ? 'active' : ''}`}
+            className={`nav-link w-100 ${activeTab === 'students' ? 'active' : ''}`}
             onClick={() => setActiveTab('students')}
           >
             <Users size={18} className="me-2" />
-            My Class Students
+            <span className="small">Students</span>
           </button>
         </li>
-        <li className="nav-item">
+        <li className="nav-item w-100 w-md-auto">
           <button 
-            className={`nav-link ${activeTab === 'results' ? 'active' : ''}`}
+            className={`nav-link w-100 ${activeTab === 'results' ? 'active' : ''}`}
             onClick={() => setActiveTab('results')}
           >
             <FileText size={18} className="me-2" />
-            My Students Results
+            <span className="small">Results</span>
           </button>
         </li>
-        <li className="nav-item">
+        <li className="nav-item w-100 w-md-auto">
           <button 
-            className={`nav-link ${activeTab === 'history' ? 'active' : ''}`}
+            className={`nav-link w-100 ${activeTab === 'history' ? 'active' : ''}`}
             onClick={() => setActiveTab('history')}
           >
             <History size={18} className="me-2" />
-            Results History
+            <span className="small">History</span>
           </button>
         </li>
       </ul>
@@ -292,7 +292,7 @@ const ResultsTab = ({
   setMessage 
 }) => {
   const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('manual'); // 'manual' or 'scan'
+  const [modalMode, setModalMode] = useState('manual');
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [editingResult, setEditingResult] = useState(null);
   const [template, setTemplate] = useState(null);
@@ -340,10 +340,10 @@ const ResultsTab = ({
   return (
     <>
       {/* Filters */}
-      <div className="row mb-4">
-        <div className="col-md-3">
+      <div className="row g-2 g-md-3 mb-3 mb-md-4">
+        <div className="col-6 col-md-3">
           <select 
-            className="form-select" 
+            className="form-select form-select-sm" 
             value={selectedTerm} 
             onChange={(e) => setSelectedTerm(e.target.value)}
           >
@@ -352,11 +352,11 @@ const ResultsTab = ({
             <option value="Third Term">Third Term</option>
           </select>
         </div>
-        <div className="col-md-3">
+        <div className="col-6 col-md-3">
           <input 
             type="text" 
-            className="form-control" 
-            placeholder="Session (e.g., 2024/2025)"
+            className="form-control form-control-sm" 
+            placeholder="Session"
             value={selectedSession}
             onChange={(e) => setSelectedSession(e.target.value)}
           />
@@ -364,17 +364,17 @@ const ResultsTab = ({
       </div>
 
       {/* Students with Result Entry Options */}
-      <div className="row g-3">
+      <div className="row g-2 g-md-3">
         {students.map(student => {
           const existingResult = results.find(r => r.student._id === student._id);
           
           return (
-            <div key={student._id} className="col-md-6">
+            <div key={student._id} className="col-12 col-md-6">
               <div className="card shadow-sm">
-                <div className="card-body">
+                <div className="card-body p-3">
                   <div className="d-flex justify-content-between align-items-start mb-2">
                     <div>
-                      <h6 className="mb-0 fw-bold">{student.name}</h6>
+                      <h6 className="mb-0 fw-bold small">{student.name}</h6>
                       <small className="text-muted">{student.regNo} • {student.classId?.name}</small>
                     </div>
                     {existingResult && (
@@ -399,18 +399,18 @@ const ResultsTab = ({
 
                   <div className="d-flex gap-2">
                     <button 
-                      className="btn btn-sm btn-primary"
+                      className="btn btn-sm btn-primary flex-fill"
                       onClick={() => openManualEntry(student)}
                     >
                       <Edit size={14} className="me-1" />
-                      {existingResult ? 'Edit Scores' : 'Enter Scores'}
+                      <span className="small">{existingResult ? 'Edit' : 'Enter'}</span>
                     </button>
                     <button 
-                      className="btn btn-sm btn-outline-secondary"
+                      className="btn btn-sm btn-outline-secondary flex-fill"
                       onClick={() => openOCRScan(student)}
                     >
                       <Scan size={14} className="me-1" />
-                      Scan Scores
+                      <span className="small">Scan</span>
                     </button>
                   </div>
                 </div>
@@ -452,7 +452,7 @@ const ResultsTab = ({
   );
 };
 
-// ==================== TAB 3: HISTORY ====================
+// ==================== TAB 3: HISTORY - MOBILE RESPONSIVE ====================
 const HistoryTab = ({ 
   results, 
   selectedTerm, 
@@ -503,11 +503,11 @@ const HistoryTab = ({
 
   return (
     <>
-      {/* Filters */}
-      <div className="row mb-4">
-        <div className="col-md-3">
+      {/* Filters - Mobile Optimized */}
+      <div className="row g-2 g-md-3 mb-3 mb-md-4">
+        <div className="col-6 col-md-3">
           <select 
-            className="form-select" 
+            className="form-select form-select-sm" 
             value={selectedTerm} 
             onChange={(e) => setSelectedTerm(e.target.value)}
           >
@@ -517,10 +517,10 @@ const HistoryTab = ({
             <option value="Third Term">Third Term</option>
           </select>
         </div>
-        <div className="col-md-3">
+        <div className="col-6 col-md-3">
           <input 
             type="text" 
-            className="form-control" 
+            className="form-control form-control-sm" 
             placeholder="Session"
             value={selectedSession}
             onChange={(e) => setSelectedSession(e.target.value)}
@@ -532,7 +532,102 @@ const HistoryTab = ({
         <div className="text-center py-5"><div className="spinner-border"></div></div>
       ) : (
         <>
-          <div className="table-responsive">
+          {/* Mobile Card View */}
+          <div className="d-md-none">
+            {results.length === 0 ? (
+              <div className="alert alert-info">
+                No results found for the selected criteria.
+              </div>
+            ) : (
+              <div className="row g-2">
+                {results.map(result => (
+                  <div key={result._id} className="col-12">
+                    <div className="card border-0 shadow-sm">
+                      <div className="card-body p-3">
+                        {/* Header */}
+                        <div className="d-flex justify-content-between align-items-start mb-2">
+                          <div className="flex-grow-1">
+                            <h6 className="mb-1 fw-bold small">{result.student.name}</h6>
+                            <small className="text-muted d-block">{result.student.regNo}</small>
+                          </div>
+                          <span className={`badge bg-${
+                            result.status === 'draft' ? 'secondary' :
+                            result.status === 'submitted' ? 'primary' :
+                            result.status === 'approved' ? 'success' :
+                            result.status === 'rejected' ? 'danger' : 'info'
+                          }`}>
+                            {result.status}
+                          </span>
+                        </div>
+
+                        {/* Details Grid */}
+                        <div className="row g-2 mb-2">
+                          <div className="col-6">
+                            <small className="text-muted d-block">Class</small>
+                            <span className="badge bg-info text-dark">{result.classId.name}</span>
+                          </div>
+                          <div className="col-6">
+                            <small className="text-muted d-block">Term</small>
+                            <span className="small">{result.term}</span>
+                          </div>
+                          <div className="col-6">
+                            <small className="text-muted d-block">Session</small>
+                            <span className="small">{result.session}</span>
+                          </div>
+                          <div className="col-6">
+                            <small className="text-muted d-block">Overall</small>
+                            <span className="small fw-bold">{result.overallTotal}</span>
+                          </div>
+                          <div className="col-12">
+                            <small className="text-muted d-block">Grade</small>
+                            <span className={`badge bg-${
+                              result.overallGrade === 'A' ? 'success' :
+                              result.overallGrade === 'B' ? 'primary' :
+                              result.overallGrade === 'C' ? 'info' :
+                              result.overallGrade === 'D' ? 'warning' : 'danger'
+                            }`}>
+                              {result.overallGrade}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="d-flex gap-2">
+                          <button 
+                            className="btn btn-sm btn-outline-primary flex-fill"
+                            onClick={() => handlePreview(result)}
+                          >
+                            <Eye size={14} className="me-1" />
+                            <span className="small">Preview</span>
+                          </button>
+                          {result.status === 'draft' && (
+                            <>
+                              <button 
+                                className="btn btn-sm btn-outline-success flex-fill"
+                                onClick={() => submitResult(result._id)}
+                              >
+                                <Send size={14} className="me-1" />
+                                <span className="small">Submit</span>
+                              </button>
+                              <button 
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => deleteResult(result._id)}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="d-none d-md-block table-responsive">
             <table className="table table-hover">
               <thead className="table-light">
                 <tr>
@@ -610,13 +705,13 @@ const HistoryTab = ({
                 ))}
               </tbody>
             </table>
-          </div>
 
-          {results.length === 0 && (
-            <div className="alert alert-info">
-              No results found for the selected criteria.
-            </div>
-          )}
+            {results.length === 0 && (
+              <div className="alert alert-info">
+                No results found for the selected criteria.
+              </div>
+            )}
+          </div>
         </>
       )}
 
@@ -634,4 +729,5 @@ const HistoryTab = ({
     </>
   );
 };
+
 export default MyClassWithResults;
