@@ -236,8 +236,7 @@ export const sendPaymentLinksToAll = async (req, res) => {
     res.status(500).json({ message: 'Failed to send bulk links.' });
   }
 };
-
-// Get payment details by token
+// ✅ UPDATED: Get payment details by token (PUBLIC ENDPOINT)
 export const getPaymentDetails = async (req, res) => {
   try {
     const { token } = req.params;
@@ -248,6 +247,22 @@ export const getPaymentDetails = async (req, res) => {
 
     if (!student) {
       return res.status(404).json({ message: 'Invalid payment link' });
+    }
+
+    // ✅ NEW: Verify schoolId exists (prevents orphaned student records)
+    if (!student.schoolId || !student.schoolId._id) {
+      console.error('[GetPaymentDetails] Missing schoolId for student:', student._id);
+      return res.status(500).json({ 
+        message: 'Configuration error. Please contact the school.' 
+      });
+    }
+
+    // ✅ NEW: Verify classId exists (prevents missing class data)
+    if (!student.classId || !student.classId._id) {
+      console.error('[GetPaymentDetails] Missing classId for student:', student._id);
+      return res.status(500).json({ 
+        message: 'Student class not configured. Please contact the school.' 
+      });
     }
 
     const classFee = student.classId?.fee || 0;
@@ -284,7 +299,7 @@ export const getPaymentDetails = async (req, res) => {
   }
 };
 
-// Initialize payment with Paystack
+// ✅ UPDATED: Initialize payment with Paystack (PUBLIC ENDPOINT)
 export const initializePayment = async (req, res) => {
   try {
     const { token } = req.params;
@@ -298,6 +313,14 @@ export const initializePayment = async (req, res) => {
       return res.status(404).json({ message: 'Invalid payment link' });
     }
 
+    // ✅ NEW: Verify school exists and has payment configuration
+    if (!student.schoolId || !student.schoolId._id) {
+      console.error('[InitializePayment] Missing schoolId for student:', student._id);
+      return res.status(500).json({ 
+        message: 'School configuration error. Please contact the school.' 
+      });
+    }
+
     const school = student.schoolId;
     const balance = (student.classId?.fee || 0) - (student.amountPaid || 0);
 
@@ -305,18 +328,20 @@ export const initializePayment = async (req, res) => {
       return res.status(400).json({ message: 'No outstanding balance' });
     }
 
+    // ✅ NEW: Better validation of payment account setup
     if (!school.paystackSubaccountCode) {
+      console.error('[InitializePayment] Missing payment config for school:', school._id);
       return res.status(400).json({ 
-        message: 'School payment account not configured. Please contact school.' 
+        message: 'School payment account not configured. Please contact school administration.' 
       });
     }
 
     const reference = paystackService.generateReference(student._id.toString());
 
-    // Create payment record
+    // Create payment record with schoolId
     const payment = new Payment({
       studentId: student._id,
-      schoolId: school._id,
+      schoolId: school._id, // ✅ Ensure schoolId is saved
       amount: balance,
       paymentMethod: 'card',
       paymentToken: token,
@@ -327,7 +352,8 @@ export const initializePayment = async (req, res) => {
       metadata: { 
         studentName: student.name, 
         className: student.classId?.name, 
-        regNo: student.regNo 
+        regNo: student.regNo,
+        schoolId: school._id.toString() // ✅ Store in metadata too
       },
       expiresAt: null
     });
@@ -362,7 +388,7 @@ export const initializePayment = async (req, res) => {
   }
 };
 
-// Verify payment
+// ✅ UPDATED: Verify payment (PUBLIC ENDPOINT)
 export const verifyPayment = async (req, res) => {
   try {
     const { reference } = req.params;
@@ -372,9 +398,24 @@ export const verifyPayment = async (req, res) => {
       return res.status(400).json({ message: 'Payment verification failed.' });
     }
 
-    const payment = await Payment.findOne({ paystackReference: reference });
-    if (!payment) return res.status(404).json({ message: 'Payment not found.' });
-    if (payment.status === 'completed') return res.json({ message: 'Already recorded.', payment });
+    const payment = await Payment.findOne({ paystackReference: reference })
+      .populate('schoolId', 'name'); // ✅ NEW: Populate school for verification
+
+    if (!payment) {
+      return res.status(404).json({ message: 'Payment not found.' });
+    }
+
+    if (payment.status === 'completed') {
+      return res.json({ message: 'Already recorded.', payment });
+    }
+
+    // ✅ NEW: Verify schoolId exists
+    if (!payment.schoolId || !payment.schoolId._id) {
+      console.error('[VerifyPayment] Missing schoolId for payment:', payment._id);
+      return res.status(500).json({ 
+        message: 'Payment configuration error. Please contact the school.' 
+      });
+    }
 
     payment.status = 'completed';
     payment.paidAt = new Date();
@@ -382,22 +423,38 @@ export const verifyPayment = async (req, res) => {
     payment.metadata = { ...payment.metadata, paystackData: paystackResponse.data };
     await payment.save();
 
-    const student = await Student.findById(payment.studentId);
+    // Update student record - verify student belongs to same school
+    const student = await Student.findOne({
+      _id: payment.studentId,
+      schoolId: payment.schoolId._id // ✅ Verify school match
+    });
+
     if (student) {
       student.amountPaid = (student.amountPaid || 0) + payment.amount;
       student.lastPaymentAt = new Date();
       await student.save();
+    } else {
+      console.error('[VerifyPayment] Student not found or school mismatch:', {
+        studentId: payment.studentId,
+        paymentSchoolId: payment.schoolId._id
+      });
     }
 
     res.json({
       message: 'Payment verified!',
-      payment: { amount: payment.amount, status: payment.status, paidAt: payment.paidAt }
+      payment: { 
+        amount: payment.amount, 
+        status: payment.status, 
+        paidAt: payment.paidAt,
+        schoolName: payment.schoolId?.name
+      }
     });
   } catch (err) {
     console.error('[VerifyPayment]', err);
     res.status(500).json({ message: 'Verification failed.' });
   }
 };
+
 
 // Get payment history - ONLY initiated payments
 export const getPaymentHistory = async (req, res) => {

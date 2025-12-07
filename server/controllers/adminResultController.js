@@ -525,7 +525,7 @@ export const sendMultipleResultsToParents = async (req, res) => {
   }
 };
 
-// ADD THIS NEW FUNCTION (or replace if you have it):
+// ✅ UPDATED: Download result PDF (PUBLIC ENDPOINT)
 export const downloadResultPDF = async (req, res) => {
   try {
     const { resultId } = req.params;
@@ -533,15 +533,34 @@ export const downloadResultPDF = async (req, res) => {
     const result = await Result.findOne({
       _id: resultId,
       status: { $in: ['approved', 'sent'] }
-    }).populate('student', 'name regNo');
+    })
+    .populate('student', 'name regNo')
+    .populate('schoolId', 'name phone'); // ✅ NEW: Populate schoolId to verify
 
     if (!result) {
-      return res.status(404).json({ message: 'Result not found.' });
+      return res.status(404).json({ message: 'Result not found or not available for download.' });
+    }
+
+    // ✅ NEW: Verify schoolId exists (prevents orphaned results)
+    if (!result.schoolId || !result.schoolId._id) {
+      console.error('[DownloadResultPDF] Missing schoolId for result:', resultId);
+      return res.status(500).json({ 
+        message: 'Result configuration error. Please contact the school.' 
+      });
+    }
+
+    // ✅ NEW: Verify student exists (additional safety check)
+    if (!result.student || !result.student._id) {
+      console.error('[DownloadResultPDF] Missing student for result:', resultId);
+      return res.status(500).json({ 
+        message: 'Student information missing. Please contact the school.' 
+      });
     }
 
     if (!result.pdfBase64) {
       return res.status(404).json({ 
-        message: 'PDF not available. Please contact school to regenerate.' 
+        message: 'PDF not available. Please contact school to regenerate.',
+        schoolContact: result.schoolId?.phone || 'N/A'
       });
     }
 

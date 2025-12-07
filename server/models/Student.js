@@ -1,4 +1,3 @@
-// server/models/Student.js - COMPLETE WITH PAYMENT FIELDS
 
 import mongoose from 'mongoose';
 
@@ -23,7 +22,6 @@ const studentSchema = new mongoose.Schema({
     ref: 'School',
     required: true
   },
-  // Payment tracking fields
   amountPaid: {
     type: Number,
     default: 0,
@@ -45,11 +43,10 @@ const studentSchema = new mongoose.Schema({
     lowercase: true,
     default: ''
   },
-  // Payment link fields (for Paystack integration)
   paymentToken: {
     type: String,
     unique: true,
-    sparse: true, // Allows multiple null values
+    sparse: true,
   },
   paystackReference: {
     type: String,
@@ -62,7 +59,6 @@ const studentSchema = new mongoose.Schema({
   lastPaymentAt: {
     type: Date,
   },
-  // Additional fields
   dateOfBirth: {
     type: Date
   },
@@ -84,12 +80,16 @@ const studentSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// ✅ Compound index for regNo + schoolId (unique per school)
+// ✅ CRITICAL: Unique regNo per school (prevents duplicate regNos across schools)
 studentSchema.index({ regNo: 1, schoolId: 1 }, { unique: true });
 
-// ✅ Other indexes for faster queries
-studentSchema.index({ schoolId: 1, classId: 1 });
-studentSchema.index({ schoolId: 1, name: 1 });
+// ✅ PERFORMANCE: Common query patterns
+studentSchema.index({ schoolId: 1, classId: 1 }); // Get students by school and class
+studentSchema.index({ schoolId: 1, name: 1 }); // Search students by name within school
+studentSchema.index({ schoolId: 1, status: 1 }); // ✅ NEW: Filter by status within school
+studentSchema.index({ schoolId: 1, parentPhone: 1 }); // ✅ NEW: Find by parent phone within school
+
+// ✅ PAYMENT: Fast lookups for payment processing
 studentSchema.index({ paymentToken: 1 });
 studentSchema.index({ paystackReference: 1 });
 
@@ -105,7 +105,6 @@ studentSchema.virtual('paymentStatus').get(function() {
   return 'unpaid';
 });
 
-// Ensure virtuals are included in JSON
 studentSchema.set('toJSON', { virtuals: true });
 studentSchema.set('toObject', { virtuals: true });
 
