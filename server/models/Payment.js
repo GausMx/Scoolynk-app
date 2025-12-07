@@ -1,4 +1,3 @@
-// server/models/Payment.js - UPDATED WITH NO EXPIRY SUPPORT
 
 import mongoose from 'mongoose';
 
@@ -20,60 +19,63 @@ const paymentSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['card', 'ussd', 'bank_transfer', 'cash'],
-    required: true
+    enum: ['card', 'bank_transfer', 'cash', 'pos'],
+    default: 'card'
   },
   paymentToken: {
     type: String,
-    unique: true,
-    required: true,
-    index: true
+    required: true
   },
   paystackReference: {
     type: String,
     unique: true,
     sparse: true
   },
-  status: {
-    type: String,
-    enum: ['pending', 'completed', 'failed', 'cancelled'],
-    default: 'pending'
-  },
   parentName: {
     type: String,
-    trim: true
+    default: ''
   },
   parentEmail: {
     type: String,
-    trim: true,
-    lowercase: true
+    default: ''
   },
-  // UPDATED: Use parentPhone consistently
   parentPhone: {
     type: String,
-    trim: true
+    default: ''
   },
   metadata: {
     type: mongoose.Schema.Types.Mixed,
     default: {}
   },
+  status: {
+    type: String,
+    enum: ['pending', 'completed', 'failed', 'cancelled'],
+    default: 'pending'
+  },
   paidAt: {
     type: Date
   },
-  // UPDATED: Allow null for no expiry
   expiresAt: {
-    type: Date,
-    default: null  // CHANGED: null = no expiry (valid until paid)
+    type: Date
   }
 }, {
   timestamps: true
 });
 
-// Indexes for performance
-paymentSchema.index({ schoolId: 1, status: 1 });
-paymentSchema.index({ studentId: 1, createdAt: -1 });
-paymentSchema.index({ paymentToken: 1 });
-paymentSchema.index({ paystackReference: 1 });
+// ✅ CRITICAL INDEXES: For efficient payment queries
+paymentSchema.index({ schoolId: 1, status: 1 }); // Admin payment history
+paymentSchema.index({ schoolId: 1, createdAt: -1 }); // Recent payments
+paymentSchema.index({ studentId: 1, schoolId: 1 }); // Student payment lookup
+paymentSchema.index({ paystackReference: 1 }); // Payment verification
+paymentSchema.index({ paymentToken: 1 }); // Public payment lookup
+paymentSchema.index({ schoolId: 1, paidAt: -1 }); // Completed payments sorting
+
+// ✅ PERFORMANCE: Compound index for dashboard queries
+paymentSchema.index({ 
+  schoolId: 1, 
+  status: 1, 
+  createdAt: -1 
+});
 
 const Payment = mongoose.model('Payment', paymentSchema);
 

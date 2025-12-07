@@ -258,65 +258,85 @@ export const getSubmittedResults = async (req, res) => {
 export const reviewResult = async (req, res) => {
   try {
     const { resultId } = req.params;
-    const {
-      action, // 'approve' or 'reject'
-      subjects,
-      affectiveTraits,
-      fees,
-      attendance,
-      comments,
-      rejectionReason
-    } = req.body;
+    const { action, comments, rejectionReason } = req.body;
 
-    const result = await Result.findOne({
-      _id: resultId,
-      schoolId: req.user.schoolId
-    });
+    console.log('[ReviewResult] Processing:', { resultId, action });
+
+    const result = await Result.findById(resultId)
+      .populate('student')
+      .populate('classId', 'name');
 
     if (!result) {
       return res.status(404).json({ message: 'Result not found.' });
     }
 
-    if (result.status !== 'submitted') {
+    if (String(result.student.schoolId) !== String(req.user.schoolId)) {
+      return res.status(403).json({ message: 'Not authorized for this school.' });
+    }
+
+    if (action === 'approve' || action === 'verify') {
+      result.status = 'approved';
+      result.approvedAt = new Date();
+      result.approvedBy = req.user._id;
+      
+      if (comments) {
+        result.comments = {
+          teacher: comments.teacher || result.comments?.teacher || '',
+          principal: comments.principal || result.comments?.principal || ''
+        };
+      }
+
+      await result.save();
+
+      console.log('[ReviewResult] Result approved/verified:', resultId);
+
+      // ✅ UPDATED: Call calculateClassPositions with schoolId
+      try {
+        await Result.calculateClassPositions(
+          result.classId._id,
+          result.term,
+          result.session,
+          req.user.schoolId // ✅ NEW: Pass schoolId
+        );
+        console.log('[ReviewResult] Class positions recalculated');
+      } catch (posErr) {
+        console.error('[ReviewResult] Position calculation failed:', posErr);
+        // Don't fail the approval if position calculation fails
+      }
+
+      return res.json({ 
+        message: 'Result approved and verified successfully.',
+        result 
+      });
+    } 
+    
+    else if (action === 'reject') {
+      result.status = 'rejected';
+      result.rejectionReason = rejectionReason || 'No reason provided';
+      result.rejectedAt = new Date();
+      result.rejectedBy = req.user._id;
+      
+      await result.save();
+
+      console.log('[ReviewResult] Result rejected:', resultId);
+
+      return res.json({ 
+        message: 'Result rejected and sent back to teacher.',
+        result 
+      });
+    } 
+    
+    else {
       return res.status(400).json({ 
-        message: 'Only submitted results can be reviewed.' 
+        message: 'Invalid action. Use "approve", "verify", or "reject".' 
       });
     }
 
-    // Admin can edit all fields
-    if (subjects) result.subjects = subjects;
-    if (affectiveTraits) result.affectiveTraits = affectiveTraits;
-    if (fees) result.fees = fees;
-    if (attendance) result.attendance = attendance;
-    if (comments) result.comments = comments;
-
-    // Update status
-    if (action === 'approve') {
-      result.status = 'approved';
-    } else if (action === 'reject') {
-      result.status = 'rejected';
-      result.rejectionReason = rejectionReason || 'Rejected by admin';
-    } else {
-      return res.status(400).json({ message: 'Invalid action. Use "approve" or "reject".' });
-    }
-
-    result.reviewedAt = new Date();
-    result.reviewedBy = req.user._id;
-
-    await result.save();
-
-    res.json({ 
-      message: action === 'approve' 
-        ? 'Result approved successfully.' 
-        : 'Result rejected and sent back to teacher.',
-      result 
-    });
   } catch (err) {
-    console.error('[ReviewResult]', err);
+    console.error('[ReviewResult Error]', err);
     res.status(500).json({ message: 'Failed to review result.' });
   }
 };
-
 export const sendResultToParent = async (req, res) => {
   try {
     const { resultId } = req.params;

@@ -486,9 +486,80 @@ export const updateClass = async (req, res) => {
 export const deleteClass = async (req, res) => {
   try {
     const { id } = req.params;
-    const cls = await Class.findOneAndDelete({ _id: id, schoolId: req.user.schoolId });
-    if (!cls) return res.status(404).json({ message: 'Class not found.' });
-    res.json({ message: 'Class deleted successfully.' });
+    const schoolId = req.user.schoolId;
+    
+    // ✅ NEW: Check if class exists and belongs to school
+    const cls = await Class.findOne({ _id: id, schoolId });
+    if (!cls) {
+      return res.status(404).json({ message: 'Class not found.' });
+    }
+    
+    // ✅ NEW: Check if class has students
+    const studentsInClass = await Student.countDocuments({ 
+      classId: id, 
+      schoolId 
+    });
+    
+    if (studentsInClass > 0) {
+      return res.status(400).json({ 
+        message: `Cannot delete class "${cls.name}". It has ${studentsInClass} student(s). Please move or delete students first.`,
+        studentCount: studentsInClass
+      });
+    }
+    
+    // ✅ NEW: Check if class has courses assigned
+    const coursesInClass = await Course.countDocuments({
+      classes: id,
+      schoolId
+    });
+    
+    if (coursesInClass > 0) {
+      return res.status(400).json({
+        message: `Cannot delete class "${cls.name}". It has ${coursesInClass} course(s) assigned. Please reassign courses first.`,
+        courseCount: coursesInClass
+      });
+    }
+    
+    // ✅ NEW: Check if any results exist for this class
+    const resultsInClass = await Result.countDocuments({
+      classId: id,
+      schoolId
+    });
+    
+    if (resultsInClass > 0) {
+      return res.status(400).json({
+        message: `Cannot delete class "${cls.name}". It has ${resultsInClass} result(s) stored. Deleting would cause data loss.`,
+        resultCount: resultsInClass
+      });
+    }
+    
+    // ✅ Safe to delete - remove from teachers first
+    await User.updateMany(
+      { 
+        schoolId,
+        $or: [
+          { classes: id },
+          { classTeacherFor: id }
+        ]
+      },
+      { 
+        $pull: { 
+          classes: id,
+          classTeacherFor: id 
+        } 
+      }
+    );
+    
+    console.log('[DeleteClass] Removed class from teachers');
+    
+    // Now delete the class
+    await Class.findByIdAndDelete(id);
+    
+    console.log('[DeleteClass] Class deleted successfully:', cls.name);
+    
+    res.json({ 
+      message: `Class "${cls.name}" deleted successfully.` 
+    });
   } catch (err) {
     console.error('[DeleteClass]', err);
     res.status(500).json({ message: 'Failed to delete class.' });
@@ -601,49 +672,38 @@ export const getAdminDashboard = async (req, res) => {
 
     console.log('[AdminDashboard] Starting dashboard fetch for school:', schoolId);
 
-    // Get all students for this school
-    const schoolStudents = await Student.find({ schoolId }).select('_id');
-    const schoolStudentIds = schoolStudents.map(s => s._id);
-
-    console.log('[AdminDashboard] Total students found:', schoolStudentIds.length);
-
-    // Get counts
+    // ✅ OPTIMIZED: Direct counts instead of fetching all student IDs
     const totalStudents = await Student.countDocuments({ schoolId });
     const totalTeachers = await User.countDocuments({ schoolId, role: 'teacher' });
     const totalClasses = await Class.countDocuments({ schoolId });
 
     console.log('[AdminDashboard] Counts - Students:', totalStudents, 'Teachers:', totalTeachers, 'Classes:', totalClasses);
 
-    // Get result counts with detailed logging
+    // ✅ OPTIMIZED: Direct schoolId filter instead of student ID array
     const pendingResults = await Result.countDocuments({ 
-      student: { $in: schoolStudentIds },
+      schoolId,
       status: 'submitted' 
     });
     console.log('[AdminDashboard] Pending results (submitted):', pendingResults);
 
-    // ✅ FIXED: Look for 'approved' status instead of 'verified'
     const approvedResults = await Result.countDocuments({ 
-      student: { $in: schoolStudentIds },
+      schoolId,
       status: 'approved' 
     });
     console.log('[AdminDashboard] Approved results:', approvedResults);
 
     const rejectedResults = await Result.countDocuments({ 
-      student: { $in: schoolStudentIds },
+      schoolId,
       status: 'rejected' 
     });
     console.log('[AdminDashboard] Rejected results:', rejectedResults);
 
-    // Debug: Check all result statuses in DB
-    const allResultStatuses = await Result.distinct('status', { 
-      student: { $in: schoolStudentIds } 
-    });
+    // ✅ KEPT: Debug checks for all result statuses in DB
+    const allResultStatuses = await Result.distinct('status', { schoolId });
     console.log('[AdminDashboard] All result statuses in DB:', allResultStatuses);
 
-    // Debug: Get all results for this school
-    const allResults = await Result.find({ 
-      student: { $in: schoolStudentIds } 
-    }).select('status student');
+    // ✅ KEPT: Debug breakdown of all results for this school
+    const allResults = await Result.find({ schoolId }).select('status student');
     console.log('[AdminDashboard] Total results for school:', allResults.length);
     console.log('[AdminDashboard] Results breakdown:', {
       submitted: allResults.filter(r => r.status === 'submitted').length,
@@ -654,8 +714,8 @@ export const getAdminDashboard = async (req, res) => {
       other: allResults.filter(r => !['submitted', 'approved', 'verified', 'rejected', 'draft'].includes(r.status)).length
     });
 
-    // Get recent activity
-    const recentActivity = await Result.find({ student: { $in: schoolStudentIds } })
+    // ✅ OPTIMIZED: Get recent activity with direct schoolId filter
+    const recentActivity = await Result.find({ schoolId })
       .sort({ updatedAt: -1 })
       .limit(5)
       .populate('student', 'name regNo')
@@ -663,7 +723,7 @@ export const getAdminDashboard = async (req, res) => {
 
     console.log('[AdminDashboard] Recent activity count:', recentActivity.length);
 
-    // Payment stats
+    // ✅ KEPT: Payment stats (unchanged)
     const students = await Student.find({ schoolId }).populate('classId', 'fee');
     
     const fullPaid = students.filter(s => {
@@ -686,7 +746,7 @@ export const getAdminDashboard = async (req, res) => {
 
     console.log('[AdminDashboard] Payment stats - Full:', fullPaid, 'Partial:', partialPaid, 'Unpaid:', unpaidFeesAmount);
 
-    // ✅ FIXED: Results trend with dynamic month labels (last 6 months)
+    // ✅ KEPT: Results trend with dynamic month labels (last 6 months)
     const today = new Date();
     const resultsTrend = [];
     const monthLabels = [];
@@ -698,9 +758,9 @@ export const getAdminDashboard = async (req, res) => {
       const monthStart = new Date(today.getFullYear(), today.getMonth() - i, 1);
       const monthEnd = new Date(today.getFullYear(), today.getMonth() - i + 1, 0, 23, 59, 59);
       
-      // Count results SUBMITTED in this month (using submittedAt field for accuracy)
+      // ✅ OPTIMIZED: Direct schoolId filter (instead of student ID array)
       const monthlyResults = await Result.countDocuments({
-        student: { $in: schoolStudentIds },
+        schoolId,
         submittedAt: { $gte: monthStart, $lte: monthEnd },
         status: { $in: ['submitted', 'approved', 'rejected', 'verified', 'sent'] }
       });
@@ -717,7 +777,7 @@ export const getAdminDashboard = async (req, res) => {
     console.log('[AdminDashboard] Final Results trend:', resultsTrend);
     console.log('[AdminDashboard] Final Month labels:', monthLabels);
 
-    // ✅ Fees trend (commented out - placeholder until payment history implemented)
+    // ✅ KEPT: Fees trend placeholder
     const feesTrend = [0, 0, 0, 0, 0, 0]; // Placeholder
 
     const responseData = {
@@ -733,7 +793,7 @@ export const getAdminDashboard = async (req, res) => {
       rejectedResults,
       feesTrend,
       resultsTrend,
-      monthLabels, // ✅ NEW: Send dynamic month labels to frontend
+      monthLabels, // ✅ Dynamic month labels
       recentActivity
     };
 

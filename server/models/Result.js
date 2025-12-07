@@ -1,4 +1,3 @@
-// server/models/Result.js - UPDATED WITH FILLED TEMPLATE IMAGE
 
 import mongoose from 'mongoose';
 
@@ -7,8 +6,8 @@ const subjectSchema = new mongoose.Schema({
   ca1: { type: Number, default: 0, min: 0, max: 20 },
   ca2: { type: Number, default: 0, min: 0, max: 20 },
   exam: { type: Number, default: 0, min: 0, max: 60 },
-  total: { type: Number }, // Auto-calculated
-  grade: { type: String }, // Auto-calculated
+  total: { type: Number },
+  grade: { type: String },
   remark: { type: String }
 }, { _id: false });
 
@@ -44,13 +43,9 @@ const resultSchema = new mongoose.Schema({
   },
   session: {
     type: String,
-    required: true // e.g., "2024/2025"
+    required: true
   },
-  
-  // Subject scores
   subjects: [subjectSchema],
-  
-  // Affective traits/behavior ratings (1-5)
   affectiveTraits: {
     punctuality: { type: Number, min: 1, max: 5, default: 3 },
     behaviour: { type: Number, min: 1, max: 5, default: 3 },
@@ -59,8 +54,6 @@ const resultSchema = new mongoose.Schema({
     attentiveness: { type: Number, min: 1, max: 5, default: 3 },
     initiative: { type: Number, min: 1, max: 5, default: 3 }
   },
-  
-  // School fees status
   fees: {
     tuition: { type: Number, default: 0 },
     uniform: { type: Number, default: 0 },
@@ -68,52 +61,36 @@ const resultSchema = new mongoose.Schema({
     lesson: { type: Number, default: 0 },
     other: { type: Number, default: 0 }
   },
-  
-  // Attendance
   attendance: {
     opened: { type: Number, default: 0 },
     present: { type: Number, default: 0 },
     absent: { type: Number, default: 0 }
   },
-  
-  // Comments
   comments: {
     teacher: { type: String, default: '' },
     principal: { type: String, default: '' }
   },
-  
-  // Overall performance (auto-calculated)
   overallTotal: { type: Number },
   overallAverage: { type: Number },
   overallGrade: { type: String },
-  overallPosition: { type: Number }, // Position in class
-  
-  // ✅ NEW: Filled template image (generated result sheet)
+  overallPosition: { type: Number },
   filledTemplateImage: {
-    type: String, // Base64 encoded image
+    type: String,
     default: null
   },
-  
-  // Status tracking
   status: {
     type: String,
     enum: ['draft', 'submitted', 'approved', 'rejected', 'sent', 'verified'],
     default: 'draft'
   },
-  
-  // Timestamps
   submittedAt: { type: Date },
   reviewedAt: { type: Date },
   sentToParentAt: { type: Date },
-  
-  // Review info
   reviewedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
   rejectionReason: { type: String },
-  
-  // OCR metadata (if scanned)
   wasScanned: { type: Boolean, default: false },
   scanData: {
     scannedAt: Date,
@@ -130,6 +107,8 @@ resultSchema.index({ schoolId: 1, term: 1, session: 1 });
 resultSchema.index({ classId: 1, term: 1, session: 1 });
 resultSchema.index({ teacher: 1, status: 1 });
 resultSchema.index({ status: 1 });
+// ✅ NEW: Performance index for position calculations
+resultSchema.index({ schoolId: 1, classId: 1, term: 1, session: 1, status: 1 });
 
 // Pre-save hook to calculate totals and grades
 resultSchema.pre('save', function(next) {
@@ -137,7 +116,6 @@ resultSchema.pre('save', function(next) {
   this.subjects.forEach(subject => {
     subject.total = (subject.ca1 || 0) + (subject.ca2 || 0) + (subject.exam || 0);
     
-    // Calculate grade based on percentage
     const percentage = (subject.total / 100) * 100;
     if (percentage >= 70) subject.grade = 'A';
     else if (percentage >= 60) subject.grade = 'B';
@@ -145,7 +123,6 @@ resultSchema.pre('save', function(next) {
     else if (percentage >= 40) subject.grade = 'D';
     else subject.grade = 'F';
     
-    // Add remark
     if (percentage >= 70) subject.remark = 'Excellent';
     else if (percentage >= 60) subject.remark = 'Very Good';
     else if (percentage >= 50) subject.remark = 'Good';
@@ -168,15 +145,33 @@ resultSchema.pre('save', function(next) {
   next();
 });
 
-// Static method to calculate positions in class
-resultSchema.statics.calculateClassPositions = async function(classId, term, session) {
-  const results = await this.find({ classId, term, session, status: { $in: ['approved', 'sent'] } })
-    .sort({ overallTotal: -1 });
+// ✅ UPDATED: Static method to calculate positions in class with schoolId validation
+resultSchema.statics.calculateClassPositions = async function(classId, term, session, schoolId) {
+  // ✅ CRITICAL: Now requires schoolId parameter
+  if (!schoolId) {
+    throw new Error('schoolId is required for calculateClassPositions');
+  }
+  
+  console.log('[CalculateClassPositions] Starting for:', { classId, term, session, schoolId });
+  
+  const results = await this.find({ 
+    classId, 
+    term, 
+    session,
+    schoolId, // ✅ NEW: Prevents mixing results from different schools
+    status: { $in: ['approved', 'sent', 'verified'] }
+  }).sort({ overallTotal: -1 });
+  
+  console.log('[CalculateClassPositions] Found', results.length, 'results to rank');
   
   for (let i = 0; i < results.length; i++) {
     results[i].overallPosition = i + 1;
     await results[i].save();
   }
+  
+  console.log('[CalculateClassPositions] Positions updated successfully');
+  
+  return results.length;
 };
 
 const Result = mongoose.model('Result', resultSchema);
