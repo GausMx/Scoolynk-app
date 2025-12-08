@@ -43,12 +43,10 @@ const isValidPhoneNumber = (phone) => {
 const isMTNNumber = (phone) => {
   const formatted = formatPhoneNumber(phone);
   // MTN prefixes in Nigeria: 0703, 0706, 0803, 0806, 0810, 0813, 0814, 0816, 0903, 0906, 0913
-const mtnPrefixes = [
-  '234703','234706','2340703','2340706',
-  '234803','234806','2340803','2340806',
-  '234810','2340810','234813','2340813','234814','2340814','234816','2340816',
-  '234903','2340903','234906','2340906','234913','2340913',
-];
+  const mtnPrefixes = [
+    '234703','234706','234707','234803','234806','234810','234813','234814','234816',
+    '234903','234906','234913'
+  ];
   return mtnPrefixes.some(prefix => formatted.startsWith(prefix));
 };
 
