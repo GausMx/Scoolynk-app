@@ -85,16 +85,18 @@ const sendSMS = async (to, message, forceDND = false) => {
     
     // Auto-detect MTN and use DND channel
     const isMTN = isMTNNumber(formattedPhone);
-    const channel = forceDND || isMTN ? 'dnd' : 'generic';
-    
-    const payload = {
-      api_key: TERMII_API_KEY,
-      to: formattedPhone,
-      from: TERMII_SENDER_ID,
-      sms: message,
-      type: 'plain',
-      channel: channel, // Use 'dnd' for MTN numbers
-    };
+const channel = forceDND || isMTN ? 'dnd' : 'generic';
+const senderId = channel === 'dnd' ? 'N-Alert' : TERMII_SENDER_ID;
+
+const payload = {
+  api_key: TERMII_API_KEY,
+  to: formattedPhone,
+  from: senderId,
+  sms: message,
+  type: 'plain',
+  channel: channel,
+};
+  
 
     console.log('[SMS Service] Sending SMS via', TERMII_API_URL);
     console.log('[SMS Service] To:', formattedPhone);
