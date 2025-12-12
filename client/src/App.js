@@ -9,9 +9,10 @@ import LoginForm from './components/Auth/LoginForm';
 import RegisterForm from './components/Auth/RegisterForm';
 import PasswordResetForm from './components/Auth/PasswordResetForm';
 import { getUser, getAccessToken } from './components/utils/auth';
-import PublicPaymentPage from './components/Public/PublicPaymentPage';
-import PaymentVerification from './components/public/PaymentVerification';
-
+import PublicPaymentPage from './components/public/PublicPaymentPage';
+import PaymentVerification from './components/public/paymentVerification';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 // ProtectedRoute wrapper
 const ProtectedRoute = ({ children, roles }) => {
   const user = getUser();
@@ -35,6 +36,17 @@ const ProtectedRoute = ({ children, roles }) => {
 const App = () => {
   return (
     <Router>
+            <ToastContainer 
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
       <Routes>
         {/* Auth routes */}
         <Route path="/" element={<LoginForm />} />
