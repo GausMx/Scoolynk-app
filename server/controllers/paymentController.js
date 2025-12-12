@@ -1,16 +1,34 @@
-// server/controllers/paymentController.js - COMPLETE WITH ALL EXPORTS
+// server/controllers/paymentController.js - COMPLETE WITH TIERED FEES
 
 import crypto from 'crypto';
-import axios from 'axios';
+import mongoose from 'mongoose';
 import Payment from '../models/Payment.js';
 import Student from '../models/Student.js';
 import School from '../models/School.js';
 import paystackService from '../services/paystackService.js';
 import SMSService from '../services/smsService.js';
+import auditService from '../services/auditService.js';
 
-const generatePaymentToken = () => {
-  return crypto.randomBytes(32).toString('hex');
+// ========== CONFIGURATION ==========
+const MINIMUM_PAYMENT = 5000; // ₦5,000 minimum to prevent losses
+const LARGE_PAYMENT_THRESHOLD = 10000; // ₦10,000 threshold for fee bearer switch
+
+// ✅ Email validation helper
+const isValidEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
 };
+
+// ✅ Get client IP address (handles proxies)
+const getClientIP = (req) => {
+  return req.ip || 
+         req.headers['x-forwarded-for']?.split(',')[0] || 
+         req.headers['x-real-ip'] || 
+         req.connection.remoteAddress || 
+         'unknown';
+};
+
+// ========== ADMIN ROUTES ==========
 
 // ✅ Create payment link (without sending SMS)
 export const createPaymentLink = async (req, res) => {
@@ -31,13 +49,20 @@ export const createPaymentLink = async (req, res) => {
       return res.status(400).json({ message: 'No outstanding balance.' });
     }
 
+    if (balance < MINIMUM_PAYMENT) {
+      return res.status(400).json({ 
+        message: `Minimum payment amount is ₦${MINIMUM_PAYMENT.toLocaleString()}. Current balance: ₦${balance.toLocaleString()}`
+      });
+    }
+
     // Generate payment token if not exists
     if (!student.paymentToken) {
       student.paymentToken = crypto.randomBytes(16).toString('hex');
       await student.save();
     }
 
-    const paymentLink = `${process.env.FRONTEND_URL}/pay/${student.paymentToken}`;
+    const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://scoolynk-app.netlify.app';
+    const paymentLink = `${frontendUrl}/pay/${student.paymentToken}`;
 
     res.json({
       message: 'Payment link created.',
@@ -51,14 +76,13 @@ export const createPaymentLink = async (req, res) => {
   }
 };
 
-// ✅ FIXED: Send payment link to individual parent
+// ✅ Send payment link to individual parent
 export const sendPaymentLinkToParent = async (req, res) => {
   try {
     const { studentId } = req.body;
     
     console.log('[SendPaymentLink] Request for student:', studentId);
 
-    // Find student with class fee
     const student = await Student.findOne({ 
       _id: studentId, 
       schoolId: req.user.schoolId 
@@ -68,20 +92,17 @@ export const sendPaymentLinkToParent = async (req, res) => {
       return res.status(404).json({ message: 'Student not found' });
     }
 
-    // Check if parent phone exists
     if (!student.parentPhone) {
       return res.status(400).json({ 
         message: 'Parent phone number not provided for this student' 
       });
     }
 
-    // Get school details
     const school = await School.findById(req.user.schoolId);
     if (!school) {
       return res.status(404).json({ message: 'School not found' });
     }
 
-    // Calculate outstanding balance
     const classFee = student.classId?.fee || 0;
     const amountPaid = student.amountPaid || 0;
     const balance = classFee - amountPaid;
@@ -92,20 +113,23 @@ export const sendPaymentLinkToParent = async (req, res) => {
       });
     }
 
+    if (balance < MINIMUM_PAYMENT) {
+      return res.status(400).json({ 
+        message: `Balance (₦${balance.toLocaleString()}) is below minimum payment of ₦${MINIMUM_PAYMENT.toLocaleString()}`
+      });
+    }
+
     // Generate unique payment token if not exists
     if (!student.paymentToken) {
       student.paymentToken = crypto.randomBytes(16).toString('hex');
       await student.save();
     }
 
-    // ✅ FIXED: Check if FRONTEND_URL is defined
     const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://scoolynk-app.netlify.app';
     const paymentLink = `${frontendUrl}/pay/${student.paymentToken}`;
 
     console.log('[SendPaymentLink] Payment link:', paymentLink);
-    console.log('[SendPaymentLink] Balance:', balance);
 
-    // ✅ FIXED: Pass options object with all required parameters
     const smsResult = await SMSService.sendPaymentLink({
       parentPhone: student.parentPhone,
       parentName: student.parentName || 'Parent',
@@ -118,22 +142,16 @@ export const sendPaymentLinkToParent = async (req, res) => {
 
     if (!smsResult.success) {
       console.error('[SendPaymentLink] SMS failed:', smsResult.error);
-      
-      // Return user-friendly error
       return res.status(500).json({ 
         message: smsResult.error || 'Failed to send payment link via SMS',
         errorCode: smsResult.errorCode,
-        // Still return the payment link so admin can manually share it
         paymentLink,
         balance
       });
     }
 
-    // Update sent timestamp
     student.paymentLinkSentAt = new Date();
     await student.save();
-
-    console.log('[SendPaymentLink] SMS sent successfully');
 
     res.json({ 
       message: 'Payment link sent successfully via SMS',
@@ -151,7 +169,7 @@ export const sendPaymentLinkToParent = async (req, res) => {
   }
 };
 
-// ✅ Send bulk payment links to all students with balance
+// ✅ Send bulk payment links
 export const sendPaymentLinksToAll = async (req, res) => {
   try {
     const { category } = req.body;
@@ -164,31 +182,35 @@ export const sendPaymentLinksToAll = async (req, res) => {
       const balance = (student.classId?.fee || 0) - (student.amountPaid || 0);
       const amountPaid = student.amountPaid || 0;
       
+      // Filter by category and minimum payment
+      if (balance < MINIMUM_PAYMENT) return false;
+      
       if (category === 'unpaid' && amountPaid === 0 && balance > 0) return true;
       if (category === 'partial' && amountPaid > 0 && balance > 0) return true;
-      if (!category && balance > 0) return true; // ALL with balance if no category
+      if (!category && balance > 0) return true;
       return false;
     }).filter(s => s.parentPhone);
 
     if (targetStudents.length === 0) {
-      return res.status(400).json({ message: 'No eligible students found.' });
+      return res.status(400).json({ 
+        message: `No eligible students found with balance ≥ ₦${MINIMUM_PAYMENT.toLocaleString()}.` 
+      });
     }
 
     const results = [];
+    const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://scoolynk-app.netlify.app';
 
     for (const student of targetStudents) {
       try {
         const balance = (student.classId?.fee || 0) - (student.amountPaid || 0);
 
-        // Generate payment token
         if (!student.paymentToken) {
           student.paymentToken = crypto.randomBytes(16).toString('hex');
           await student.save();
         }
 
-        const paymentLink = `${process.env.FRONTEND_URL}/pay/${student.paymentToken}`;
+        const paymentLink = `${frontendUrl}/pay/${student.paymentToken}`;
 
-        // Send SMS
         const smsResult = await SMSService.sendPaymentLink({
           parentPhone: student.parentPhone,
           parentName: student.parentName || 'Parent',
@@ -206,7 +228,8 @@ export const sendPaymentLinksToAll = async (req, res) => {
           results.push({ 
             success: true, 
             studentName: student.name, 
-            sentTo: student.parentPhone
+            sentTo: student.parentPhone,
+            amount: balance
           });
         } else {
           results.push({ 
@@ -216,7 +239,6 @@ export const sendPaymentLinksToAll = async (req, res) => {
           });
         }
         
-        // Rate limit delay
         await new Promise(resolve => setTimeout(resolve, 500));
       } catch (error) {
         results.push({ success: false, studentName: student.name, error: error.message });
@@ -236,10 +258,15 @@ export const sendPaymentLinksToAll = async (req, res) => {
     res.status(500).json({ message: 'Failed to send bulk links.' });
   }
 };
-// ✅ UPDATED: Get payment details by token (PUBLIC ENDPOINT)
+
+// ========== PUBLIC ROUTES ==========
+
+// ✅ Get payment details by token (PUBLIC - NO AUTH) + AUDIT LOG
 export const getPaymentDetails = async (req, res) => {
   try {
     const { token } = req.params;
+    const ipAddress = getClientIP(req);
+    const userAgent = req.headers['user-agent'];
 
     const student = await Student.findOne({ paymentToken: token })
       .populate('classId', 'name fee')
@@ -249,7 +276,6 @@ export const getPaymentDetails = async (req, res) => {
       return res.status(404).json({ message: 'Invalid payment link' });
     }
 
-    // ✅ NEW: Verify schoolId exists (prevents orphaned student records)
     if (!student.schoolId || !student.schoolId._id) {
       console.error('[GetPaymentDetails] Missing schoolId for student:', student._id);
       return res.status(500).json({ 
@@ -257,7 +283,6 @@ export const getPaymentDetails = async (req, res) => {
       });
     }
 
-    // ✅ NEW: Verify classId exists (prevents missing class data)
     if (!student.classId || !student.classId._id) {
       console.error('[GetPaymentDetails] Missing classId for student:', student._id);
       return res.status(500).json({ 
@@ -275,11 +300,40 @@ export const getPaymentDetails = async (req, res) => {
       });
     }
 
+    if (balance < MINIMUM_PAYMENT) {
+      return res.status(400).json({ 
+        message: `Balance (₦${balance.toLocaleString()}) is below minimum payment of ₦${MINIMUM_PAYMENT.toLocaleString()}`
+      });
+    }
+
+    // ✅ LOG: Payment page viewed (create temporary payment for audit)
+    const tempPayment = await Payment.create({
+      studentId: student._id,
+      schoolId: student.schoolId._id,
+      amount: balance,
+      paymentMethod: 'card',
+      paymentToken: token,
+      status: 'pending'
+    });
+
+    await auditService.logPaymentAction({
+      paymentId: tempPayment._id,
+      studentId: student._id,
+      schoolId: student.schoolId._id,
+      action: 'payment_page_viewed',
+      amount: balance,
+      paymentToken: token,
+      ipAddress,
+      userAgent,
+      status: 'success'
+    });
+
     res.json({
       student: {
         name: student.name,
         regNo: student.regNo,
         className: student.classId?.name,
+        parentEmail: student.parentEmail
       },
       school: {
         name: student.schoolId?.name,
@@ -290,6 +344,7 @@ export const getPaymentDetails = async (req, res) => {
         totalFee: classFee,
         amountPaid,
         balance,
+        minimumPayment: MINIMUM_PAYMENT
       }
     });
 
@@ -299,11 +354,20 @@ export const getPaymentDetails = async (req, res) => {
   }
 };
 
-// ✅ UPDATED: Initialize payment with Paystack (PUBLIC ENDPOINT)
+// ✅ TIERED FEE METHOD: Initialize payment
 export const initializePayment = async (req, res) => {
   try {
     const { token } = req.params;
     const { email } = req.body;
+    const ipAddress = getClientIP(req);
+    const userAgent = req.headers['user-agent'];
+
+    // ✅ VALIDATE EMAIL
+    if (!email || !isValidEmail(email)) {
+      return res.status(400).json({ 
+        message: 'Valid email address is required' 
+      });
+    }
 
     const student = await Student.findOne({ paymentToken: token })
       .populate('classId', 'name fee')
@@ -313,7 +377,6 @@ export const initializePayment = async (req, res) => {
       return res.status(404).json({ message: 'Invalid payment link' });
     }
 
-    // ✅ NEW: Verify school exists and has payment configuration
     if (!student.schoolId || !student.schoolId._id) {
       console.error('[InitializePayment] Missing schoolId for student:', student._id);
       return res.status(500).json({ 
@@ -328,7 +391,13 @@ export const initializePayment = async (req, res) => {
       return res.status(400).json({ message: 'No outstanding balance' });
     }
 
-    // ✅ NEW: Better validation of payment account setup
+    // ✅ MINIMUM PAYMENT CHECK
+    if (balance < MINIMUM_PAYMENT) {
+      return res.status(400).json({ 
+        message: `Minimum payment amount is ₦${MINIMUM_PAYMENT.toLocaleString()}. Current balance: ₦${balance.toLocaleString()}`
+      });
+    }
+
     if (!school.paystackSubaccountCode) {
       console.error('[InitializePayment] Missing payment config for school:', school._id);
       return res.status(400).json({ 
@@ -338,78 +407,178 @@ export const initializePayment = async (req, res) => {
 
     const reference = paystackService.generateReference(student._id.toString());
 
-    // Create payment record with schoolId
+    // Create payment record
     const payment = new Payment({
       studentId: student._id,
-      schoolId: school._id, // ✅ Ensure schoolId is saved
+      schoolId: school._id,
       amount: balance,
       paymentMethod: 'card',
       paymentToken: token,
       paystackReference: reference,
       parentName: student.parentName,
-      parentEmail: email || student.parentEmail,
+      parentEmail: email,
       parentPhone: student.parentPhone,
       metadata: { 
         studentName: student.name, 
         className: student.classId?.name, 
         regNo: student.regNo,
-        schoolId: school._id.toString() // ✅ Store in metadata too
+        schoolId: school._id.toString()
       },
       expiresAt: null
     });
 
     await payment.save();
 
-    // Initialize with Paystack
+    const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://scoolynk-app.netlify.app';
+
+    // ✅ TIERED FEE STRUCTURE
+    const platformFeePercentage = school.paymentSettings?.platformFeePercentage || 5;
+    
+    let bearer;
+    let feeNote;
+    
+    if (balance >= LARGE_PAYMENT_THRESHOLD) {
+      // Large payment: Platform pays Paystack fees
+      bearer = 'subaccount';
+      feeNote = `Large payment (≥₦${LARGE_PAYMENT_THRESHOLD.toLocaleString()}): Platform absorbs Paystack fees`;
+      console.log(`[InitializePayment] ${feeNote}`);
+    } else {
+      // Small payment: School pays Paystack fees
+      bearer = 'account';
+      feeNote = `Small payment (<₦${LARGE_PAYMENT_THRESHOLD.toLocaleString()}): School pays Paystack fees`;
+      console.log(`[InitializePayment] ${feeNote}`);
+    }
+
+    // ✅ Initialize with Paystack
     const paystackResponse = await paystackService.initializeTransaction({
-      email: email || student.parentEmail || 'noreply@school.com',
+      email: email,
       amount: balance,
       reference,
       subaccount: school.paystackSubaccountCode,
-      transaction_charge: school.paymentSettings?.platformFeePercentage || 5,
-      bearer: 'account',
+      transaction_charge: platformFeePercentage,
+      bearer: bearer, // ✅ TIERED: 'subaccount' for large, 'account' for small
       metadata: {
         paymentId: payment._id.toString(),
         studentName: student.name,
         schoolId: school._id.toString(),
-        schoolName: school.name
+        schoolName: school.name,
+        feeBearer: bearer,
+        feeNote: feeNote
       },
-      callback_url: `${process.env.FRONTEND_URL}/payment/${token}/verify`
+      callback_url: `${frontendUrl}/payment/verify?reference=${reference}`
+    });
+
+    // ✅ LOG: Payment initialized
+    await auditService.logPaymentAction({
+      paymentId: payment._id,
+      studentId: student._id,
+      schoolId: school._id,
+      action: 'payment_initialized',
+      amount: balance,
+      paymentToken: token,
+      paystackReference: reference,
+      ipAddress,
+      userAgent,
+      email,
+      status: 'success',
+      metadata: {
+        authorizationUrl: paystackResponse.data.authorization_url,
+        feeBearer: bearer,
+        feeNote: feeNote
+      }
     });
 
     res.json({
       message: 'Payment initialized.',
       authorizationUrl: paystackResponse.data.authorization_url,
-      reference
+      reference,
+      feeStructure: {
+        bearer: bearer,
+        note: feeNote
+      }
     });
   } catch (err) {
     console.error('[InitializePayment]', err);
+    
+    // ✅ LOG: Failed initialization
+    if (req.params.token) {
+      try {
+        const student = await Student.findOne({ paymentToken: req.params.token });
+        if (student) {
+          await auditService.logPaymentAction({
+            paymentId: new mongoose.Types.ObjectId(),
+            studentId: student._id,
+            schoolId: student.schoolId,
+            action: 'payment_initialized',
+            amount: 0,
+            paymentToken: req.params.token,
+            ipAddress: getClientIP(req),
+            userAgent: req.headers['user-agent'],
+            email: req.body.email,
+            status: 'failed',
+            errorMessage: err.message
+          });
+        }
+      } catch (logError) {
+        console.error('[InitializePayment] Failed to log error:', logError);
+      }
+    }
+    
     res.status(500).json({ message: 'Failed to initialize payment.' });
   }
 };
 
-// ✅ UPDATED: Verify payment (PUBLIC ENDPOINT)
+// ✅ Verify payment (PUBLIC - NO AUTH) + AUDIT LOG
 export const verifyPayment = async (req, res) => {
   try {
     const { reference } = req.params;
+    const ipAddress = getClientIP(req);
+    const userAgent = req.headers['user-agent'];
+
+    console.log('[VerifyPayment] Verifying reference:', reference);
 
     const paystackResponse = await paystackService.verifyTransaction(reference);
+    
     if (paystackResponse.data.status !== 'success') {
+      // ✅ LOG: Verification failed
+      const payment = await Payment.findOne({ paystackReference: reference });
+      if (payment) {
+        await auditService.logPaymentAction({
+          paymentId: payment._id,
+          studentId: payment.studentId,
+          schoolId: payment.schoolId,
+          action: 'payment_verified',
+          amount: payment.amount,
+          paystackReference: reference,
+          ipAddress,
+          userAgent,
+          status: 'failed',
+          errorMessage: 'Paystack verification failed'
+        });
+      }
+      
       return res.status(400).json({ message: 'Payment verification failed.' });
     }
 
     const payment = await Payment.findOne({ paystackReference: reference })
-      .populate('schoolId', 'name'); // ✅ NEW: Populate school for verification
+      .populate('schoolId', 'name');
 
     if (!payment) {
       return res.status(404).json({ message: 'Payment not found.' });
     }
 
     if (payment.status === 'completed') {
-      return res.json({ message: 'Already recorded.', payment });
+      return res.json({ 
+        message: 'Payment already recorded.', 
+        payment: {
+          amount: payment.amount,
+          status: payment.status,
+          paidAt: payment.paidAt,
+          schoolName: payment.schoolId?.name
+        }
+      });
     }
 
-    // ✅ NEW: Verify schoolId exists
     if (!payment.schoolId || !payment.schoolId._id) {
       console.error('[VerifyPayment] Missing schoolId for payment:', payment._id);
       return res.status(500).json({ 
@@ -417,31 +586,54 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
+    // Update payment record
     payment.status = 'completed';
     payment.paidAt = new Date();
     payment.paymentMethod = paystackResponse.data.channel;
     payment.metadata = { ...payment.metadata, paystackData: paystackResponse.data };
     await payment.save();
 
-    // Update student record - verify student belongs to same school
+    console.log('[VerifyPayment] Payment record updated');
+
+    // Update student record
     const student = await Student.findOne({
       _id: payment.studentId,
-      schoolId: payment.schoolId._id // ✅ Verify school match
+      schoolId: payment.schoolId._id
     });
 
     if (student) {
       student.amountPaid = (student.amountPaid || 0) + payment.amount;
       student.lastPaymentAt = new Date();
       await student.save();
-    } else {
-      console.error('[VerifyPayment] Student not found or school mismatch:', {
-        studentId: payment.studentId,
-        paymentSchoolId: payment.schoolId._id
+      console.log('[VerifyPayment] Student balance updated:', {
+        studentId: student._id,
+        newBalance: student.amountPaid
       });
+    } else {
+      console.error('[VerifyPayment] Student not found or school mismatch');
     }
 
+    // ✅ LOG: Payment completed
+    await auditService.logPaymentAction({
+      paymentId: payment._id,
+      studentId: payment.studentId,
+      schoolId: payment.schoolId._id,
+      action: 'payment_completed',
+      amount: payment.amount,
+      paystackReference: reference,
+      ipAddress,
+      userAgent,
+      email: payment.parentEmail,
+      status: 'success',
+      metadata: {
+        channel: paystackResponse.data.channel,
+        paidAt: payment.paidAt,
+        feeBearer: payment.metadata?.feeBearer || 'unknown'
+      }
+    });
+
     res.json({
-      message: 'Payment verified!',
+      message: 'Payment verified successfully!',
       payment: { 
         amount: payment.amount, 
         status: payment.status, 
@@ -451,23 +643,47 @@ export const verifyPayment = async (req, res) => {
     });
   } catch (err) {
     console.error('[VerifyPayment]', err);
+    
+    // ✅ LOG: Verification error
+    try {
+      const payment = await Payment.findOne({ paystackReference: req.params.reference });
+      if (payment) {
+        await auditService.logPaymentAction({
+          paymentId: payment._id,
+          studentId: payment.studentId,
+          schoolId: payment.schoolId,
+          action: 'payment_verified',
+          amount: payment.amount,
+          paystackReference: req.params.reference,
+          ipAddress: getClientIP(req),
+          userAgent: req.headers['user-agent'],
+          status: 'failed',
+          errorMessage: err.message
+        });
+      }
+    } catch (logError) {
+      console.error('[VerifyPayment] Failed to log error:', logError);
+    }
+    
     res.status(500).json({ message: 'Verification failed.' });
   }
 };
 
-
-// Get payment history - ONLY initiated payments
+// ✅ Get payment history
 export const getPaymentHistory = async (req, res) => {
   try {
     const schoolId = req.user.schoolId;
     const { status } = req.query;
 
-    const query = { 
-      schoolId,
-      paystackReference: { $exists: true, $ne: null } // Only show payments with Paystack reference
-    };
+    const query = { schoolId };
     
-    if (status) query.status = status;
+    if (req.query.paystackOnly === 'true') {
+      query.paystackReference = { $exists: true, $ne: null };
+    }
+    
+    if (status) {
+      query.status = status;
+    }
 
     const payments = await Payment.find(query)
       .populate('studentId', 'name regNo')

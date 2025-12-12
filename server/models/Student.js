@@ -1,3 +1,4 @@
+// server/models/Student.js - COMPLETE
 
 import mongoose from 'mongoose';
 
@@ -22,11 +23,6 @@ const studentSchema = new mongoose.Schema({
     ref: 'School',
     required: true
   },
-  amountPaid: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
   parentPhone: {
     type: String,
     trim: true,
@@ -43,22 +39,27 @@ const studentSchema = new mongoose.Schema({
     lowercase: true,
     default: ''
   },
+  amountPaid: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  // ✅ PAYMENT FIELDS
   paymentToken: {
     type: String,
     unique: true,
     sparse: true,
-  },
-  paystackReference: {
-    type: String,
-    unique: true,
-    sparse: true,
+    index: true
   },
   paymentLinkSentAt: {
     type: Date,
+    default: null
   },
   lastPaymentAt: {
     type: Date,
+    default: null
   },
+  // ADDITIONAL INFO
   dateOfBirth: {
     type: Date
   },
@@ -80,33 +81,60 @@ const studentSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// ✅ CRITICAL: Unique regNo per school (prevents duplicate regNos across schools)
+// ========== INDEXES ==========
 studentSchema.index({ regNo: 1, schoolId: 1 }, { unique: true });
-
-// ✅ PERFORMANCE: Common query patterns
-studentSchema.index({ schoolId: 1, classId: 1 }); // Get students by school and class
-studentSchema.index({ schoolId: 1, name: 1 }); // Search students by name within school
-studentSchema.index({ schoolId: 1, status: 1 }); // ✅ NEW: Filter by status within school
-studentSchema.index({ schoolId: 1, parentPhone: 1 }); // ✅ NEW: Find by parent phone within school
-
-// ✅ PAYMENT: Fast lookups for payment processing
+studentSchema.index({ schoolId: 1, classId: 1 });
+studentSchema.index({ schoolId: 1, name: 1 });
+studentSchema.index({ schoolId: 1, status: 1 });
+studentSchema.index({ schoolId: 1, parentPhone: 1 });
 studentSchema.index({ paymentToken: 1 });
-studentSchema.index({ paystackReference: 1 });
+studentSchema.index({ schoolId: 1, amountPaid: 1 });
+studentSchema.index({ schoolId: 1, lastPaymentAt: -1 });
 
-// Virtual for payment status
+// ========== VIRTUALS ==========
 studentSchema.virtual('paymentStatus').get(function() {
   if (!this.populated('classId') || !this.classId?.fee) return 'unknown';
   
   const classFee = this.classId.fee;
   const paid = this.amountPaid || 0;
   
-  if (paid >= classFee) return 'paid';
-  if (paid > 0) return 'partial';
+  if (paid >= classFee && classFee > 0) return 'paid';
+  if (paid > 0 && paid < classFee) return 'partial';
   return 'unpaid';
+});
+
+studentSchema.virtual('balance').get(function() {
+  if (!this.populated('classId') || !this.classId?.fee) return 0;
+  
+  const classFee = this.classId.fee;
+  const paid = this.amountPaid || 0;
+  const balance = classFee - paid;
+  
+  return balance > 0 ? balance : 0;
 });
 
 studentSchema.set('toJSON', { virtuals: true });
 studentSchema.set('toObject', { virtuals: true });
+
+// ========== METHODS ==========
+studentSchema.methods.generatePaymentToken = function() {
+  if (!this.paymentToken) {
+    this.paymentToken = require('crypto').randomBytes(16).toString('hex');
+  }
+  return this.paymentToken;
+};
+
+studentSchema.statics.findWithBalance = function(schoolId, minBalance = 0) {
+  return this.find({ schoolId, status: 'active' })
+    .populate('classId', 'name fee')
+    .then(students => {
+      return students.filter(s => {
+        const fee = s.classId?.fee || 0;
+        const paid = s.amountPaid || 0;
+        return (fee - paid) >= minBalance;
+      });
+    });
+};
 
 const Student = mongoose.model('Student', studentSchema);
 
