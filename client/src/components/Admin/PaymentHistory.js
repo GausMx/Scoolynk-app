@@ -1,6 +1,6 @@
-// src/components/Admin/PaymentHistory.js - WITH LOADING ANIMATION
+// src/components/Admin/PaymentHistory.js - WITH REAL-TIME UPDATES
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { 
   DollarSign, 
@@ -14,8 +14,10 @@ import {
   Calendar,
   User,
   CreditCard,
-  Info
+  Info,
+  RefreshCw
 } from 'lucide-react';
+import { toast } from 'react-toastify';
 import Loading from '../common/Loading';
 
 const { REACT_APP_API_URL } = process.env;
@@ -30,38 +32,84 @@ const PaymentHistory = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
 
   const token = localStorage.getItem('accessToken');
 
+  // ✅ Initial fetch
   useEffect(() => {
     fetchPaymentHistory();
   }, []);
 
+  // ✅ Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchPaymentHistory(true); // Silent refresh
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // ✅ Apply filters when data changes
   useEffect(() => {
     applyFilters();
   }, [payments, statusFilter, searchTerm, dateFilter]);
 
-  const fetchPaymentHistory = async () => {
+  const fetchPaymentHistory = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
-      setLoadingPercent(10);
+      if (!silent) {
+        setLoading(true);
+        setLoadingPercent(10);
+      } else {
+        setRefreshing(true);
+      }
 
       const res = await axios.get(`${REACT_APP_API_URL}/api/payments/history`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        params: { paystackOnly: 'true' } // Only show Paystack payments
       });
 
-      setLoadingPercent(70);
+      if (!silent) {
+        setLoadingPercent(70);
+      }
+
+      // Check for new payments
+      const newCompletedCount = res.data.stats.completed;
+      const oldCompletedCount = stats.completed;
+      
+      if (silent && newCompletedCount > oldCompletedCount) {
+        const diff = newCompletedCount - oldCompletedCount;
+        toast.success(`${diff} new payment${diff > 1 ? 's' : ''} received!`, {
+          position: 'top-right',
+          autoClose: 5000
+        });
+      }
 
       setPayments(res.data.payments);
       setStats(res.data.stats);
+      setLastRefresh(new Date());
 
-      setLoadingPercent(100);
+      if (!silent) {
+        setLoadingPercent(100);
+      }
     } catch (err) {
       console.error('Failed to fetch payment history:', err);
-      setLoadingPercent(100);
+      if (!silent) {
+        setLoadingPercent(100);
+        toast.error('Failed to load payment history');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      } else {
+        setRefreshing(false);
+      }
     }
+  }, [token, stats.completed]);
+
+  const handleManualRefresh = () => {
+    fetchPaymentHistory(false);
   };
 
   const applyFilters = () => {
@@ -144,19 +192,45 @@ const PaymentHistory = () => {
     );
   };
 
+  const getTimeSinceRefresh = () => {
+    const seconds = Math.floor((new Date() - lastRefresh) / 1000);
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    return `${minutes}m ago`;
+  };
+
   if (loading) {
     return <Loading percentage={loadingPercent} />;
   }
 
   return (
     <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
-      {/* Header */}
-      <div className="mb-4">
-        <h2 className="fw-bold text-primary d-flex align-items-center fs-4 fs-md-3">
-          <DollarSign size={28} className="me-2" />
-          Payment History
-        </h2>
-        <p className="text-muted small">Track all initiated payment transactions</p>
+      {/* Header with Refresh */}
+      <div className="mb-4 d-flex justify-content-between align-items-center">
+        <div>
+          <h2 className="fw-bold text-primary d-flex align-items-center fs-4 fs-md-3">
+            <DollarSign size={28} className="me-2" />
+            Payment History
+          </h2>
+          <p className="text-muted small mb-0">
+            Track all initiated payment transactions
+            <span className="badge bg-light text-dark ms-2">
+              {refreshing ? (
+                <><RefreshCw size={12} className="me-1" style={{ animation: 'spin 1s linear infinite' }} />Refreshing...</>
+              ) : (
+                <>Updated {getTimeSinceRefresh()}</>
+              )}
+            </span>
+          </p>
+        </div>
+        <button 
+          className="btn btn-outline-primary btn-sm rounded-3"
+          onClick={handleManualRefresh}
+          disabled={refreshing}
+        >
+          <RefreshCw size={16} className="me-1" />
+          Refresh
+        </button>
       </div>
 
       {/* Info Alert */}
@@ -167,7 +241,7 @@ const PaymentHistory = () => {
             <small>
               <strong>Note:</strong> This page shows only payments that have been initiated through Paystack 
               (when parents click the payment link and start the checkout process). Payment links that have 
-              been sent but not yet clicked will not appear here.
+              been sent but not yet clicked will not appear here. The page auto-refreshes every 30 seconds.
             </small>
           </div>
         </div>
@@ -236,7 +310,6 @@ const PaymentHistory = () => {
       <div className="card border-0 shadow-sm rounded-4 mb-4">
         <div className="card-body p-3 p-md-4">
           <div className="row g-3">
-            {/* Search */}
             <div className="col-12 col-md-4">
               <label className="form-label fw-semibold small">
                 <Search size={16} className="me-2" />
@@ -251,7 +324,6 @@ const PaymentHistory = () => {
               />
             </div>
 
-            {/* Status Filter */}
             <div className="col-6 col-md-3">
               <label className="form-label fw-semibold small">
                 <Filter size={16} className="me-2" />
@@ -270,7 +342,6 @@ const PaymentHistory = () => {
               </select>
             </div>
 
-            {/* Date Filter */}
             <div className="col-6 col-md-3">
               <label className="form-label fw-semibold small">
                 <Calendar size={16} className="me-2" />
@@ -288,7 +359,6 @@ const PaymentHistory = () => {
               </select>
             </div>
 
-            {/* Export Button */}
             <div className="col-12 col-md-2 d-flex align-items-end">
               <button
                 className="btn btn-outline-primary rounded-3 w-100"
@@ -384,7 +454,6 @@ const PaymentHistory = () => {
           )}
         </div>
 
-        {/* Pagination Info */}
         {filteredPayments.length > 0 && (
           <div className="card-footer bg-light border-0 p-3">
             <small className="text-muted">
@@ -396,5 +465,15 @@ const PaymentHistory = () => {
     </div>
   );
 };
+
+// Add spinning animation
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+`;
+document.head.appendChild(style);
 
 export default PaymentHistory;

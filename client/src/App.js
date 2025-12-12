@@ -9,6 +9,8 @@ import LoginForm from './components/Auth/LoginForm';
 import RegisterForm from './components/Auth/RegisterForm';
 import PasswordResetForm from './components/Auth/PasswordResetForm';
 import { getUser, getAccessToken } from './components/utils/auth';
+import PublicPaymentPage from './components/Public/PublicPaymentPage';
+import PaymentVerification from './components/public/PaymentVerification';
 
 // ProtectedRoute wrapper
 const ProtectedRoute = ({ children, roles }) => {
@@ -60,6 +62,13 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        {/* ========== ✅ NEW PUBLIC PAYMENT ROUTES (NO AUTH REQUIRED) ========== */}
+        
+        {/* Public Payment Page - Parent clicks SMS link and lands here */}
+        <Route path="/pay/:token" element={<PublicPaymentPage />} />
+        
+        {/* Payment Verification - Paystack redirects here after payment */}
+        <Route path="/payment/verify" element={<PaymentVerification />} />
 
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/login" replace />} />
