@@ -10,7 +10,7 @@ import RegisterForm from './components/Auth/RegisterForm';
 import PasswordResetForm from './components/Auth/PasswordResetForm';
 import { getUser, getAccessToken } from './components/utils/auth';
 import PublicPaymentPage from './components/public/PublicPaymentPage';
-import PaymentVerification from './components/public/paymentVerification';
+import PaymentVerification from './components/public/PaymentVerification';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 // ProtectedRoute wrapper
