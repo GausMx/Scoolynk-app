@@ -33,8 +33,8 @@ const __dirname = path.dirname(__filename);
 // 🌐 CORS CONFIG (MUST BE FIRST!)
 // -----------------------------------------------------
 const allowedOrigins = [
-  "https://scoolynk-app.netlify.app",
-  "https://scoolynk-app.onrender.com",
+  "https://app.scoolynk.com.ng",
+  "https://scoolynk.com.ng",
   "http://localhost:3000",
   "http://localhost:5173",
 ];
