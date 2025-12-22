@@ -13,6 +13,7 @@ const LoginForm = () => {
   });
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { email, password } = formData;
 
   // handle input change
@@ -23,6 +24,7 @@ const LoginForm = () => {
   const onSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     try {
       const res = await API.post('/api/auth/login', { email, password });
       const { accessToken, role, name, _id, schoolId, mustChangePassword } = res.data;
@@ -43,6 +45,8 @@ const LoginForm = () => {
         err.response?.data?.message ||
         'Login failed. Try again.'
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -86,6 +90,7 @@ const LoginForm = () => {
                       onChange={onChange}
                       placeholder="Enter your email"
                       required
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -105,11 +110,13 @@ const LoginForm = () => {
                       onChange={onChange}
                       placeholder="Enter your password"
                       required
+                      disabled={loading}
                     />
                     <button 
                       className="btn btn-outline-secondary" 
                       type="button" 
                       onClick={() => setShowPassword(!showPassword)}
+                      disabled={loading}
                     >
                       <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
                     </button>
@@ -123,9 +130,19 @@ const LoginForm = () => {
                   <button 
                     type="submit" 
                     className="btn btn-primary btn-lg rounded-pill"
+                    disabled={loading}
                   >
-                    <i className="bi bi-box-arrow-in-right me-2"></i>
-                    Login
+                    {loading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Logging in...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-box-arrow-in-right me-2"></i>
+                        Login
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
