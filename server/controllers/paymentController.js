@@ -61,7 +61,7 @@ export const createPaymentLink = async (req, res) => {
       await student.save();
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://scoolynk-app.netlify.app';
+    const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://scoolynk.com.ng';
     const paymentLink = `${frontendUrl}/pay/${student.paymentToken}`;
 
     res.json({
