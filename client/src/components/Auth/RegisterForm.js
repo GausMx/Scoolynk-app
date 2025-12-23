@@ -21,6 +21,7 @@ const RegisterForm = () => {
   const [message, setMessage] = useState('');
   const [adminExists, setAdminExists] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [availableClasses, setAvailableClasses] = useState([]);
   const [availableCourses, setAvailableCourses] = useState([]);
@@ -83,6 +84,7 @@ const RegisterForm = () => {
   const handleSubmit = async e => {
     e.preventDefault();
     setMessage('');
+    setIsLoading(true);
     try {
       const payload = { ...formData };
       if (formData.role === 'teacher') {
@@ -115,6 +117,7 @@ const RegisterForm = () => {
       });
     } catch (error) {
       setMessage(error.response?.data?.message || 'Something went wrong.');
+      setIsLoading(false);
     }
   };
 
@@ -191,6 +194,7 @@ const RegisterForm = () => {
                       value={formData.role}
                       onChange={handleChange}
                       required
+                      disabled={isLoading}
                     >
                       <option value="">Select role</option>
                       <option value="admin">Admin</option>
@@ -216,6 +220,7 @@ const RegisterForm = () => {
                       onChange={handleChange}
                       placeholder="Enter your full name"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -237,6 +242,7 @@ const RegisterForm = () => {
                       onChange={handleChange}
                       placeholder="Enter your email"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -258,6 +264,7 @@ const RegisterForm = () => {
                       onChange={handleChange}
                       placeholder="Enter your phone number"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -279,11 +286,13 @@ const RegisterForm = () => {
                       onChange={handleChange}
                       placeholder="Enter your password"
                       required
+                      disabled={isLoading}
                     />
                     <button
                       className="btn btn-outline-secondary"
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
+                      disabled={isLoading}
                     >
                       <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
                     </button>
@@ -308,6 +317,7 @@ const RegisterForm = () => {
                         onChange={handleChange}
                         placeholder="Enter your school name"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -334,6 +344,7 @@ const RegisterForm = () => {
                           required
                           minLength={16}
                           maxLength={16}
+                          disabled={isLoading}
                         />
                       </div>
                       {loadingOptions && (
@@ -361,6 +372,7 @@ const RegisterForm = () => {
                             value={formData.classes}
                             onChange={e => handleMultiSelect(e, 'classes')}
                             required
+                            disabled={isLoading}
                           >
                             {availableClasses.map(cls => (
                               <option key={cls._id} value={cls._id}>
@@ -394,6 +406,7 @@ const RegisterForm = () => {
                             value={formData.courses}
                             onChange={e => handleMultiSelect(e, 'courses')}
                             required
+                            disabled={isLoading}
                           >
                             {availableCourses.map(course => (
                               <option key={course._id} value={course.name}>
@@ -413,8 +426,22 @@ const RegisterForm = () => {
                 )}
 
                 <div className="d-grid mb-3">
-                  <button type="submit" className="btn btn-primary btn-lg rounded-pill">
-                    <i className="bi bi-person-check me-2"></i>Register
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary btn-lg rounded-pill"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Registering...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-person-check me-2"></i>
+                        Register
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
