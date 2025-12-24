@@ -1,4 +1,4 @@
-// src/components/Public/PublicPaymentPage.js - COMPLETE
+// src/components/Public/PublicPaymentPage.js - UPDATED FOR PARTIAL PAYMENTS
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
@@ -10,7 +10,8 @@ import {
   CreditCard, 
   AlertCircle,
   CheckCircle,
-  Loader
+  Loader,
+  Info
 } from 'lucide-react';
 
 const { REACT_APP_API_URL } = process.env;
@@ -35,7 +36,16 @@ const PublicPaymentPage = () => {
       setEmail(res.data.student.parentEmail || '');
       setError('');
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid payment link');
+      const errorMsg = err.response?.data?.message || 'Invalid payment link';
+      const errorCode = err.response?.data?.code;
+      
+      // ✅ Show friendly message for fully paid
+      if (errorCode === 'FULLY_PAID') {
+        setError('This payment has been completed in full. Thank you! 🎉');
+      } else {
+        setError(errorMsg);
+      }
+      
       console.error('Payment details error:', err);
     } finally {
       setLoading(false);
@@ -90,10 +100,12 @@ const PublicPaymentPage = () => {
                        style={{ width: '80px', height: '80px' }}>
                     <AlertCircle size={40} className="text-danger" />
                   </div>
-                  <h3 className="text-danger mb-3">Invalid Payment Link</h3>
+                  <h3 className="text-danger mb-3">Payment Link Issue</h3>
                   <p className="text-muted">{error}</p>
                   <small className="text-muted d-block mt-3">
-                    Please contact your school for a valid payment link.
+                    {error.includes('completed') 
+                      ? 'All fees have been paid. No action needed.'
+                      : 'Please contact your school for assistance.'}
                   </small>
                 </div>
               </div>
@@ -103,6 +115,9 @@ const PublicPaymentPage = () => {
       </div>
     );
   }
+
+  const { student, school, payment } = paymentData;
+  const isPartialPayment = payment.amountPaid > 0;
 
   return (
     <div className="min-vh-100 bg-light py-5">
@@ -116,7 +131,7 @@ const PublicPaymentPage = () => {
                 <School size={40} className="text-primary" />
               </div>
               <h2 className="fw-bold text-primary mb-2">Pay School Fees</h2>
-              <p className="text-muted">{paymentData?.school.name}</p>
+              <p className="text-muted">{school.name}</p>
             </div>
 
             {/* Main Card */}
@@ -129,24 +144,36 @@ const PublicPaymentPage = () => {
                   </div>
                 )}
 
+                {/* ✅ Show partial payment info if applicable */}
+                {isPartialPayment && (
+                  <div className="alert alert-info rounded-3 mb-4">
+                    <Info size={20} className="me-2" />
+                    <strong>Partial Payment Detected</strong>
+                    <p className="mb-0 small mt-2">
+                      You've already paid ₦{payment.amountPaid.toLocaleString()}. 
+                      This payment is for the remaining balance.
+                    </p>
+                  </div>
+                )}
+
                 {/* Student Details */}
                 <div className="bg-light rounded-4 p-4 mb-4">
                   <div className="d-flex align-items-center mb-3">
                     <User size={24} className="text-primary me-3" />
                     <div>
                       <small className="text-muted d-block">Student Name</small>
-                      <strong className="fs-5">{paymentData?.student.name}</strong>
+                      <strong className="fs-5">{student.name}</strong>
                     </div>
                   </div>
                   
                   <div className="row g-3 text-center">
                     <div className="col-6">
                       <small className="text-muted d-block mb-1">Registration No.</small>
-                      <span className="badge bg-primary fs-6">{paymentData?.student.regNo}</span>
+                      <span className="badge bg-primary fs-6">{student.regNo}</span>
                     </div>
                     <div className="col-6">
                       <small className="text-muted d-block mb-1">Class</small>
-                      <span className="badge bg-info fs-6">{paymentData?.student.className}</span>
+                      <span className="badge bg-info fs-6">{student.className}</span>
                     </div>
                   </div>
                 </div>
@@ -156,15 +183,15 @@ const PublicPaymentPage = () => {
                   <div className="row g-3 text-center">
                     <div className="col-4">
                       <small className="text-muted d-block mb-2">Total Fee</small>
-                      <h6 className="mb-0">₦{paymentData?.payment.totalFee.toLocaleString()}</h6>
+                      <h6 className="mb-0">₦{payment.totalFee.toLocaleString()}</h6>
                     </div>
                     <div className="col-4">
                       <small className="text-muted d-block mb-2">Paid</small>
-                      <h6 className="text-success mb-0">₦{paymentData?.payment.amountPaid.toLocaleString()}</h6>
+                      <h6 className="text-success mb-0">₦{payment.amountPaid.toLocaleString()}</h6>
                     </div>
                     <div className="col-4">
                       <small className="text-muted d-block mb-2">Balance</small>
-                      <h6 className="text-danger mb-0">₦{paymentData?.payment.balance.toLocaleString()}</h6>
+                      <h6 className="text-danger mb-0">₦{payment.balance.toLocaleString()}</h6>
                     </div>
                   </div>
                 </div>
@@ -173,9 +200,22 @@ const PublicPaymentPage = () => {
                 <div className="bg-success bg-opacity-10 rounded-4 p-4 mb-4 text-center">
                   <small className="text-success fw-semibold d-block mb-2">AMOUNT TO PAY</small>
                   <h2 className="text-success fw-bold mb-0">
-                    ₦{paymentData?.payment.balance.toLocaleString()}
+                    ₦{payment.balance.toLocaleString()}
                   </h2>
+                  {isPartialPayment && (
+                    <small className="text-muted d-block mt-2">
+                      (Remaining Balance)
+                    </small>
+                  )}
                 </div>
+
+                {/* ✅ Show warning if below minimum but still allow */}
+                {payment.minimumWarning && (
+                  <div className="alert alert-warning rounded-3 mb-4">
+                    <AlertCircle size={18} className="me-2" />
+                    <small>{payment.minimumWarning}</small>
+                  </div>
+                )}
 
                 {/* Email Input */}
                 <div className="mb-4">
@@ -226,6 +266,16 @@ const PublicPaymentPage = () => {
                     <span className="badge bg-light text-dark">USSD</span>
                   </div>
                 </div>
+
+                {/* ✅ Partial payment note */}
+                {payment.allowPartialPayment && (
+                  <div className="mt-4 p-3 bg-info bg-opacity-10 rounded-3">
+                    <small className="text-dark">
+                      <CheckCircle size={16} className="me-2 text-success" />
+                      <strong>Partial payments accepted.</strong> You can pay any amount and complete the balance later using the same link.
+                    </small>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -237,13 +287,13 @@ const PublicPaymentPage = () => {
                   <School size={18} className="text-primary me-2 mt-1" />
                   <div>
                     <small className="text-muted d-block">School Contact</small>
-                    <span className="small">{paymentData?.school.phone}</span>
+                    <span className="small">{school.phone}</span>
                   </div>
                 </div>
-                {paymentData?.school.address && (
+                {school.address && (
                   <div className="d-flex align-items-start">
                     <AlertCircle size={18} className="text-primary me-2 mt-1" />
-                    <small className="text-muted">{paymentData.school.address}</small>
+                    <small className="text-muted">{school.address}</small>
                   </div>
                 )}
               </div>
