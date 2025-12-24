@@ -33,10 +33,13 @@ const __dirname = path.dirname(__filename);
 // 🌐 CORS CONFIG (MUST BE FIRST!)
 // -----------------------------------------------------
 const allowedOrigins = [
-  "https://app.scoolynk.com.ng",
-  "https://scoolynk.com.ng",
-  "http://localhost:3000",
-  "http://localhost:5173",
+  'https://scoolynk.com.ng', // ✅ Main domain
+  'https://www.scoolynk.com.ng', // ✅ www variant
+  'https://app.scoolynk.com.ng', // ✅ App subdomain
+  'https://www.app.scoolynk.com.ng', // ✅ www app subdomain
+  'https://scoolynk-app.netlify.app', // ✅ Keep old Netlify (if still redirecting)
+  'http://localhost:3000',
+  'http://localhost:5173' 
 ];
 
 app.use(

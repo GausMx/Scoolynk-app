@@ -125,7 +125,7 @@ export const sendPaymentLinkToParent = async (req, res) => {
       await student.save();
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://scoolynk-app.netlify.app';
+    const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://app.scoolynk.com.ng';
     const paymentLink = `${frontendUrl}/pay/${student.paymentToken}`;
 
     console.log('[SendPaymentLink] Payment link:', paymentLink);
@@ -198,8 +198,9 @@ export const sendPaymentLinksToAll = async (req, res) => {
     }
 
     const results = [];
-    const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://scoolynk-app.netlify.app';
+    const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://scoolynk.com.ng';
 
+    
     for (const student of targetStudents) {
       try {
         const balance = (student.classId?.fee || 0) - (student.amountPaid || 0);
@@ -306,15 +307,6 @@ export const getPaymentDetails = async (req, res) => {
       });
     }
 
-    // ✅ LOG: Payment page viewed (create temporary payment for audit)
-    const tempPayment = await Payment.create({
-      studentId: student._id,
-      schoolId: student.schoolId._id,
-      amount: balance,
-      paymentMethod: 'card',
-      paymentToken: token,
-      status: 'pending'
-    });
 
     await auditService.logPaymentAction({
       paymentId: tempPayment._id,
@@ -387,16 +379,20 @@ export const initializePayment = async (req, res) => {
     const school = student.schoolId;
     const balance = (student.classId?.fee || 0) - (student.amountPaid || 0);
 
-    if (balance <= 0) {
-      return res.status(400).json({ message: 'No outstanding balance' });
-    }
+if (balance === 0) {
+  // Only block if EXACTLY zero (fully paid)
+  return res.status(400).json({ 
+    message: 'Payment has been completed in full.',
+    code: 'FULLY_PAID'
+  });
+}
 
     // ✅ MINIMUM PAYMENT CHECK
-    if (balance < MINIMUM_PAYMENT) {
-      return res.status(400).json({ 
-        message: `Minimum payment amount is ₦${MINIMUM_PAYMENT.toLocaleString()}. Current balance: ₦${balance.toLocaleString()}`
-      });
-    }
+// ✅ NEW CODE:
+if (balance > 0 && balance < MINIMUM_PAYMENT) {
+  minimumWarning = `Note: Minimum recommended payment is ₦${MINIMUM_PAYMENT.toLocaleString()}`;
+  // Show warning but DON'T block payment
+}
 
     if (!school.paystackSubaccountCode) {
       console.error('[InitializePayment] Missing payment config for school:', school._id);
@@ -463,7 +459,7 @@ export const initializePayment = async (req, res) => {
         schoolId: school._id.toString(),
         schoolName: school.name,
         feeBearer: bearer,
-        feeNote: feeNote
+        feeNote: feeNote,
       },
       callback_url: `${frontendUrl}/payment/verify?reference=${reference}`
     });
