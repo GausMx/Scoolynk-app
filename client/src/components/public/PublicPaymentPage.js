@@ -28,29 +28,34 @@ const PublicPaymentPage = () => {
     fetchPaymentDetails();
   }, [token]);
 
-  const fetchPaymentDetails = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get(`${REACT_APP_API_URL}/api/payments/${token}`);
-      setPaymentData(res.data);
-      setEmail(res.data.student.parentEmail || '');
-      setError('');
-    } catch (err) {
-      const errorMsg = err.response?.data?.message || 'Invalid payment link';
-      const errorCode = err.response?.data?.code;
-      
-      // ✅ Show friendly message for fully paid
-      if (errorCode === 'FULLY_PAID') {
-        setError('This payment has been completed in full. Thank you! 🎉');
-      } else {
-        setError(errorMsg);
-      }
-      
-      console.error('Payment details error:', err);
-    } finally {
-      setLoading(false);
+// src/components/Public/PublicPaymentPage.js
+
+const fetchPaymentDetails = async () => {
+  try {
+    setLoading(true);
+    const res = await axios.get(`${REACT_APP_API_URL}/api/payments/${token}`);
+    setPaymentData(res.data);
+    setEmail(res.data.student.parentEmail || '');
+    setError('');
+  } catch (err) {
+    const errorMsg = err.response?.data?.message || 'Invalid payment link';
+    const errorCode = err.response?.data?.code;
+    const statusCode = err.response?.status;
+    
+    // ✅ Handle rate limit error specifically
+    if (statusCode === 429 || errorCode === 'RATE_LIMIT_EXCEEDED') {
+      setError('Too many requests. Please wait a moment and try again.');
+    } else if (errorCode === 'FULLY_PAID') {
+      setError('This payment has been completed in full. Thank you! 🎉');
+    } else {
+      setError(errorMsg);
     }
-  };
+    
+    console.error('Payment details error:', err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handlePayment = async () => {
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
