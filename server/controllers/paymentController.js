@@ -309,7 +309,7 @@ export const getPaymentDetails = async (req, res) => {
 
 
     await auditService.logPaymentAction({
-      paymentId: tempPayment._id,
+      paymentId: null,
       studentId: student._id,
       schoolId: student.schoolId._id,
       action: 'payment_page_viewed',
@@ -320,25 +320,31 @@ export const getPaymentDetails = async (req, res) => {
       status: 'success'
     });
 
-    res.json({
-      student: {
-        name: student.name,
-        regNo: student.regNo,
-        className: student.classId?.name,
-        parentEmail: student.parentEmail
-      },
-      school: {
-        name: student.schoolId?.name,
-        phone: student.schoolId?.phone,
-        address: student.schoolId?.address,
-      },
-      payment: {
-        totalFee: classFee,
-        amountPaid,
-        balance,
-        minimumPayment: MINIMUM_PAYMENT
-      }
-    });
+res.json({
+  student: {
+    name: student.name,
+    regNo: student.regNo,
+    className: student.classId?.name,
+    parentEmail: student.parentEmail
+  },
+  school: {
+    name: student.schoolId?.name,
+    phone: student.schoolId?.phone,
+    address: student.schoolId?.address,
+  },
+  payment: {
+    totalFee: classFee,
+    amountPaid,
+    balance,
+    minimumPayment: MINIMUM_PAYMENT,
+    allowPartialPayment: true,
+    minimumWarning:
+      balance > 0 && balance < MINIMUM_PAYMENT
+        ? `Recommended minimum is ₦${MINIMUM_PAYMENT.toLocaleString()}`
+        : null
+  }
+});
+
 
   } catch (error) {
     console.error('[GetPaymentDetails]', error);
@@ -389,6 +395,7 @@ if (balance === 0) {
 
     // ✅ MINIMUM PAYMENT CHECK
 // ✅ NEW CODE:
+let minimumWarning = null;
 if (balance > 0 && balance < MINIMUM_PAYMENT) {
   minimumWarning = `Note: Minimum recommended payment is ₦${MINIMUM_PAYMENT.toLocaleString()}`;
   // Show warning but DON'T block payment
