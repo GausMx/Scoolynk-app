@@ -1,10 +1,9 @@
-// server/routes/paymentRoutes.js - WITH RATE LIMITING
+// server/routes/paymentRoutes.js - FIXED VERSION
 
 import express from 'express';
 import protect from '../middleware/authMiddleware.js';
 import requireRole from '../middleware/roleMiddleware.js';
 import {
-  publicPaymentLimiter,
   paymentInitLimiter,
   paymentVerifyLimiter
 } from '../middleware/rateLimiter.js';
@@ -20,33 +19,21 @@ import {
 
 const router = express.Router();
 
-// ========== ADMIN ROUTES (PROTECTED) ==========
+// ========== ADMIN ROUTES ==========
 router.post('/create-link', protect, requireRole('admin'), createPaymentLink);
 router.post('/send-link', protect, requireRole('admin'), sendPaymentLinkToParent);
 router.post('/send-bulk', protect, requireRole('admin'), sendPaymentLinksToAll);
 router.get('/history', protect, requireRole('admin'), getPaymentHistory);
 
-// ========== PUBLIC ROUTES (NO AUTH) WITH RATE LIMITING ==========
+// ========== PUBLIC ROUTES ==========
 
-// ✅ Get payment details - Rate limited (10 requests per 15 min per IP)
-router.get(
-  '/:token', 
-  publicPaymentLimiter,
-  getPaymentDetails
-);
+// ✅ NO RATE LIMIT on viewing payment page
+router.get('/:token', getPaymentDetails);
 
-// ✅ Initialize payment - Stricter rate limit (3 requests per 5 min per token+IP)
-router.post(
-  '/:token/initialize', 
-  paymentInitLimiter,
-  initializePayment
-);
+// ✅ Rate limit ONLY on payment initialization (costs money)
+router.post('/:token/initialize', paymentInitLimiter, initializePayment);
 
-// ✅ Verify payment - More generous limit (20 requests per min)
-router.get(
-  '/verify/:reference', 
-  paymentVerifyLimiter,
-  verifyPayment
-);
+// ✅ Lenient rate limit on verification (just checking status)
+router.get('/verify/:reference', paymentVerifyLimiter, verifyPayment);
 
 export default router;
