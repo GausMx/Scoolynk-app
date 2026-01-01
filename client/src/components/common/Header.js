@@ -51,7 +51,7 @@ const Header = ({ role }) => {
   };
 
   return (
-    <header className="bg-primary text-white shadow-sm" style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1030 }}>
+    <header className="bg-dark text-white shadow-sm" style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1030 }}>
       <div className="container-fluid py-3 px-4">
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
           <div className="text-center text-md-start">
