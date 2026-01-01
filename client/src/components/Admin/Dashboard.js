@@ -147,7 +147,7 @@ const Dashboard = () => {
           <i className="bi-lightning-fill me-2 text-warning"></i> Quick Actions
         </h5>
         <div className="row g-3">
-          <div className="col-6 col-md-3">
+          <div className="col-6 col-md-4 col-lg-2">
             <button
               className="btn btn-outline-primary w-100 rounded-3 py-3"
               onClick={() => navigate('/admin/result-management')}
@@ -156,7 +156,7 @@ const Dashboard = () => {
               <span className="fw-semibold">View Results</span>
             </button>
           </div>
-          <div className="col-6 col-md-3">
+          <div className="col-6 col-md-4 col-lg-2">
             <button
               className="btn btn-outline-success w-100 rounded-3 py-3"
               onClick={() => navigate('/admin/payment-history')}
@@ -165,16 +165,34 @@ const Dashboard = () => {
               <span className="fw-semibold">Payment History</span>
             </button>
           </div>
-          <div className="col-6 col-md-3">
+          <div className="col-6 col-md-4 col-lg-2">
             <button
               className="btn btn-outline-info w-100 rounded-3 py-3"
+              onClick={() => navigate('/admin/manage-courses')}
+            >
+              <i className="bi-book d-block mb-2" style={{ fontSize: '2rem' }}></i>
+              <span className="fw-semibold">Manage Courses</span>
+            </button>
+          </div>
+          <div className="col-6 col-md-4 col-lg-2">
+            <button
+              className="btn btn-outline-danger w-100 rounded-3 py-3"
+              onClick={() => navigate('/admin/payment-setup')}
+            >
+              <i className="bi-credit-card d-block mb-2" style={{ fontSize: '2rem' }}></i>
+              <span className="fw-semibold">Payment Setup</span>
+            </button>
+          </div>
+          <div className="col-6 col-md-4 col-lg-2">
+            <button
+              className="btn btn-outline-secondary w-100 rounded-3 py-3"
               onClick={() => navigate('/admin/settings')}
             >
               <i className="bi-gear-fill d-block mb-2" style={{ fontSize: '2rem' }}></i>
               <span className="fw-semibold">Settings</span>
             </button>
           </div>
-          <div className="col-6 col-md-3">
+          <div className="col-6 col-md-4 col-lg-2">
             <button
               className="btn btn-outline-warning w-100 rounded-3 py-3"
               onClick={() => navigate('/admin/template-builder')}
