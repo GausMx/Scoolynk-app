@@ -9,7 +9,7 @@ const Loading = ({ percentage }) => {
       height: '100vh'
     }}>
       <img 
-        src='/scoolynkLogo2.png' 
+        src='/logo192.png' 
         alt="Scoolynk Logo" 
         style={{ width: 150, marginBottom: 20 }}
       />
