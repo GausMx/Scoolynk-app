@@ -159,9 +159,6 @@ const TeacherHome = ({ teacherData, refreshData }) => {
             </div>
           </div>
         </div>
-
-        {/* Removed Pending Results and Submitted Results cards */}
-
       </div>
 
       <div className="row g-4">
@@ -296,7 +293,7 @@ const TeacherHome = ({ teacherData, refreshData }) => {
                 Quick Actions
               </h5>
               <div className="row g-3">
-                <div className="col-6 col-md-3">
+                <div className="col-6 col-md-6">
                   <button 
                     className="btn btn-outline-primary w-100 rounded-3 py-3 h-100"
                     onClick={() => navigate('/teacher/my-class')}
@@ -305,31 +302,13 @@ const TeacherHome = ({ teacherData, refreshData }) => {
                     <small className="fw-semibold">Manage Students</small>
                   </button>
                 </div>
-                <div className="col-6 col-md-3">
-                  <button 
-                    className="btn btn-outline-success w-100 rounded-3 py-3 h-100"
-                    onClick={() => navigate('/teacher/my-class')}
-                  >
-                    <FileText size={24} className="mb-2 d-block mx-auto" />
-                    <small className="fw-semibold">Enter Results</small>
-                  </button>
-                </div>
-                <div className="col-6 col-md-3">
+                <div className="col-6 col-md-6">
                   <button 
                     className="btn btn-outline-info w-100 rounded-3 py-3 h-100"
                     onClick={() => navigate('/teacher/teacher-profile')}
                   >
                     <Award size={24} className="mb-2 d-block mx-auto" />
                     <small className="fw-semibold">My Profile</small>
-                  </button>
-                </div>
-                <div className="col-6 col-md-3">
-                  <button 
-                    className="btn btn-outline-warning w-100 rounded-3 py-3 h-100"
-                    onClick={() => navigate('/teacher/my-class')}
-                  >
-                    <Calendar size={24} className="mb-2 d-block mx-auto" />
-                    <small className="fw-semibold">View History</small>
                   </button>
                 </div>
               </div>
