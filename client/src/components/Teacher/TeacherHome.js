@@ -128,7 +128,7 @@ const TeacherHome = ({ teacherData, refreshData }) => {
 
       {/* Stats Cards */}
       <div className="row g-3 mb-4">
-        <div className="col-6 col-lg-4">
+        <div className="col-6 col-lg-6">
           <div className="card border-0 shadow-sm rounded-4 bg-primary text-white h-100">
             <div className="card-body p-3">
               <div className="d-flex justify-content-between align-items-start">
@@ -144,7 +144,7 @@ const TeacherHome = ({ teacherData, refreshData }) => {
           </div>
         </div>
 
-        <div className="col-6 col-lg-4">
+        <div className="col-6 col-lg-6">
           <div className="card border-0 shadow-sm rounded-4 bg-success text-white h-100">
             <div className="card-body p-3">
               <div className="d-flex justify-content-between align-items-start">
