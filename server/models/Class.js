@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 const classSchema = new mongoose.Schema({
   name: { type: String, required: true },
   schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
-  fee: { type: Number, required: false },
+  fee: { type: Number, required: required },
   teachers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // teachers for this class
   students: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Student' }],
 }); 

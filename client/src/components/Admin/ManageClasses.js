@@ -75,6 +75,7 @@ const ManageClasses = () => {
       // Prepare payload for API: exclude fee, include classTeacherFor as array of teacher IDs
       const payload = {
         name: formData.name,
+        fee: formData.fee,
         classTeacherFor: formData.classTeacherFor || []
       };
 
@@ -197,6 +198,7 @@ const ManageClasses = () => {
   const ClassForm = ({ initialData, onSubmit, onCancel, isSaving }) => {
     const [formData, setFormData] = useState({
       name: initialData?.name || '',
+      fee: initialData?.fee || 0,
       classTeacherFor: initialData?.classTeachers?.map(t => t._id) || []
     });
 
@@ -230,6 +232,19 @@ const ManageClasses = () => {
             required 
           />
         </div>
+              <div className="mb-3">
+        <label className="form-label fw-semibold small">Class Fee *</label>
+        <input 
+          type="number" 
+          name="fee" 
+          value={formData.fee} 
+          onChange={handleChange} 
+          className="form-control rounded-3" 
+          placeholder="Enter class fee"
+          min="0"
+          required 
+        />
+      </div>
         <div className="mb-4">
           <label className="form-label fw-semibold small">Class Teacher(s) *</label>
           <select
