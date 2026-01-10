@@ -480,7 +480,7 @@ const PendingResultsTab = ({
           {pendingResults.length === 0 ? (
             <div className="alert alert-success rounded-3">
               <CheckCircle size={20} className="me-2" />
-              No pending results to review. All caught up!
+              No pending results to review. All caught up!!
             </div>
           ) : (
             <div className="table-responsive">
