@@ -451,8 +451,22 @@ export const createClass = async (req, res) => {
     if (fee == null || isNaN(fee) || fee < 0) {
       return res.status(400).json({ message: 'Valid class fee is required.' });
     }
-    const newClass = new Class({ name, fee, schoolId: req.user.schoolId });
+    const newClass = new Class({ name, fee, classTeacherFor, schoolId: req.user.schoolId });
     await newClass.save();
+    
+    // ✅ ADD: Assign class teachers if provided
+    if (classTeacherFor && Array.isArray(classTeacherFor) && classTeacherFor.length > 0) {
+      await User.updateMany(
+        { 
+          _id: { $in: classTeacherFor },
+          schoolId: req.user.schoolId,
+          role: 'teacher'
+        },
+        { $addToSet: { classTeacherFor: newClass._id } }
+      );
+      console.log(`[CreateClass] Assigned class teachers for "${newClass.name}":`, classTeacherFor);
+    }
+
     res.status(201).json({ message: 'Class created successfully.', class: newClass });
   } catch (err) {
     console.error('[CreateClass]', err);
@@ -466,10 +480,10 @@ export const createClass = async (req, res) => {
 export const updateClass = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, fee } = req.body;
+    const { name, fee, classTeacherFor } = req.body;
     const cls = await Class.findOneAndUpdate(
       { _id: id, schoolId: req.user.schoolId },
-      { name, fee },
+      { name, fee, classTeacherFor },
       { new: true }
     );
     if (!cls) return res.status(404).json({ message: 'Class not found.' });
