@@ -546,7 +546,7 @@ const PendingResultsTab = ({
   );
 };
 
-// ==================== ALL RESULTS TAB ====================
+// ==================== RESULTS TAB ====================
 const AllResultsTab = ({ 
   results, 
   loading, 
