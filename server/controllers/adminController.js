@@ -442,19 +442,28 @@ export const getClasses = async (req, res) => {
   }
 };
 // -------------------------
-// Create new class
+// Create new class - FIXED VERSION
 // -------------------------
 export const createClass = async (req, res) => {
   try {
-    const { name, fee } = req.body;
-    if (!name) return res.status(400).json({ message: 'Class name is required.' });
-    if (fee == null || isNaN(fee) || fee < 0) {
-      return res.status(400).json({ message: 'Valid class fee is required.' });
+    const { name, fee, classTeacherFor } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ message: 'Class name is required.' });
     }
-    const newClass = new Class({ name, fee, classTeacherFor, schoolId: req.user.schoolId });
+    
+    // Make fee optional with default value of 0
+    const classFee = fee != null && !isNaN(fee) && fee >= 0 ? fee : 0;
+    
+    const newClass = new Class({ 
+      name, 
+      fee: classFee, 
+      schoolId: req.user.schoolId 
+    });
+    
     await newClass.save();
     
-    // ✅ ADD: Assign class teachers if provided
+    // Assign class teachers if provided
     if (classTeacherFor && Array.isArray(classTeacherFor) && classTeacherFor.length > 0) {
       await User.updateMany(
         { 
@@ -467,27 +476,71 @@ export const createClass = async (req, res) => {
       console.log(`[CreateClass] Assigned class teachers for "${newClass.name}":`, classTeacherFor);
     }
 
-    res.status(201).json({ message: 'Class created successfully.', class: newClass });
+    res.status(201).json({ 
+      message: 'Class created successfully.', 
+      class: newClass 
+    });
   } catch (err) {
     console.error('[CreateClass]', err);
     res.status(500).json({ message: 'Failed to create class.' });
   }
 };
 
+
 // -------------------------
-// Update class
+// Update class - FIXED VERSION
 // -------------------------
 export const updateClass = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, fee, classTeacherFor } = req.body;
-    const cls = await Class.findOneAndUpdate(
-      { _id: id, schoolId: req.user.schoolId },
-      { name, fee, classTeacherFor },
-      { new: true }
-    );
-    if (!cls) return res.status(404).json({ message: 'Class not found.' });
-    res.json({ message: 'Class updated successfully.', class: cls });
+    
+    const schoolId = req.user.schoolId;
+    
+    // Find the class first to get current state
+    const cls = await Class.findOne({ _id: id, schoolId });
+    if (!cls) {
+      return res.status(404).json({ message: 'Class not found.' });
+    }
+    
+    // Update basic class info
+    if (name !== undefined) cls.name = name;
+    if (fee !== undefined) cls.fee = fee;
+    await cls.save();
+    
+    // Handle class teacher assignments
+    if (classTeacherFor !== undefined) {
+      const teacherIds = Array.isArray(classTeacherFor) ? classTeacherFor : [];
+      
+      // Remove this class from ALL teachers first
+      await User.updateMany(
+        { 
+          schoolId,
+          role: 'teacher',
+          classTeacherFor: id
+        },
+        { $pull: { classTeacherFor: id } }
+      );
+      
+      // Add this class to selected teachers
+      if (teacherIds.length > 0) {
+        await User.updateMany(
+          { 
+            _id: { $in: teacherIds },
+            schoolId,
+            role: 'teacher'
+          },
+          { $addToSet: { classTeacherFor: id } }
+        );
+      }
+      
+      console.log(`[UpdateClass] Updated class teachers for "${cls.name}":`, teacherIds);
+    }
+    
+    res.json({ 
+      message: 'Class updated successfully.', 
+      class: cls 
+    });
   } catch (err) {
     console.error('[UpdateClass]', err);
     res.status(500).json({ message: 'Failed to update class.' });
