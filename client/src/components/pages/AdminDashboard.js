@@ -10,8 +10,6 @@ import ManageTeachers from '../Admin/ManageTeachers';
 import ManageStudents from '../Admin/ManageStudents';
 import ManageClasses from '../Admin/ManageClasses';
 import ManageCourses from '../Admin/ManageCourses';
-import PaymentSetup from '../Admin/PaymentSetup';
-import PaymentHistory from '../Admin/PaymentHistory';
 import AdminResultManagement from '../Admin/AdminResultManagement'; 
 import TemplateBuilder from '../Admin/VisualTemplateBuilder';
 const AdminDashboard = ({ user }) => {
@@ -24,8 +22,6 @@ const AdminDashboard = ({ user }) => {
         <Route path="/manage-students" element={<ManageStudents />} />
         <Route path="/manage-classes" element={<ManageClasses />} />
         <Route path="/manage-courses" element={<ManageCourses />} />
-        <Route path="/payment-setup" element={<PaymentSetup/>} />
-        <Route path="/payment-history" element={<PaymentHistory/>} />
         <Route path="/result-management" element={<AdminResultManagement />} />
         <Route path="/template-builder" element={<TemplateBuilder />} />
       </Routes>

@@ -1,7 +1,7 @@
-// src/components/Admin/ManageStudents.js - WITH LOADING COMPONENT
+// src/components/Admin/ManageStudents.js - PAYMENT CODE REMOVED
 
 import React, { useState, useEffect } from 'react';
-import { Users, Edit, Trash2, PlusCircle, Search, AlertTriangle, Download, Upload } from 'lucide-react';
+import { Users, Edit, Trash2, PlusCircle, Search, AlertTriangle, Download } from 'lucide-react';
 import axios from 'axios';
 import Loading from '../common/Loading';
 
@@ -231,6 +231,9 @@ const ManageStudents = () => {
       name: initialData?.name || '',
       regNo: initialData?.regNo || '',
       classId: initialData?.classId?._id || '',
+      parentName: initialData?.parentName || '',
+      parentPhone: initialData?.parentPhone || '',
+      parentEmail: initialData?.parentEmail || '',
     });
 
     const handleChange = (e) => {
@@ -267,7 +270,7 @@ const ManageStudents = () => {
           />
           <small className="text-muted">Must be unique</small>
         </div>
-        <div className="mb-4">
+        <div className="mb-3">
           <label className="form-label fw-semibold small">Class *</label>
           <select
             className="form-select rounded-3"
@@ -284,6 +287,43 @@ const ManageStudents = () => {
             ))}
           </select>
         </div>
+        
+        <hr className="my-3" />
+        <h6 className="fw-semibold small mb-3">Parent/Guardian Information</h6>
+        
+        <div className="mb-3">
+          <label className="form-label fw-semibold small">Parent Name</label>
+          <input
+            type="text"
+            className="form-control rounded-3"
+            name="parentName"
+            value={formData.parentName}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="mb-3">
+          <label className="form-label fw-semibold small">Parent Phone</label>
+          <input
+            type="tel"
+            className="form-control rounded-3"
+            name="parentPhone"
+            value={formData.parentPhone}
+            onChange={handleChange}
+            placeholder="e.g., 08012345678"
+          />
+        </div>
+        <div className="mb-4">
+          <label className="form-label fw-semibold small">Parent Email</label>
+          <input
+            type="email"
+            className="form-control rounded-3"
+            name="parentEmail"
+            value={formData.parentEmail}
+            onChange={handleChange}
+            placeholder="e.g., parent@example.com"
+          />
+        </div>
+        
         <div className="d-flex flex-column flex-md-row justify-content-end gap-2">
           <button
             type="button"
@@ -383,6 +423,8 @@ const ManageStudents = () => {
                           <th className="small">#</th>
                           <th className="small">Name</th>
                           <th className="small">Registration Number</th>
+                          <th className="small">Parent Name</th>
+                          <th className="small">Parent Phone</th>
                           <th className="text-center small">Actions</th>
                         </tr>
                       </thead>
@@ -392,6 +434,8 @@ const ManageStudents = () => {
                             <td className="small">{index + 1}</td>
                             <td className="fw-semibold small">{student.name}</td>
                             <td className="small">{student.regNo}</td>
+                            <td className="small">{student.parentName || '-'}</td>
+                            <td className="small">{student.parentPhone || '-'}</td>
                             <td className="text-center">
                               <div className="d-flex gap-2 justify-content-center">
                                 <button

@@ -1,4 +1,4 @@
-// src/components/Admin/ManageClasses.js - MOBILE RESPONSIVE VERSION
+// src/components/Admin/ManageClasses.js - PAYMENT CODE REMOVED
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -36,7 +36,6 @@ const ManageClasses = () => {
       const enrichedClasses = classList.map(cls => {
         const classStudents = studentList.filter(s => s.classId?._id === cls._id);
         const classCourses = courseList.filter(c => c.classes?.some(cl => cl._id === cls._id));
-        // Find teachers assigned as classTeacherFor this class
         const classTeachers = teacherList.filter(t => t.classTeacherFor?.some(c => c._id === cls._id));
 
         return {
@@ -72,10 +71,8 @@ const ManageClasses = () => {
     try {
       setLoading(true);
       setMessage('');
-      // Prepare payload for API: exclude fee, include classTeacherFor as array of teacher IDs
       const payload = {
         name: formData.name,
-        fee: formData.fee,
         classTeacherFor: formData.classTeacherFor || []
       };
 
@@ -198,7 +195,6 @@ const ManageClasses = () => {
   const ClassForm = ({ initialData, onSubmit, onCancel, isSaving }) => {
     const [formData, setFormData] = useState({
       name: initialData?.name || '',
-      fee: initialData?.fee || 0,
       classTeacherFor: initialData?.classTeachers?.map(t => t._id) || []
     });
 
@@ -232,19 +228,6 @@ const ManageClasses = () => {
             required 
           />
         </div>
-              <div className="mb-3">
-        <label className="form-label fw-semibold small">Class Fee *</label>
-        <input 
-          type="number" 
-          name="fee" 
-          value={formData.fee} 
-          onChange={handleChange} 
-          className="form-control rounded-3" 
-          placeholder="Enter class fee"
-          min="0"
-          required 
-        />
-      </div>
         <div className="mb-4">
           <label className="form-label fw-semibold small">Class Teacher(s) *</label>
           <select
@@ -312,8 +295,6 @@ const ManageClasses = () => {
   };
 
   const totalStudents = classes.reduce((sum, cls) => sum + cls.studentCount, 0);
-  // Total revenue not applicable as fee removed; keep 0
-  const totalRevenue = 0;
   const avgStudentsPerClass = classes.length > 0 ? (totalStudents / classes.length).toFixed(1) : 0;
 
   return (
@@ -350,7 +331,7 @@ const ManageClasses = () => {
 
         {/* Stats Cards */}
         <div className="row g-3 mb-4">
-          <div className="col-6 col-md-3">
+          <div className="col-6 col-md-4">
             <div className="card bg-primary text-white shadow-sm rounded-4 p-3">
               <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
                 <div className="mb-2 mb-md-0">
@@ -361,7 +342,7 @@ const ManageClasses = () => {
               </div>
             </div>
           </div>
-          <div className="col-6 col-md-3">
+          <div className="col-6 col-md-4">
             <div className="card bg-success text-white shadow-sm rounded-4 p-3">
               <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
                 <div className="mb-2 mb-md-0">
@@ -372,7 +353,7 @@ const ManageClasses = () => {
               </div>
             </div>
           </div>
-          <div className="col-6 col-md-3">
+          <div className="col-6 col-md-4">
             <div className="card bg-info text-white shadow-sm rounded-4 p-3">
               <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
                 <div className="mb-2 mb-md-0">
@@ -380,16 +361,6 @@ const ManageClasses = () => {
                   <h3 className="mb-0 fs-4 fs-md-3">{avgStudentsPerClass}</h3>
                 </div>
                 <TrendingUp size={32} className="d-none d-md-block" />
-              </div>
-            </div>
-          </div>
-          <div className="col-6 col-md-3">
-            <div className="card bg-warning text-white shadow-sm rounded-4 p-3">
-              <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
-                <div className="mb-2 mb-md-0">
-                  <h6 className="mb-1 small">Total Revenue</h6>
-                  <h3 className="mb-0 fs-4 fs-md-3">N/A</h3>
-                </div>
               </div>
             </div>
           </div>
