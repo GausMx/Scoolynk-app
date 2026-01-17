@@ -9,9 +9,7 @@ import resultRoutes from './routes/resultRoutes.js';
 import teacherRoutes from "./routes/teacherRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
-import subaccountRoutes from "./routes/subaccountRoutes.js";
 import ocrRoutes from "./routes/ocrRoutes.js";
-import paymentRoutes from "./routes/paymentRoutes.js";
 
 // Security
 import helmet from "helmet";
