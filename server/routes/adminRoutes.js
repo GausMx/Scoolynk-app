@@ -25,7 +25,6 @@ import {
   createStudent,
   updateStudent,
   deleteStudent,
-  getPaymentStatus,
   sendPaymentReminders,
   updateStudentPayment,
 } from '../controllers/adminController.js';
@@ -119,8 +118,6 @@ router.put('/students/:id', protect, requireRole('admin'), updateStudent);
 router.delete('/students/:id', protect, requireRole('admin'), deleteStudent);
 
 // ========== PAYMENT MANAGEMENT ==========
-router.get('/payments/status', protect, requireRole('admin'), getPaymentStatus);
-// ✅ FIXED: Changed from /payments/reminders to /payments/send-reminders
 router.post('/payments/send-reminders', protect, requireRole('admin'), sendPaymentReminders);
 router.put('/students/:id/payment', protect, requireRole('admin'), updateStudentPayment);
 

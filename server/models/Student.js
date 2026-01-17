@@ -1,4 +1,4 @@
-// server/models/Student.js - COMPLETE
+// server/models/Student.js - PAYMENT FIELDS REMOVED
 
 import mongoose from 'mongoose';
 
@@ -39,26 +39,6 @@ const studentSchema = new mongoose.Schema({
     lowercase: true,
     default: ''
   },
-  amountPaid: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-  // ✅ PAYMENT FIELDS
-  paymentToken: {
-    type: String,
-    unique: true,
-    sparse: true,
-    index: true
-  },
-  paymentLinkSentAt: {
-    type: Date,
-    default: null
-  },
-  lastPaymentAt: {
-    type: Date,
-    default: null
-  },
   // ADDITIONAL INFO
   dateOfBirth: {
     type: Date
@@ -87,53 +67,48 @@ studentSchema.index({ schoolId: 1, classId: 1 });
 studentSchema.index({ schoolId: 1, name: 1 });
 studentSchema.index({ schoolId: 1, status: 1 });
 studentSchema.index({ schoolId: 1, parentPhone: 1 });
-studentSchema.index({ paymentToken: 1 });
-studentSchema.index({ schoolId: 1, amountPaid: 1 });
-studentSchema.index({ schoolId: 1, lastPaymentAt: -1 });
-
-// ========== VIRTUALS ==========
-studentSchema.virtual('paymentStatus').get(function() {
-  if (!this.populated('classId') || !this.classId?.fee) return 'unknown';
-  
-  const classFee = this.classId.fee;
-  const paid = this.amountPaid || 0;
-  
-  if (paid >= classFee && classFee > 0) return 'paid';
-  if (paid > 0 && paid < classFee) return 'partial';
-  return 'unpaid';
-});
-
-studentSchema.virtual('balance').get(function() {
-  if (!this.populated('classId') || !this.classId?.fee) return 0;
-  
-  const classFee = this.classId.fee;
-  const paid = this.amountPaid || 0;
-  const balance = classFee - paid;
-  
-  return balance > 0 ? balance : 0;
-});
-
-studentSchema.set('toJSON', { virtuals: true });
-studentSchema.set('toObject', { virtuals: true });
 
 // ========== METHODS ==========
-studentSchema.methods.generatePaymentToken = function() {
-  if (!this.paymentToken) {
-    this.paymentToken = require('crypto').randomBytes(16).toString('hex');
-  }
-  return this.paymentToken;
+// Helper method to get student's full info
+studentSchema.methods.getFullInfo = function() {
+  return {
+    id: this._id,
+    name: this.name,
+    regNo: this.regNo,
+    class: this.classId?.name || 'Unknown',
+    parentName: this.parentName,
+    parentPhone: this.parentPhone,
+    parentEmail: this.parentEmail,
+    status: this.status,
+    enrollmentDate: this.enrollmentDate
+  };
 };
 
-studentSchema.statics.findWithBalance = function(schoolId, minBalance = 0) {
-  return this.find({ schoolId, status: 'active' })
-    .populate('classId', 'name fee')
-    .then(students => {
-      return students.filter(s => {
-        const fee = s.classId?.fee || 0;
-        const paid = s.amountPaid || 0;
-        return (fee - paid) >= minBalance;
-      });
-    });
+// Static method to find active students in a class
+studentSchema.statics.findActiveByClass = function(classId, schoolId) {
+  return this.find({ 
+    classId, 
+    schoolId, 
+    status: 'active' 
+  })
+  .populate('classId', 'name')
+  .sort({ name: 1 });
+};
+
+// Static method to search students
+studentSchema.statics.searchStudents = function(schoolId, searchTerm) {
+  const regex = new RegExp(searchTerm, 'i');
+  return this.find({
+    schoolId,
+    $or: [
+      { name: regex },
+      { regNo: regex },
+      { parentName: regex },
+      { parentPhone: regex }
+    ]
+  })
+  .populate('classId', 'name')
+  .sort({ name: 1 });
 };
 
 const Student = mongoose.model('Student', studentSchema);

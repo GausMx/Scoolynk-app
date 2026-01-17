@@ -732,6 +732,9 @@ export const reviewResult = async (req, res) => {
     res.status(500).json({ message: 'Failed to review result.' });
   }
 };
+
+// -------------------------
+// Get Admin Dashboard - PAYMENT STATS REMOVED
 // -------------------------
 export const getAdminDashboard = async (req, res) => {
   try {
@@ -739,14 +742,14 @@ export const getAdminDashboard = async (req, res) => {
 
     console.log('[AdminDashboard] Starting dashboard fetch for school:', schoolId);
 
-    // ✅ OPTIMIZED: Direct counts instead of fetching all student IDs
+    // ✅ Direct counts
     const totalStudents = await Student.countDocuments({ schoolId });
     const totalTeachers = await User.countDocuments({ schoolId, role: 'teacher' });
     const totalClasses = await Class.countDocuments({ schoolId });
 
     console.log('[AdminDashboard] Counts - Students:', totalStudents, 'Teachers:', totalTeachers, 'Classes:', totalClasses);
 
-    // ✅ OPTIMIZED: Direct schoolId filter instead of student ID array
+    // ✅ Result counts
     const pendingResults = await Result.countDocuments({ 
       schoolId,
       status: 'submitted' 
@@ -765,11 +768,11 @@ export const getAdminDashboard = async (req, res) => {
     });
     console.log('[AdminDashboard] Rejected results:', rejectedResults);
 
-    // ✅ KEPT: Debug checks for all result statuses in DB
+    // ✅ Debug checks for all result statuses in DB
     const allResultStatuses = await Result.distinct('status', { schoolId });
     console.log('[AdminDashboard] All result statuses in DB:', allResultStatuses);
 
-    // ✅ KEPT: Debug breakdown of all results for this school
+    // ✅ Debug breakdown of all results for this school
     const allResults = await Result.find({ schoolId }).select('status student');
     console.log('[AdminDashboard] Total results for school:', allResults.length);
     console.log('[AdminDashboard] Results breakdown:', {
@@ -781,7 +784,7 @@ export const getAdminDashboard = async (req, res) => {
       other: allResults.filter(r => !['submitted', 'approved', 'verified', 'rejected', 'draft'].includes(r.status)).length
     });
 
-    // ✅ OPTIMIZED: Get recent activity with direct schoolId filter
+    // ✅ Get recent activity
     const recentActivity = await Result.find({ schoolId })
       .sort({ updatedAt: -1 })
       .limit(5)
@@ -790,30 +793,7 @@ export const getAdminDashboard = async (req, res) => {
 
     console.log('[AdminDashboard] Recent activity count:', recentActivity.length);
 
-    // ✅ KEPT: Payment stats (unchanged)
-    const students = await Student.find({ schoolId }).populate('classId', 'fee');
-    
-    const fullPaid = students.filter(s => {
-      const fee = s.classId?.fee || 0;
-      return s.amountPaid >= fee && fee > 0;
-    }).length;
-
-    const partialPaid = students.filter(s => {
-      const fee = s.classId?.fee || 0;
-      return s.amountPaid > 0 && s.amountPaid < fee;
-    }).length;
-
-    const unpaidFeesAmount = students.reduce((sum, s) => {
-      const fee = s.classId?.fee || 0;
-      const balance = fee - (s.amountPaid || 0);
-      return sum + (balance > 0 ? balance : 0);
-    }, 0);
-
-    const activeStudents = students.filter(s => (s.amountPaid || 0) > 0).length;
-
-    console.log('[AdminDashboard] Payment stats - Full:', fullPaid, 'Partial:', partialPaid, 'Unpaid:', unpaidFeesAmount);
-
-    // ✅ KEPT: Results trend with dynamic month labels (last 6 months)
+    // ✅ Results trend with dynamic month labels (last 6 months)
     const today = new Date();
     const resultsTrend = [];
     const monthLabels = [];
@@ -825,7 +805,6 @@ export const getAdminDashboard = async (req, res) => {
       const monthStart = new Date(today.getFullYear(), today.getMonth() - i, 1);
       const monthEnd = new Date(today.getFullYear(), today.getMonth() - i + 1, 0, 23, 59, 59);
       
-      // ✅ OPTIMIZED: Direct schoolId filter (instead of student ID array)
       const monthlyResults = await Result.countDocuments({
         schoolId,
         submittedAt: { $gte: monthStart, $lte: monthEnd },
@@ -844,23 +823,15 @@ export const getAdminDashboard = async (req, res) => {
     console.log('[AdminDashboard] Final Results trend:', resultsTrend);
     console.log('[AdminDashboard] Final Month labels:', monthLabels);
 
-    // ✅ KEPT: Fees trend placeholder
-    const feesTrend = [0, 0, 0, 0, 0, 0]; // Placeholder
-
     const responseData = {
       totalStudents,
       totalTeachers,
       totalClasses,
-      activeStudents,
-      unpaidFeesAmount,
-      partialPaid,
-      fullPaid,
       pendingResults,
       approvedResults,
       rejectedResults,
-      feesTrend,
       resultsTrend,
-      monthLabels, // ✅ Dynamic month labels
+      monthLabels,
       recentActivity
     };
 
@@ -935,7 +906,6 @@ export const getAdminSettings = async (req, res) => {
         phone: school.phone,
         motto: school.motto,
         schoolCode: school.schoolCode,
-        defaultFee: school.defaultFee || 0,
         classes: school.classes,
         subjects: school.subjects,
         gradingSystem: school.gradingSystem,
@@ -957,7 +927,7 @@ export const getAdminSettings = async (req, res) => {
 };
 
 // -------------------------
-// Update Admin Settings
+// Update Admin Settings 
 // -------------------------
 export const updateAdminSettings = async (req, res) => {
   try {
@@ -996,7 +966,6 @@ export const updateAdminSettings = async (req, res) => {
           return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
         }
 
-        // ✅ FIXED: User model uses passwordHash, not password
         console.log('[UpdateAdminSettings - Security] Fetching admin with ID:', adminId);
         const admin = await User.findById(adminId);
         
@@ -1007,7 +976,7 @@ export const updateAdminSettings = async (req, res) => {
         
         console.log('[UpdateAdminSettings - Security] Admin found:', admin.email);
 
-        // ✅ Verify current password using the matchPassword method
+        // Verify current password using the matchPassword method
         console.log('[UpdateAdminSettings - Security] Verifying current password...');
         const isMatch = await admin.matchPassword(currentPassword);
         
@@ -1016,7 +985,7 @@ export const updateAdminSettings = async (req, res) => {
           return res.status(401).json({ message: 'Current password is incorrect.' });
         }
         
-        // ✅ Hash and update new password using passwordHash field
+        // Hash and update new password using passwordHash field
         console.log('[UpdateAdminSettings - Security] Hashing new password...');
         const hashedPassword = await User.hashPassword(newPassword);
         await User.findByIdAndUpdate(adminId, { passwordHash: hashedPassword });
@@ -1024,14 +993,6 @@ export const updateAdminSettings = async (req, res) => {
         console.log('[UpdateAdminSettings - Security] Password updated successfully');
         return res.json({ message: 'Password updated successfully.' });
       }
-
-      case 'fees': {
-        const { defaultFee } = data;
-        await School.findByIdAndUpdate(schoolId, {
-          defaultFee: defaultFee,
-        }, { new: true });
-        return res.json({ message: 'Fee settings updated successfully.' });
-      } 
         
       case 'academic': {
         const { gradingSystem, termStart, termEnd } = data;
@@ -1052,45 +1013,6 @@ export const updateAdminSettings = async (req, res) => {
   }
 };
 
-// -------------------------
-// Get Payment Status (Categorized by payment status)
-// -------------------------
-export const getPaymentStatus = async (req, res) => {
-  try {
-    const schoolId = req.user.schoolId;
-
-    const students = await Student.find({ schoolId })
-      .populate('classId', 'name fee')
-      .sort({ classId: 1, name: 1 });
-
-    const paid = [];
-    const partial = [];
-    const unpaid = [];
-
-    students.forEach(student => {
-      const classFee = student.classId?.fee || 0;
-      const amountPaid = student.amountPaid || 0;
-
-      const studentData = {
-        ...student.toObject(),
-        classFee
-      };
-
-      if (amountPaid >= classFee && classFee > 0) {
-        paid.push(studentData);
-      } else if (amountPaid > 0 && amountPaid < classFee) {
-        partial.push(studentData);
-      } else {
-        unpaid.push(studentData);
-      }
-    });
-
-    res.json({ paid, partial, unpaid });
-  } catch (err) {
-    console.error('[GetPaymentStatus]', err);
-    res.status(500).json({ message: 'Failed to fetch payment status.' });
-  }
-};
 
 // -------------------------
 // Send Payment Reminders
@@ -1201,46 +1123,5 @@ export const sendPaymentReminders = async (req, res) => {
   } catch (err) {
     console.error('[SendPaymentReminders]', err);
     res.status(500).json({ message: 'Failed to send payment reminders.' });
-  }
-};
-
-// -------------------------
-// Update Student Payment
-// -------------------------
-export const updateStudentPayment = async (req, res) => {
-  try {
-    const { studentId, amountPaid, parentPhone } = req.body;
-
-    if (!studentId || amountPaid == null) {
-      return res.status(400).json({ message: 'Student ID and amount paid are required.' });
-    }
-
-    const student = await Student.findOne({ 
-      _id: studentId, 
-      schoolId: req.user.schoolId 
-    });
-
-    if (!student) {
-      return res.status(404).json({ message: 'Student not found.' });
-    }
-
-    student.amountPaid = amountPaid;
-    if (parentPhone) {
-      student.parentPhone = parentPhone;
-    }
-
-    await student.save();
-
-    const updatedStudent = await Student.findById(studentId)
-      .populate('classId', 'name fee');
-
-    res.json({ 
-      message: 'Payment information updated successfully.',
-      student: updatedStudent
-    });
-
-  } catch (err) {
-    console.error('[UpdateStudentPayment]', err);
-    res.status(500).json({ message: 'Failed to update payment information.' });
   }
 };
