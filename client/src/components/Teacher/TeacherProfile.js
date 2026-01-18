@@ -412,9 +412,6 @@ const TeacherProfile = () => {
                   <th className="small">Reg No</th>
                   <th className="small d-none d-md-table-cell">Parent Name</th>
                   <th className="small d-none d-lg-table-cell">Parent Phone</th>
-                  <th className="small d-none d-md-table-cell">Fee</th>
-                  <th className="small d-none d-md-table-cell">Paid</th>
-                  <th className="small">Status</th>
                   <th className="text-center small">Actions</th>
                 </tr>
               </thead>
@@ -459,30 +456,7 @@ const TeacherProfile = () => {
                       ) : (
                         <small>{student.parentPhone || 'N/A'}</small>
                       )}
-                    </td>
-                    <td className="d-none d-md-table-cell"><small>₦{student.classFee?.toLocaleString()}</small></td>
-                    <td className="d-none d-md-table-cell">
-                      {editingStudent?._id === student._id ? (
-                        <input
-                          type="number"
-                          className="form-control form-control-sm"
-                          value={editingStudent.amountPaid || 0}
-                          onChange={(e) => setEditingStudent({...editingStudent, amountPaid: parseFloat(e.target.value) || 0})}
-                        />
-                      ) : (
-                        <span className={student.amountPaid > 0 ? 'text-success' : 'text-muted'}>
-                          <small>₦{student.amountPaid?.toLocaleString() || 0}</small>
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <span className={`badge ${
-                        student.paymentStatus === 'paid' ? 'bg-success' :
-                        student.paymentStatus === 'partial' ? 'bg-warning' : 'bg-danger'
-                      }`}>
-                        <small>{student.paymentStatus}</small>
-                      </span>
-                    </td>
+                    </td> 
                     <td className="text-center">
                       {editingStudent?._id === student._id ? (
                         <div className="btn-group btn-group-sm">
@@ -491,8 +465,7 @@ const TeacherProfile = () => {
                             onClick={() => handleUpdateStudent(student._id, {
                               name: editingStudent.name,
                               parentName: editingStudent.parentName,
-                              parentPhone: editingStudent.parentPhone,
-                              amountPaid: editingStudent.amountPaid
+                              parentPhone: editingStudent.parentPhone
                             })}
                           >
                             <Save size={14} />
