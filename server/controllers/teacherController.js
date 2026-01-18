@@ -5,7 +5,7 @@ import Class from '../models/Class.js';
 import Course from '../models/Course.js';
 import Student from '../models/Student.js';
 import School from '../models/School.js';
-import Result from '../models/Result.js'; // ✅ CRITICAL: Import Result model
+import Result from '../models/Result.js';
 
 export const getTeacherDashboard = async (req, res) => {
   try {
@@ -225,8 +225,7 @@ export const bulkAddStudents = async (req, res) => {
         schoolId: req.user.schoolId,
         parentPhone: student.parentPhone?.trim() || '',
         parentName: student.parentName?.trim() || '',
-        parentEmail: student.parentEmail?.trim() || '',
-        amountPaid: student.amountPaid || 0
+        parentEmail: student.parentEmail?.trim() || ''
       });
     }
 
@@ -369,7 +368,7 @@ export const getMyClassStudents = async (req, res) => {
     const students = await Student.find({ 
       classId: { $in: teacher.classTeacherFor },
       schoolId: req.user.schoolId 
-    }).populate('classId', 'name fee').sort({ name: 1 });
+    }).populate('classId', 'name').sort({ name: 1 });
 
     res.json({ students });
   } catch (err) {
@@ -397,32 +396,12 @@ export const getClassStudents = async (req, res) => {
       classId: classId,
       schoolId: teacherSchoolId 
     })
-    .populate('classId', 'name fee')
+    .populate('classId', 'name')
     .sort({ name: 1 });
-
-    const studentsWithStatus = students.map(student => {
-      const classFee = classExists.fee || 0;
-      const amountPaid = student.amountPaid || 0;
-      
-      let paymentStatus = 'unpaid';
-      if (amountPaid >= classFee && classFee > 0) {
-        paymentStatus = 'paid';
-      } else if (amountPaid > 0) {
-        paymentStatus = 'partial';
-      }
-
-      return {
-        ...student.toObject(),
-        classFee,
-        paymentStatus,
-        balance: classFee - amountPaid
-      };
-    });
     
     res.json({ 
-      students: studentsWithStatus, 
       className: classExists.name,
-      classFee: classExists.fee || 0
+      students
     });
   } catch (err) {
     console.error('[GetClassStudents]', err);
@@ -466,7 +445,7 @@ export const getClassCourses = async (req, res) => {
 export const updateStudent = async (req, res) => {
   try {
     const { studentId } = req.params;
-    const { name, regNo, parentPhone, parentName, parentEmail, amountPaid } = req.body;
+    const { name, regNo, parentPhone, parentName, parentEmail } = req.body;
 
     const student = await Student.findOne({ 
       _id: studentId, 
@@ -495,7 +474,7 @@ export const updateStudent = async (req, res) => {
 
     await student.save();
 
-    const updatedStudent = await Student.findById(studentId).populate('classId', 'name fee');
+    const updatedStudent = await Student.findById(studentId).populate('classId', 'name');
 
     res.json({ 
       message: 'Student updated successfully.',

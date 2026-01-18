@@ -15,7 +15,7 @@ import SMSService from '../services/smsService.js';
 export const getStudents = async (req, res) => {
   try {
     const students = await Student.find({ schoolId: req.user.schoolId })
-      .populate('classId', 'name fee')
+      .populate('classId', 'name')
       .sort({ classId: 1, name: 1 });
 
     res.json({ students });
@@ -30,7 +30,7 @@ export const getStudents = async (req, res) => {
 // -------------------------
 export const createStudent = async (req, res) => {
   try {
-    const { name, regNo, classId, parentPhone, parentName, parentEmail, amountPaid } = req.body;
+    const { name, regNo, classId, parentPhone, parentName, parentEmail } = req.body;
 
     if (!name || !regNo || !classId) {
       return res.status(400).json({ message: 'Name, registration number, and class are required.' });
@@ -55,9 +55,8 @@ export const createStudent = async (req, res) => {
       schoolId: req.user.schoolId,
       parentPhone: parentPhone || '',
       parentName: parentName || '',
-      parentEmail: parentEmail || '',
-      amountPaid: amountPaid || 0
-    });
+      parentEmail: parentEmail || ''
+        });
 
     await student.save();
 
@@ -66,7 +65,7 @@ export const createStudent = async (req, res) => {
       $push: { students: student._id }
     });
 
-    const populatedStudent = await Student.findById(student._id).populate('classId', 'name fee');
+    const populatedStudent = await Student.findById(student._id).populate('classId', 'name');
 
     res.status(201).json({ 
       message: 'Student created successfully.', 
@@ -84,7 +83,7 @@ export const createStudent = async (req, res) => {
 export const updateStudent = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, regNo, classId, parentPhone, parentName, parentEmail, amountPaid } = req.body;
+    const { name, regNo, classId, parentPhone, parentName, parentEmail } = req.body;
 
     // Find student
     const student = await Student.findOne({ _id: id, schoolId: req.user.schoolId });
@@ -128,12 +127,10 @@ export const updateStudent = async (req, res) => {
     student.classId = classId || student.classId;
     student.parentPhone = parentPhone !== undefined ? parentPhone : student.parentPhone;
     student.parentName = parentName !== undefined ? parentName : student.parentName;
-    student.parentEmail = parentEmail !== undefined ? parentEmail : student.parentEmail;
-    student.amountPaid = amountPaid !== undefined ? amountPaid : student.amountPaid;
-    
+    student.parentEmail = parentEmail !== undefined ? parentEmail : student.parentEmail;    
     await student.save();
 
-    const updatedStudent = await Student.findById(id).populate('classId', 'name fee');
+    const updatedStudent = await Student.findById(id).populate('classId', 'name');
 
     res.json({ 
       message: 'Student updated successfully.', 
@@ -886,7 +883,7 @@ export const getAdminSettings = async (req, res) => {
     }
     
     const school = await School.findById(req.user.schoolId).select(
-      'name address phone motto classes subjects gradingSystem termStart termEnd defaultFee lateFee schoolCode'
+      'name address phone motto classes subjects gradingSystem termStart termEnd schoolCode'
     );
     console.log('[GetAdminSettings] School found:', !!school);
 
@@ -1010,118 +1007,5 @@ export const updateAdminSettings = async (req, res) => {
   } catch (err) {
     console.error('[UpdateAdminSettings]', err);
     res.status(500).json({ message: 'Failed to update settings.' });
-  }
-};
-
-
-// -------------------------
-// Send Payment Reminders
-// -------------------------
-export const sendPaymentReminders = async (req, res) => {
-  try {
-    const { category } = req.body;
-    const schoolId = req.user.schoolId;
-
-    if (!['paid', 'partial', 'unpaid'].includes(category)) {
-      return res.status(400).json({ message: 'Invalid category.' });
-    }
-
-    const school = await School.findById(schoolId).select('name phone');
-    if (!school) {
-      return res.status(404).json({ message: 'School not found.' });
-    }
-
-    const students = await Student.find({ schoolId })
-      .populate('classId', 'name fee');
-
-    const targetStudents = [];
-
-    students.forEach(student => {
-      const classFee = student.classId?.fee || 0;
-      const amountPaid = student.amountPaid || 0;
-
-      let shouldInclude = false;
-
-      if (category === 'paid' && amountPaid >= classFee && classFee > 0) {
-        shouldInclude = true;
-      } else if (category === 'partial' && amountPaid > 0 && amountPaid < classFee) {
-        shouldInclude = true;
-      } else if (category === 'unpaid' && amountPaid === 0) {
-        shouldInclude = true;
-      }
-
-      if (shouldInclude && student.parentPhone) {
-        targetStudents.push({
-          name: student.name,
-          parentName: student.parentName,
-          parentPhone: student.parentPhone,
-          classFee,
-          amountPaid,
-          balance: classFee - amountPaid,
-          className: student.classId?.name || 'Unknown'
-        });
-      }
-    });
-
-    if (targetStudents.length === 0) {
-      return res.status(400).json({ 
-        message: 'No students with phone numbers found in this category.' 
-      });
-    }
-
-    const messages = targetStudents.map(student => {
-      const formattedFee = `₦${student.classFee.toLocaleString()}`;
-      const formattedPaid = `₦${student.amountPaid.toLocaleString()}`;
-      const formattedBalance = `₦${student.balance.toLocaleString()}`;
-
-      let messageText = '';
-
-      if (category === 'paid') {
-        messageText = `Dear ${student.parentName || 'Parent'},\n\n` +
-          `Thank you for completing payment of ${formattedFee} for ${student.name} (${student.className}).\n\n` +
-          `We appreciate your prompt payment.\n\n` +
-          `Best regards,\n${school.name}\n${school.phone}`;
-      } else if (category === 'partial') {
-        messageText = `Dear ${student.parentName || 'Parent'},\n\n` +
-          `This is a reminder regarding school fees for ${student.name} (${student.className}).\n\n` +
-          `Total Fee: ${formattedFee}\n` +
-          `Amount Paid: ${formattedPaid}\n` +
-          `Balance: ${formattedBalance}\n\n` +
-          `Please complete the payment at your earliest convenience.\n\n` +
-          `Best regards,\n${school.name}\n${school.phone}`;
-      } else {
-        messageText = `Dear ${student.parentName || 'Parent'},\n\n` +
-          `This is a reminder that school fees for ${student.name} (${student.className}) have not been paid.\n\n` +
-          `Amount Due: ${formattedFee}\n\n` +
-          `Please make payment as soon as possible to avoid any inconvenience.\n\n` +
-          `Best regards,\n${school.name}\n${school.phone}`;
-      }
-
-      return {
-        to: student.parentPhone,
-        message: messageText
-      };
-    });
-
-    try {
-      const results = await SMSService.sendBulkMessages(messages);
-      
-      const successCount = results.filter(r => r.success).length;
-      const failCount = results.filter(r => !r.success).length;
-      
-      res.json({ 
-        message: `Sent ${successCount}/${messages.length} messages successfully.`,
-        sentCount: successCount,
-        failedCount: failCount,
-        details: results
-      });
-    } catch (error) {
-      console.error('[SendPaymentReminders Error]', error);
-      res.status(500).json({ message: 'Failed to send reminders.' });
-    }
-
-  } catch (err) {
-    console.error('[SendPaymentReminders]', err);
-    res.status(500).json({ message: 'Failed to send payment reminders.' });
   }
 };

@@ -25,8 +25,6 @@ import {
   createStudent,
   updateStudent,
   deleteStudent,
-  sendPaymentReminders,
-  updateStudentPayment,
 } from '../controllers/adminController.js';
 
 import {
@@ -116,9 +114,4 @@ router.get('/students', protect, requireRole('admin'), getStudents);
 router.post('/students', protect, requireRole('admin'), createStudent);
 router.put('/students/:id', protect, requireRole('admin'), updateStudent);
 router.delete('/students/:id', protect, requireRole('admin'), deleteStudent);
-
-// ========== PAYMENT MANAGEMENT ==========
-router.post('/payments/send-reminders', protect, requireRole('admin'), sendPaymentReminders);
-router.put('/students/:id/payment', protect, requireRole('admin'), updateStudentPayment);
-
 export default router;
