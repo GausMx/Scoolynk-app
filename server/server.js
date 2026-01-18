@@ -183,7 +183,6 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/teacher", teacherRoutes);
-app.use("/api/subaccount", subaccountRoutes);
 app.use("/api/ocr", ocrRoutes);
 app.use("/api/payments", paymentRoutes);
 
