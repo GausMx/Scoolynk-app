@@ -184,7 +184,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/teacher", teacherRoutes);
 app.use("/api/ocr", ocrRoutes);
-app.use("/api/payments", paymentRoutes);
 
 // ✅ PUBLIC RESULT ROUTES (For parent PDF downloads - no auth required)
 app.use("/api/results", resultRoutes);
