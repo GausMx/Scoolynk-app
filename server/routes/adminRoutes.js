@@ -25,6 +25,7 @@ import {
   createStudent,
   updateStudent,
   deleteStudent,
+  uploadStudentsByClass
 } from '../controllers/adminController.js';
 
 import {
@@ -114,4 +115,14 @@ router.get('/students', protect, requireRole('admin'), getStudents);
 router.post('/students', protect, requireRole('admin'), createStudent);
 router.put('/students/:id', protect, requireRole('admin'), updateStudent);
 router.delete('/students/:id', protect, requireRole('admin'), deleteStudent);
+
+// ========== BULK STUDENT UPLOAD ==========
+router.post(
+  '/students/upload',
+  protect,
+  requireRole('admin'),
+  upload.single('file'),
+  uploadStudentsByClass
+);
+
 export default router;

@@ -7,6 +7,7 @@ import Result from '../models/Result.js';
 import Class from '../models/Class.js';
 import Course from '../models/Course.js';
 import Student from '../models/Student.js';
+import XLSX from 'xlsx';
 import SMSService from '../services/smsService.js';
 
 // -------------------------
@@ -25,6 +26,106 @@ export const getStudents = async (req, res) => {
   }
 };
 
+export const uploadStudentsByClass = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded.' });
+    }
+
+    const schoolId = req.user.schoolId;
+
+    // Read workbook
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+
+    if (workbook.SheetNames.length !== 1) {
+      return res.status(400).json({
+        message: 'Upload exactly one sheet per class.',
+      });
+    }
+
+    const sheetName = workbook.SheetNames[0].trim();
+
+    // Find class by name
+    const cls = await Class.findOne({
+      name: sheetName,
+      schoolId,
+    });
+
+    if (!cls) {
+      return res.status(404).json({
+        message: `Class "${sheetName}" not found.`,
+      });
+    }
+
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet);
+
+    if (rows.length === 0) {
+      return res.status(400).json({ message: 'Sheet is empty.' });
+    }
+
+    const studentsToInsert = [];
+    const skipped = [];
+
+    for (const row of rows) {
+      const name = row.name || row.Name;
+      const regNo = row.regNo || row.RegNo || row['Registration Number'];
+
+      if (!name || !regNo) {
+        skipped.push({ row, reason: 'Missing name or regNo' });
+        continue;
+      }
+
+      const exists = await Student.findOne({
+        regNo,
+        schoolId,
+      });
+
+      if (exists) {
+        skipped.push({ regNo, reason: 'Duplicate regNo' });
+        continue;
+      }
+
+      studentsToInsert.push({
+        name,
+        regNo,
+        classId: cls._id,
+        schoolId,
+        parentPhone: row.parentPhone || '',
+        parentName: row.parentName || '',
+        parentEmail: row.parentEmail || '',
+      });
+    }
+
+    if (studentsToInsert.length === 0) {
+      return res.status(400).json({
+        message: 'No valid students found.',
+        skipped,
+      });
+    }
+
+    const insertedStudents = await Student.insertMany(studentsToInsert);
+
+    // Push students to class
+    await Class.findByIdAndUpdate(cls._id, {
+      $addToSet: {
+        students: { $each: insertedStudents.map(s => s._id) },
+      },
+    });
+
+    res.status(201).json({
+      message: `Uploaded ${insertedStudents.length} students to ${cls.name}`,
+      insertedCount: insertedStudents.length,
+      skippedCount: skipped.length,
+      skipped,
+    });
+  } catch (err) {
+    console.error('[UploadStudentsByClass]', err);
+    res.status(500).json({
+      message: 'Failed to upload students.',
+    });
+  }
+};
 // -------------------------
 // Create new student
 // -------------------------

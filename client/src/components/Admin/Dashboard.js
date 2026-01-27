@@ -177,6 +177,15 @@ const Dashboard = () => {
           </div>
           <div className="col-6 col-md-6 col-lg-3">
             <button
+              className="btn btn-outline-secondary w-100 rounded-3 py-3"
+              onClick={() => navigate('/admin/students-upload')}
+            >
+              <i className="bi-gear-fill d-block mb-2" style={{ fontSize: '2rem' }}></i>
+              <span className="fw-semibold">Students Upload</span>
+            </button>
+          </div>
+          <div className="col-6 col-md-6 col-lg-3">
+            <button
               className="btn btn-outline-warning w-100 rounded-3 py-3"
               onClick={() => navigate('/admin/template-builder')}
             >
