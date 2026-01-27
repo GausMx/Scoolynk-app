@@ -1,7 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 
-export default function BulkStudentUpload({ classes }) {
+export default function StudentsUpload({ classes }) {
   const [selectedClass, setSelectedClass] = useState("");
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
