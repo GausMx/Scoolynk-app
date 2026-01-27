@@ -149,6 +149,19 @@ const Dashboard = () => {
         <div className="row g-3">
           {/* Mobile: 2 columns (col-6), Tablet: 2 columns (col-md-6), PC: 3 columns (col-lg-3) */}
           <div className="col-6 col-md-6 col-lg-3">
+  <button
+    className="btn btn-outline-success w-100 rounded-3 py-3"
+    onClick={() => navigate('/admin/students-upload')}
+  >
+    <i
+      className="bi-upload d-block mb-2"
+      style={{ fontSize: '2rem' }}
+    ></i>
+    <span className="fw-semibold">Upload Students</span>
+  </button>
+</div>
+
+          <div className="col-6 col-md-6 col-lg-3">
             <button
               className="btn btn-outline-primary w-100 rounded-3 py-3"
               onClick={() => navigate('/admin/result-management')}
@@ -173,15 +186,6 @@ const Dashboard = () => {
             >
               <i className="bi-gear-fill d-block mb-2" style={{ fontSize: '2rem' }}></i>
               <span className="fw-semibold">Settings</span>
-            </button>
-          </div>
-          <div className="col-6 col-md-6 col-lg-3">
-            <button
-              className="btn btn-outline-secondary w-100 rounded-3 py-3"
-              onClick={() => navigate('/admin/students-upload')}
-            >
-              <i className="bi-gear-fill d-block mb-2" style={{ fontSize: '2rem' }}></i>
-              <span className="fw-semibold">Students Upload</span>
             </button>
           </div>
           <div className="col-6 col-md-6 col-lg-3">
