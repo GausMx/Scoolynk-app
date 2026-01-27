@@ -147,7 +147,8 @@ const Dashboard = () => {
           <i className="bi-lightning-fill me-2 text-warning"></i> Quick Actions
         </h5>
         <div className="row g-3">
-          <div className="col-6 col-md-4 col-lg-2">
+          {/* Mobile: 2 columns (col-6), Tablet: 2 columns (col-md-6), PC: 3 columns (col-lg-3) */}
+          <div className="col-6 col-md-6 col-lg-3">
             <button
               className="btn btn-outline-primary w-100 rounded-3 py-3"
               onClick={() => navigate('/admin/result-management')}
@@ -156,7 +157,7 @@ const Dashboard = () => {
               <span className="fw-semibold">View Results</span>
             </button>
           </div>
-          <div className="col-6 col-md-4 col-lg-2">
+          <div className="col-6 col-md-6 col-lg-3">
             <button
               className="btn btn-outline-info w-100 rounded-3 py-3"
               onClick={() => navigate('/admin/manage-courses')}
@@ -165,7 +166,7 @@ const Dashboard = () => {
               <span className="fw-semibold">Manage Courses</span>
             </button>
           </div>
-          <div className="col-6 col-md-4 col-lg-2">
+          <div className="col-6 col-md-6 col-lg-3">
             <button
               className="btn btn-outline-secondary w-100 rounded-3 py-3"
               onClick={() => navigate('/admin/settings')}
@@ -174,7 +175,7 @@ const Dashboard = () => {
               <span className="fw-semibold">Settings</span>
             </button>
           </div>
-          <div className="col-6 col-md-4 col-lg-2">
+          <div className="col-6 col-md-6 col-lg-3">
             <button
               className="btn btn-outline-warning w-100 rounded-3 py-3"
               onClick={() => navigate('/admin/template-builder')}
