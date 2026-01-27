@@ -4,7 +4,7 @@ import express from 'express';
 import protect from '../middleware/authMiddleware.js';
 import requireRole from '../middleware/roleMiddleware.js';
 import subscriptionGuard from '../middleware/subscriptionMiddleware.js';
-import upload from '../middleware/uploadMiddleware.js';
+import {upload} from '../middleware/uploadMiddleware.js';
 import {
   getAdminSettings,
   updateAdminSettings,
