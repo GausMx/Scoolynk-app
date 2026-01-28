@@ -32,81 +32,112 @@ export const uploadStudentsByClass = async (req, res) => {
       return res.status(400).json({ message: 'No file uploaded.' });
     }
 
+    const { classId } = req.body;
     const schoolId = req.user.schoolId;
 
-    // Read workbook
-    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
-
-    if (workbook.SheetNames.length !== 1) {
-      return res.status(400).json({
-        message: 'Upload exactly one sheet per class.',
-      });
+    if (!classId) {
+      return res.status(400).json({ message: 'Class ID is required.' });
     }
 
-    const sheetName = workbook.SheetNames[0].trim();
-
-    // Find class by name
+    // Find class by ID (not by sheet name)
     const cls = await Class.findOne({
-      name: sheetName,
+      _id: classId,
       schoolId,
     });
 
     if (!cls) {
       return res.status(404).json({
-        message: `Class "${sheetName}" not found.`,
+        message: 'Class not found.',
       });
     }
 
+    // Read workbook
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+
+    // Get first sheet (doesn't matter what it's named)
+    const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(sheet);
 
     if (rows.length === 0) {
-      return res.status(400).json({ message: 'Sheet is empty.' });
+      return res.status(400).json({ message: 'Excel file is empty.' });
     }
 
     const studentsToInsert = [];
     const skipped = [];
 
     for (const row of rows) {
-      const name = row.name || row.Name;
-      const regNo = row.regNo || row.RegNo || row['Registration Number'];
+      // Support multiple column name formats
+      const name = row.name || row.Name || row.NAME;
+      const regNo = row.regNo || row.RegNo || row['Reg No'] || row['Registration Number'];
+      const parentPhone = row.parentPhone || row['Parent Phone'] || row.phone || '';
+      const parentName = row.parentName || row['Parent Name'] || '';
+      const parentEmail = row.parentEmail || row['Parent Email'] || '';
 
-      if (!name || !regNo) {
-        skipped.push({ row, reason: 'Missing name or regNo' });
+      // Validate required field
+      if (!name || name.trim() === '') {
+        skipped.push({ 
+          name: name || 'N/A', 
+          regNo: regNo || 'N/A', 
+          reason: 'Name is required' 
+        });
         continue;
       }
 
+      // Generate regNo if not provided
+      let finalRegNo = regNo?.trim() || '';
+      if (!finalRegNo) {
+        finalRegNo = `${cls.name.substring(0, 3).toUpperCase()}-${Date.now()}-${studentsToInsert.length}`;
+      }
+
+      // Check for duplicate regNo in database
       const exists = await Student.findOne({
-        regNo,
+        regNo: finalRegNo,
         schoolId,
       });
 
       if (exists) {
-        skipped.push({ regNo, reason: 'Duplicate regNo' });
+        skipped.push({ 
+          name, 
+          regNo: finalRegNo, 
+          reason: 'Registration number already exists' 
+        });
+        continue;
+      }
+
+      // Check for duplicate in current batch
+      const duplicateInBatch = studentsToInsert.find(s => s.regNo === finalRegNo);
+      if (duplicateInBatch) {
+        skipped.push({ 
+          name, 
+          regNo: finalRegNo, 
+          reason: 'Duplicate registration number in file' 
+        });
         continue;
       }
 
       studentsToInsert.push({
-        name,
-        regNo,
+        name: name.trim(),
+        regNo: finalRegNo,
         classId: cls._id,
         schoolId,
-        parentPhone: row.parentPhone || '',
-        parentName: row.parentName || '',
-        parentEmail: row.parentEmail || '',
+        parentPhone: parentPhone.toString().trim(),
+        parentName: parentName.toString().trim(),
+        parentEmail: parentEmail.toString().trim(),
       });
     }
 
     if (studentsToInsert.length === 0) {
       return res.status(400).json({
-        message: 'No valid students found.',
+        message: 'No valid students found to insert.',
         skipped,
       });
     }
 
+    // Insert students
     const insertedStudents = await Student.insertMany(studentsToInsert);
 
-    // Push students to class
+    // Add students to class
     await Class.findByIdAndUpdate(cls._id, {
       $addToSet: {
         students: { $each: insertedStudents.map(s => s._id) },
@@ -114,15 +145,15 @@ export const uploadStudentsByClass = async (req, res) => {
     });
 
     res.status(201).json({
-      message: `Uploaded ${insertedStudents.length} students to ${cls.name}`,
+      message: `Successfully uploaded ${insertedStudents.length} student(s) to ${cls.name}`,
       insertedCount: insertedStudents.length,
-      skippedCount: skipped.length,
-      skipped,
+      skipped: skipped,
     });
   } catch (err) {
     console.error('[UploadStudentsByClass]', err);
     res.status(500).json({
       message: 'Failed to upload students.',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
   }
 };
