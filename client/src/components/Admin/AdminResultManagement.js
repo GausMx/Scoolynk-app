@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   FileText, Eye, Check, Send, Plus, Edit2,
-  AlertCircle, CheckCircle, Clock, Trash2
+  AlertCircle, CheckCircle, Clock, Trash2, X
 } from 'lucide-react';
 import VisualTemplateBuilder from './VisualTemplateBuilder';
 import Loading from '../common/Loading';
@@ -382,6 +382,211 @@ const TemplatesTab = ({ templates, onCreateNew, onEdit, onDelete }) => {
     </>
   );
 };
+
+// ==================== RESULT PREVIEW MODAL ====================
+const ResultPreviewModal = ({ result, onClose, onApprove, onReject, showActions = false }) => {
+  const [reviewing, setReviewing] = useState(false);
+
+  const handleReview = async (action) => {
+    setReviewing(true);
+    try {
+      if (action === 'approve') {
+        await onApprove(result._id);
+      } else {
+        await onReject(result._id);
+      }
+    } finally {
+      setReviewing(false);
+    }
+  };
+
+  return (
+    <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+      <div className="modal-dialog modal-xl modal-dialog-scrollable">
+        <div className="modal-content">
+          <div className="modal-header">
+            <h5 className="modal-title">
+              <Eye size={20} className="me-2" />
+              Result Preview - {result.student.name}
+            </h5>
+            <button type="button" className="btn-close" onClick={onClose}></button>
+          </div>
+          <div className="modal-body">
+            {/* Student Info */}
+            <div className="card border-0 bg-light mb-4">
+              <div className="card-body">
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <strong className="d-block text-muted small mb-1">Student Name</strong>
+                    <span className="fw-bold">{result.student.name}</span>
+                  </div>
+                  <div className="col-md-6">
+                    <strong className="d-block text-muted small mb-1">Registration Number</strong>
+                    <span className="fw-bold">{result.student.regNo}</span>
+                  </div>
+                  <div className="col-md-4">
+                    <strong className="d-block text-muted small mb-1">Class</strong>
+                    <span className="badge bg-info">{result.classId.name}</span>
+                  </div>
+                  <div className="col-md-4">
+                    <strong className="d-block text-muted small mb-1">Term</strong>
+                    <span>{result.term}</span>
+                  </div>
+                  <div className="col-md-4">
+                    <strong className="d-block text-muted small mb-1">Session</strong>
+                    <span>{result.session}</span>
+                  </div>
+                  <div className="col-md-4">
+                    <strong className="d-block text-muted small mb-1">Teacher</strong>
+                    <span>{result.teacher.name}</span>
+                  </div>
+                  <div className="col-md-4">
+                    <strong className="d-block text-muted small mb-1">Status</strong>
+                    <span className={`badge bg-${
+                      result.status === 'draft' ? 'secondary' :
+                      result.status === 'submitted' ? 'primary' :
+                      result.status === 'approved' ? 'success' :
+                      result.status === 'rejected' ? 'danger' : 'info'
+                    }`}>
+                      {result.status}
+                    </span>
+                  </div>
+                  {result.submittedAt && (
+                    <div className="col-md-4">
+                      <strong className="d-block text-muted small mb-1">Submitted At</strong>
+                      <span>{new Date(result.submittedAt).toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Subjects Table */}
+            <h6 className="mb-3">Subject Scores</h6>
+            <div className="table-responsive mb-4">
+              <table className="table table-bordered table-hover">
+                <thead className="table-light">
+                  <tr>
+                    <th>Subject</th>
+                    <th className="text-center">CA (40)</th>
+                    <th className="text-center">Exam (60)</th>
+                    <th className="text-center">Total (100)</th>
+                    <th className="text-center">Grade</th>
+                    <th>Remark</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.subjects && result.subjects.length > 0 ? (
+                    result.subjects.map((subject, index) => (
+                      <tr key={index}>
+                        <td className="fw-semibold">{subject.name}</td>
+                        <td className="text-center">{subject.ca}</td>
+                        <td className="text-center">{subject.exam}</td>
+                        <td className="text-center fw-bold">{subject.total}</td>
+                        <td className="text-center">
+                          <span className={`badge bg-${
+                            subject.grade === 'A' ? 'success' :
+                            subject.grade === 'B' ? 'primary' :
+                            subject.grade === 'C' ? 'info' :
+                            subject.grade === 'D' ? 'warning' : 'danger'
+                          }`}>
+                            {subject.grade}
+                          </span>
+                        </td>
+                        <td>{subject.remark}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="text-center text-muted">No subjects recorded</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Overall Performance */}
+            <div className="card border-0 bg-primary bg-opacity-10 mb-4">
+              <div className="card-body">
+                <h6 className="mb-3">Overall Performance</h6>
+                <div className="row g-3">
+                  <div className="col-md-4">
+                    <strong className="d-block text-muted small mb-1">Total Score</strong>
+                    <h4 className="fw-bold mb-0">{result.overallTotal}</h4>
+                  </div>
+                  <div className="col-md-4">
+                    <strong className="d-block text-muted small mb-1">Average</strong>
+                    <h4 className="fw-bold mb-0">{result.overallAverage?.toFixed(2) || 'N/A'}%</h4>
+                  </div>
+                  <div className="col-md-4">
+                    <strong className="d-block text-muted small mb-1">Grade</strong>
+                    <h4 className="mb-0">
+                      <span className={`badge bg-${
+                        result.overallGrade === 'A' ? 'success' :
+                        result.overallGrade === 'B' ? 'primary' :
+                        result.overallGrade === 'C' ? 'info' :
+                        result.overallGrade === 'D' ? 'warning' : 'danger'
+                      }`}>
+                        {result.overallGrade}
+                      </span>
+                    </h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Comments */}
+            {(result.teacherComment || result.principalComment) && (
+              <div className="card border-0 bg-light">
+                <div className="card-body">
+                  <h6 className="mb-3">Comments</h6>
+                  {result.teacherComment && (
+                    <div className="mb-3">
+                      <strong className="d-block text-muted small mb-1">Teacher's Comment</strong>
+                      <p className="mb-0">{result.teacherComment}</p>
+                    </div>
+                  )}
+                  {result.principalComment && (
+                    <div>
+                      <strong className="d-block text-muted small mb-1">Principal's Comment</strong>
+                      <p className="mb-0">{result.principalComment}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
+              Close
+            </button>
+            {showActions && result.status === 'submitted' && (
+              <>
+                <button 
+                  type="button" 
+                  className="btn btn-danger"
+                  onClick={() => handleReview('reject')}
+                  disabled={reviewing}
+                >
+                  {reviewing ? 'Processing...' : 'Reject'}
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-success"
+                  onClick={() => handleReview('approve')}
+                  disabled={reviewing}
+                >
+                  {reviewing ? 'Processing...' : 'Approve & Send to Parent'}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ==================== PENDING RESULTS TAB ====================
 const PendingResultsTab = ({ 
   results, 
@@ -394,7 +599,6 @@ const PendingResultsTab = ({
   onReviewSuccess 
 }) => {
   const [selectedResult, setSelectedResult] = useState(null);
-  const [showReviewModal, setShowReviewModal] = useState(false);
   const [approvingAll, setApprovingAll] = useState(false);
 
   const pendingResults = results.filter(r => r.status === 'submitted');
@@ -423,6 +627,37 @@ const PendingResultsTab = ({
       alert('Failed to approve all results: ' + (err.response?.data?.message || err.message));
     } finally {
       setApprovingAll(false);
+    }
+  };
+
+  const handleApprove = async (resultId) => {
+    try {
+      await axios.put(
+        `${REACT_APP_API_URL}/api/admin/results/${resultId}/review`,
+        { action: 'approve' },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSelectedResult(null);
+      onReviewSuccess();
+    } catch (err) {
+      alert('Failed to approve result: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleReject = async (resultId) => {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (!reason) return;
+
+    try {
+      await axios.put(
+        `${REACT_APP_API_URL}/api/admin/results/${resultId}/review`,
+        { action: 'reject', reason },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSelectedResult(null);
+      onReviewSuccess();
+    } catch (err) {
+      alert('Failed to reject result: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -480,7 +715,7 @@ const PendingResultsTab = ({
           {pendingResults.length === 0 ? (
             <div className="alert alert-success rounded-3">
               <CheckCircle size={20} className="me-2" />
-              No pending results to review. All caught up!!
+              No pending results to review. All caught up!
             </div>
           ) : (
             <div className="table-responsive">
@@ -525,9 +760,7 @@ const PendingResultsTab = ({
                         <div className="d-flex gap-2 justify-content-center">
                           <button 
                             className="btn btn-sm btn-primary rounded-3"
-                            onClick={() => {
-                              // Your review modal logic here
-                            }}
+                            onClick={() => setSelectedResult(result)}
                           >
                             <Eye size={14} className="d-none d-md-inline me-1" />
                             <span className="small">Review</span>
@@ -542,11 +775,22 @@ const PendingResultsTab = ({
           )}
         </>
       )}
+
+      {/* Preview Modal */}
+      {selectedResult && (
+        <ResultPreviewModal
+          result={selectedResult}
+          onClose={() => setSelectedResult(null)}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          showActions={true}
+        />
+      )}
     </>
   );
 };
 
-// ====================RESULTS TAB ====================
+// ==================== ALL RESULTS TAB ====================
 const AllResultsTab = ({ 
   results, 
   loading, 
@@ -559,6 +803,7 @@ const AllResultsTab = ({
 }) => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedResults, setSelectedResults] = useState([]);
+  const [previewResult, setPreviewResult] = useState(null);
 
   const filteredResults = results.filter(r => 
     (statusFilter === 'all' || r.status === statusFilter) &&
@@ -730,6 +975,15 @@ const AllResultsTab = ({
                             <span className="small">{result.teacher.name}</span>
                           </div>
                         </div>
+
+                        {/* Preview Button */}
+                        <button 
+                          className="btn btn-sm btn-outline-primary rounded-3 w-100"
+                          onClick={() => setPreviewResult(result)}
+                        >
+                          <Eye size={14} className="me-1" />
+                          Preview Result
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -766,6 +1020,7 @@ const AllResultsTab = ({
                   <th className="small">Grade</th>
                   <th className="small">Status</th>
                   <th className="small d-none d-lg-table-cell">Teacher</th>
+                  <th className="small text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -790,12 +1045,9 @@ const AllResultsTab = ({
                     </td>
                     <td>
                       <div className="fw-semibold small">{result.student.name}</div>
-                      <small className="text-muted d-block d-md-none">{result.student.regNo}</small>
-                      <div className="d-md-none mt-1">
-                        <span className="badge bg-info">{result.classId.name}</span>
-                      </div>
+                      <small className="text-muted">{result.student.regNo}</small>
                     </td>
-                    <td className="d-none d-md-table-cell"><span className="badge bg-info">{result.classId.name}</span></td>
+                    <td><span className="badge bg-info">{result.classId.name}</span></td>
                     <td className="d-none d-lg-table-cell small">{result.term}</td>
                     <td className="d-none d-lg-table-cell small">{result.session}</td>
                     <td className="fw-bold small">{result.overallTotal}</td>
@@ -822,12 +1074,30 @@ const AllResultsTab = ({
                     <td className="d-none d-lg-table-cell">
                       <small>{result.teacher.name}</small>
                     </td>
+                    <td className="text-center">
+                      <button 
+                        className="btn btn-sm btn-outline-primary rounded-3"
+                        onClick={() => setPreviewResult(result)}
+                      >
+                        <Eye size={14} className="me-1" />
+                        <span className="small">Preview</span>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </>
+      )}
+
+      {/* Preview Modal */}
+      {previewResult && (
+        <ResultPreviewModal
+          result={previewResult}
+          onClose={() => setPreviewResult(null)}
+          showActions={false}
+        />
       )}
     </>
   );
