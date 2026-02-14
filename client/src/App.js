@@ -1,3 +1,5 @@
+// src/App.js - UPDATED WITH PARENT ROUTES
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
@@ -13,10 +15,17 @@ import PublicPaymentPage from './components/public/PublicPaymentPage';
 import PaymentVerification from './components/public/PaymentVerification';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
+// ✅ NEW: Parent Components
+import ParentDashboard from './components/Parent/ParentDashboard';
+import ChildResults from './components/Parent/ChildResults';
+import ResultDetails from './components/Parent/ResultDetails';
+import PerformanceAnalytics from './components/Parent/PerformanceAnalytics';
+
 // ProtectedRoute wrapper
 const ProtectedRoute = ({ children, roles }) => {
   const user = getUser();
-  const token = getAccessToken(); // Updated to accessToken
+  const token = getAccessToken();
 
   if (!user || !token) {
     return <Navigate to="/login" replace />;
@@ -36,7 +45,7 @@ const ProtectedRoute = ({ children, roles }) => {
 const App = () => {
   return (
     <Router>
-            <ToastContainer 
+      <ToastContainer 
         position="top-right"
         autoClose={5000}
         hideProgressBar={false}
@@ -74,12 +83,43 @@ const App = () => {
             </ProtectedRoute>
           }
         />
-        {/* ========== ✅ NEW PUBLIC PAYMENT ROUTES (NO AUTH REQUIRED) ========== */}
-        
-        {/* Public Payment Page - Parent clicks SMS link and lands here */}
+
+        {/* ========== ✅ PARENT ROUTES (NEW) ========== */}
+        <Route
+          path="/parent"
+          element={
+            <ProtectedRoute roles={['parent']}>
+              <ParentDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/parent/children/:studentId/results"
+          element={
+            <ProtectedRoute roles={['parent']}>
+              <ChildResults />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/parent/children/:studentId/analytics"
+          element={
+            <ProtectedRoute roles={['parent']}>
+              <PerformanceAnalytics />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/parent/results/:resultId"
+          element={
+            <ProtectedRoute roles={['parent']}>
+              <ResultDetails />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ========== PUBLIC PAYMENT ROUTES (NO AUTH REQUIRED) ========== */}
         <Route path="/pay/:token" element={<PublicPaymentPage />} />
-        
-        {/* Payment Verification - Paystack redirects here after payment */}
         <Route path="/payment/verify" element={<PaymentVerification />} />
 
         {/* Catch-all */}

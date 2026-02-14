@@ -1,3 +1,5 @@
+// src/components/utils/auth.js - UPDATED
+
 // ----------------------
 // Local Storage Helpers
 // ----------------------
@@ -23,7 +25,7 @@ export const clearAuth = () => {
 };
 
 // ----------------------
-// Redirect Helper
+// Redirect Helper - ✅ UPDATED WITH PARENT
 // ----------------------
 export const redirectByRole = (role) => {
   switch (role) {
@@ -31,6 +33,8 @@ export const redirectByRole = (role) => {
       return '/admin';
     case 'teacher':
       return '/teacher';
+    case 'parent': // ✅ NEW
+      return '/parent';
     default:
       return '/';
   }

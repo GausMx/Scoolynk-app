@@ -1,4 +1,5 @@
-// src/components/Auth/RegisterForm.js
+// src/components/Auth/RegisterForm.js - UPDATED WITH PARENT ROLE
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import API from '../utils/api';
@@ -17,6 +18,7 @@ const RegisterForm = () => {
     role: '',
     classes: [],
     courses: [],
+    studentRegNo: '', // ✅ NEW: For parent registration
   });
   const [message, setMessage] = useState('');
   const [adminExists, setAdminExists] = useState(false);
@@ -85,11 +87,16 @@ const RegisterForm = () => {
     e.preventDefault();
     setMessage('');
     setIsLoading(true);
+    
     try {
       const payload = { ...formData };
+      
       if (formData.role === 'teacher') {
         payload.classes = formData.classes;
         payload.courses = formData.courses;
+      } else if (formData.role === 'parent') {
+        // ✅ Ensure studentRegNo is included for parent registration
+        payload.studentRegNo = formData.studentRegNo;
       }
 
       const response = await API.post('/api/auth/register', payload);
@@ -100,8 +107,18 @@ const RegisterForm = () => {
         setMessage('Registration successful! Redirecting to onboarding...');
         setTimeout(() => navigate('/teacher/onboarding'), 1500);
       } else {
-        setMessage('Registration successful! Redirecting to login...');
-        setTimeout(() => navigate('/login'), 1500);
+        setAccessToken(response.data.accessToken);
+        setUser(response.data);
+        setMessage('Registration successful! Redirecting...');
+        
+        // ✅ Redirect based on role
+        setTimeout(() => {
+          if (response.data.role === 'parent') {
+            navigate('/parent');
+          } else {
+            navigate('/login');
+          }
+        }, 1500);
       }
 
       setFormData({
@@ -114,6 +131,7 @@ const RegisterForm = () => {
         role: '',
         classes: [],
         courses: [],
+        studentRegNo: '',
       });
     } catch (error) {
       setMessage(error.response?.data?.message || 'Something went wrong.');
@@ -199,6 +217,7 @@ const RegisterForm = () => {
                       <option value="">Select role</option>
                       <option value="admin">Admin</option>
                       <option value="teacher">Teacher</option>
+                      <option value="parent">Parent</option> {/* ✅ NEW */}
                     </select>
                   </div>
                 </div>
@@ -299,7 +318,7 @@ const RegisterForm = () => {
                   </div>
                 </div>
 
-                {/* Admin School Name */}
+                {/* ========== ADMIN FIELDS ========== */}
                 {formData.role === 'admin' && (
                   <div className="mb-3">
                     <label className="form-label d-flex align-items-center">
@@ -323,7 +342,7 @@ const RegisterForm = () => {
                   </div>
                 )}
 
-                {/* Teacher School Code */}
+                {/* ========== TEACHER FIELDS ========== */}
                 {formData.role === 'teacher' && (
                   <>
                     <div className="mb-3">
@@ -422,6 +441,70 @@ const RegisterForm = () => {
                         </div>
                       </div>
                     )}
+                  </>
+                )}
+
+                {/* ========== ✅ PARENT FIELDS (NEW) ========== */}
+                {formData.role === 'parent' && (
+                  <>
+                    <div className="mb-3">
+                      <label className="form-label d-flex align-items-center">
+                        <i className="bi bi-key-fill me-2"></i>School Code
+                      </label>
+                      <div className="input-group">
+                        <span className="input-group-text">
+                          <i className="bi bi-hash"></i>
+                        </span>
+                        <input
+                          type="text"
+                          className="form-control form-control-lg"
+                          name="schoolCode"
+                          value={formData.schoolCode}
+                          onChange={handleChange}
+                          placeholder="Enter 16-digit school code"
+                          required
+                          minLength={16}
+                          maxLength={16}
+                          disabled={isLoading}
+                        />
+                      </div>
+                      <div className="form-text">
+                        <i className="bi bi-info-circle me-1"></i>
+                        Contact your child's school to get the school code.
+                      </div>
+                    </div>
+
+                    <div className="mb-3">
+                      <label className="form-label d-flex align-items-center">
+                        <i className="bi bi-person-vcard me-2"></i>Student Registration Number
+                      </label>
+                      <div className="input-group">
+                        <span className="input-group-text">
+                          <i className="bi bi-123"></i>
+                        </span>
+                        <input
+                          type="text"
+                          className="form-control form-control-lg"
+                          name="studentRegNo"
+                          value={formData.studentRegNo}
+                          onChange={handleChange}
+                          placeholder="Enter your child's registration number"
+                          required
+                          disabled={isLoading}
+                        />
+                      </div>
+                      <div className="form-text">
+                        <i className="bi bi-info-circle me-1"></i>
+                        This is your child's unique student ID or registration number provided by the school.
+                      </div>
+                    </div>
+
+                    <div className="alert alert-info rounded-3">
+                      <i className="bi bi-info-circle-fill me-2"></i>
+                      <strong>Important:</strong> Your phone number must match the parent phone number 
+                      registered with your child at the school. Contact the school admin if you need to 
+                      update your contact information.
+                    </div>
                   </>
                 )}
 
