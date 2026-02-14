@@ -1,4 +1,4 @@
-// server/models/User.js
+// server/models/User.js - UPDATED WITH PARENT ROLE
 
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
@@ -8,23 +8,44 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   phone: { type: String, required: true, unique: true },
   passwordHash: { type: String, required: true },
-  role: { type: String, enum: ['admin', 'teacher'], required: true },
-  schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
+  role: { 
+    type: String, 
+    enum: ['admin', 'teacher', 'parent'], // ✅ Added 'parent'
+    required: true 
+  },
+  schoolId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'School', 
+    required: true 
+  },
   
-  // For parents: array of children (students)
-  children: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Student' }],
+  // ✅ For parents: array of children (students)
+  children: [{ 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Student' 
+  }],
   
   // For teachers: array of classes they teach
-  classes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Class' }],
+  classes: [{ 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Class' 
+  }],
   
   // For teachers: array of course names they teach
   courses: [{ type: String }],
   
-  // NEW: For teachers: array of classes they are class teacher for
-  classTeacherFor: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Class' }],
+  // For teachers: array of classes they are class teacher for
+  classTeacherFor: [{ 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Class' 
+  }],
   
   mustChangePassword: { type: Boolean, default: false },
-  subscriptionStatus: { type: String, enum: ['trial', 'active', 'inactive'], default: 'trial' },
+  subscriptionStatus: { 
+    type: String, 
+    enum: ['trial', 'active', 'inactive'], 
+    default: 'trial' 
+  },
   trialStartDate: { type: Date, default: Date.now },
   trialEndDate: { type: Date },
   createdAt: { type: Date, default: Date.now },

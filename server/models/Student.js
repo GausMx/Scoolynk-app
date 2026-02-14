@@ -1,4 +1,4 @@
-// server/models/Student.js - PAYMENT FIELDS REMOVED
+// server/models/Student.js - UPDATED WITH PARENT LINK
 
 import mongoose from 'mongoose';
 
@@ -23,6 +23,14 @@ const studentSchema = new mongoose.Schema({
     ref: 'School',
     required: true
   },
+  
+  // ✅ NEW: Link to parent user account
+  parentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  
   parentPhone: {
     type: String,
     trim: true,
@@ -39,7 +47,6 @@ const studentSchema = new mongoose.Schema({
     lowercase: true,
     default: ''
   },
-  // ADDITIONAL INFO
   dateOfBirth: {
     type: Date
   },
@@ -67,9 +74,10 @@ studentSchema.index({ schoolId: 1, classId: 1 });
 studentSchema.index({ schoolId: 1, name: 1 });
 studentSchema.index({ schoolId: 1, status: 1 });
 studentSchema.index({ schoolId: 1, parentPhone: 1 });
+// ✅ NEW: Index for parent lookup
+studentSchema.index({ parentId: 1, schoolId: 1 });
 
 // ========== METHODS ==========
-// Helper method to get student's full info
 studentSchema.methods.getFullInfo = function() {
   return {
     id: this._id,
@@ -84,7 +92,6 @@ studentSchema.methods.getFullInfo = function() {
   };
 };
 
-// Static method to find active students in a class
 studentSchema.statics.findActiveByClass = function(classId, schoolId) {
   return this.find({ 
     classId, 
@@ -95,7 +102,6 @@ studentSchema.statics.findActiveByClass = function(classId, schoolId) {
   .sort({ name: 1 });
 };
 
-// Static method to search students
 studentSchema.statics.searchStudents = function(schoolId, searchTerm) {
   const regex = new RegExp(searchTerm, 'i');
   return this.find({

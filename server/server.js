@@ -10,6 +10,7 @@ import teacherRoutes from "./routes/teacherRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import ocrRoutes from "./routes/ocrRoutes.js";
+import parentRoutes from "./routes/parentRoutes.js";
 
 // Security
 import helmet from "helmet";
@@ -184,6 +185,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/teacher", teacherRoutes);
 app.use("/api/ocr", ocrRoutes);
+app.use("/api/parent", parentRoutes); // ✅ Parent routes
 
 // ✅ PUBLIC RESULT ROUTES (For parent PDF downloads - no auth required)
 app.use("/api/results", resultRoutes);

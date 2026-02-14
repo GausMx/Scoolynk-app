@@ -1,11 +1,11 @@
-// server/controllers/adminResultController.js - VISUAL TEMPLATE BUILDER
+// server/controllers/adminResultController.js - CORRECTED VERSION (NO SMS)
 
 import Result from '../models/Result.js'; 
 import ResultTemplate from '../models/ResultTemplate.js';
 import Student from '../models/Student.js';
 import School from '../models/School.js';
-import SMSService from '../services/smsService.js';
 import { generateResultPDFBase64 } from '../services/pdfResultService.js';
+
 // ✅ CREATE RESULT TEMPLATE (Visual Builder)
 export const createResultTemplate = async (req, res) => {
   try {
@@ -37,8 +37,8 @@ export const createResultTemplate = async (req, res) => {
       name,
       term,
       session,
-      templateType: 'visual', // NEW: Mark as visual template
-      components, // Store component configuration
+      templateType: 'visual',
+      components,
       createdBy: req.user._id,
       isActive: true
     });
@@ -70,7 +70,6 @@ export const updateResultTemplate = async (req, res) => {
       return res.status(404).json({ message: 'Template not found.' });
     }
 
-    // Update fields
     if (name) template.name = name;
     if (term) template.term = term;
     if (session) template.session = session;
@@ -130,6 +129,7 @@ export const getResultTemplate = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch template.' });
   }
 };
+
 // ✅ DELETE TEMPLATE (soft delete for active, hard delete for inactive)
 export const deleteResultTemplate = async (req, res) => {
   try {
@@ -145,7 +145,6 @@ export const deleteResultTemplate = async (req, res) => {
       return res.status(404).json({ message: 'Template not found.' });
     }
 
-    // ✅ If template is active, soft delete (deactivate)
     if (template.isActive) {
       template.isActive = false;
       await template.save();
@@ -155,7 +154,6 @@ export const deleteResultTemplate = async (req, res) => {
       });
     }
 
-    // ✅ If template is already inactive, permanently delete
     await ResultTemplate.findByIdAndDelete(id);
     
     res.json({ 
@@ -189,7 +187,6 @@ export const duplicateResultTemplate = async (req, res) => {
       return res.status(404).json({ message: 'Original template not found.' });
     }
 
-    // Check if template already exists for new term/session
     const existingTemplate = await ResultTemplate.findOne({
       schoolId: req.user.schoolId,
       term: newTerm,
@@ -203,7 +200,6 @@ export const duplicateResultTemplate = async (req, res) => {
       });
     }
 
-    // Create duplicate
     const newTemplate = new ResultTemplate({
       schoolId: originalTemplate.schoolId,
       name: newName || `${originalTemplate.name} (${newTerm} - ${newSession})`,
@@ -227,7 +223,7 @@ export const duplicateResultTemplate = async (req, res) => {
   }
 };
 
-// Get submitted results for review
+// ✅ GET SUBMITTED RESULTS
 export const getSubmittedResults = async (req, res) => {
   try {
     const { term, session, classId } = req.query;
@@ -242,7 +238,7 @@ export const getSubmittedResults = async (req, res) => {
     if (classId) query.classId = classId;
 
     const results = await Result.find(query)
-      .populate('student', 'name regNo parentPhone parentName')
+      .populate('student', 'name regNo parentPhone parentName parentId')
       .populate('classId', 'name')
       .populate('teacher', 'name')
       .sort({ submittedAt: -1 });
@@ -254,7 +250,7 @@ export const getSubmittedResults = async (req, res) => {
   }
 };
 
-// Review and edit result
+// ✅ REVIEW RESULT
 export const reviewResult = async (req, res) => {
   try {
     const { resultId } = req.params;
@@ -290,18 +286,16 @@ export const reviewResult = async (req, res) => {
 
       console.log('[ReviewResult] Result approved/verified:', resultId);
 
-      // ✅ UPDATED: Call calculateClassPositions with schoolId
       try {
         await Result.calculateClassPositions(
           result.classId._id,
           result.term,
           result.session,
-          req.user.schoolId // ✅ NEW: Pass schoolId
+          req.user.schoolId
         );
         console.log('[ReviewResult] Class positions recalculated');
       } catch (posErr) {
         console.error('[ReviewResult] Position calculation failed:', posErr);
-        // Don't fail the approval if position calculation fails
       }
 
       return res.json({ 
@@ -337,6 +331,8 @@ export const reviewResult = async (req, res) => {
     res.status(500).json({ message: 'Failed to review result.' });
   }
 };
+
+// ✅ UPDATED: PUBLISH RESULT TO PARENT (NO SMS - Direct Dashboard Access)
 export const sendResultToParent = async (req, res) => {
   try {
     const { resultId } = req.params;
@@ -346,7 +342,7 @@ export const sendResultToParent = async (req, res) => {
       schoolId: req.user.schoolId,
       status: 'approved'
     })
-    .populate('student', 'name regNo parentPhone parentName')
+    .populate('student', 'name regNo parentPhone parentName parentId')
     .populate('classId', 'name');
 
     if (!result) {
@@ -356,75 +352,60 @@ export const sendResultToParent = async (req, res) => {
     }
 
     const student = result.student;
-
-    if (!student.parentPhone) {
-      return res.status(400).json({ 
-        message: 'Parent phone number not available for this student.' 
-      });
-    }
-
     const school = await School.findById(req.user.schoolId).select('name phone address');
 
     try {
-      // Generate PDF as Base64 (stored in memory, then in MongoDB)
-      console.log('[SendResultToParent] Generating PDF...');
+      // Generate PDF as Base64
+      console.log('[PublishResultToParent] Generating PDF...');
       const pdfResult = await generateResultPDFBase64(result, school);
 
       if (!pdfResult.success) {
         throw new Error('Failed to generate PDF');
       }
 
-      console.log('[SendResultToParent] PDF generated, size:', pdfResult.size, 'bytes');
+      console.log('[PublishResultToParent] PDF generated, size:', pdfResult.size, 'bytes');
 
-      // Store Base64 PDF in MongoDB (no files!)
+      // Store Base64 PDF in MongoDB
       result.pdfBase64 = pdfResult.base64;
+
+      // ✅ Mark as sent (parent can now access via dashboard)
+      result.status = 'sent';
+      result.sentToParentAt = new Date();
+      await result.save();
 
       // Create download link
       const baseUrl = process.env.APP_URL || 'http://localhost:5000';
       const downloadLink = `${baseUrl}/api/results/download/${result._id}`;
 
-      // Prepare SMS message
-      const message = `Dear ${student.parentName || 'Parent'},\n\n` +
-        `${result.term} result for ${student.name} (${result.classId.name}) is ready.\n\n` +
-        `Overall: ${result.overallTotal}/${result.subjects.length * 100} (${result.overallAverage}%) - Grade ${result.overallGrade}\n` +
-        `Position: ${result.overallPosition || 'N/A'}\n\n` +
-        `Download full result PDF:\n${downloadLink}\n\n` +
-        `Or visit school to collect printed copy.\n\n` +
-        `${school.name}\n${school.phone}`;
-
-      // Send SMS
-      const smsResult = await SMSService.sendSMS(student.parentPhone, message);
-
-      if (!smsResult.success) {
-        throw new Error(smsResult.error || 'Failed to send SMS');
-      }
-
-      result.status = 'sent';
-      result.sentToParentAt = new Date();
-      await result.save();
-
-      res.json({ 
-        message: 'Result PDF generated and download link sent to parent successfully.',
-        sentTo: student.parentPhone,
+      const response = {
+        message: 'Result published successfully!',
         pdfGenerated: true,
         pdfSize: pdfResult.size,
-        downloadLink
-      });
+        downloadLink,
+        studentName: student.name,
+        parentAccess: student.parentId 
+          ? '✅ Parent can now view in their dashboard' 
+          : '⚠️ No parent account linked yet. Parent needs to register.'
+      };
+
+      console.log('[PublishResultToParent] Success:', response);
+
+      res.json(response);
 
     } catch (error) {
-      console.error('[SMS/PDF Error]', error);
+      console.error('[PDF Error]', error);
       return res.status(500).json({ 
-        message: 'Failed to send result to parent.',
+        message: 'Failed to generate result PDF.',
         error: error.message
       });
     }
   } catch (err) {
-    console.error('[SendResultToParent]', err);
-    res.status(500).json({ message: 'Failed to send result to parent.' });
+    console.error('[PublishResultToParent]', err);
+    res.status(500).json({ message: 'Failed to publish result to parent.' });
   }
 };
 
-// REPLACE YOUR EXISTING sendMultipleResultsToParents FUNCTION WITH THIS:
+// ✅ UPDATED: PUBLISH MULTIPLE RESULTS TO PARENTS (NO SMS - Direct Dashboard Access)
 export const sendMultipleResultsToParents = async (req, res) => {
   try {
     const { resultIds } = req.body;
@@ -438,7 +419,7 @@ export const sendMultipleResultsToParents = async (req, res) => {
       schoolId: req.user.schoolId,
       status: 'approved'
     })
-    .populate('student', 'name regNo parentPhone parentName')
+    .populate('student', 'name regNo parentPhone parentName parentId')
     .populate('classId', 'name');
 
     if (results.length === 0) {
@@ -446,31 +427,23 @@ export const sendMultipleResultsToParents = async (req, res) => {
     }
 
     const school = await School.findById(req.user.schoolId).select('name phone address');
-    const baseUrl = process.env.APP_URL || 'http://localhost:5000';
     
-    const messages = [];
-    const successfulSends = [];
-    const failedSends = [];
+    const successfulPublishes = [];
+    const failedPublishes = [];
+    let parentsWithAccess = 0;
+    let parentsWithoutAccess = 0;
 
-    console.log(`[SendMultipleResults] Generating ${results.length} PDFs...`);
+    console.log(`[PublishMultipleResults] Processing ${results.length} results...`);
     
     for (const result of results) {
       const student = result.student;
-
-      if (!student.parentPhone) {
-        failedSends.push({
-          studentName: student.name,
-          reason: 'No parent phone number'
-        });
-        continue;
-      }
 
       try {
         // Generate PDF as Base64
         const pdfResult = await generateResultPDFBase64(result, school);
 
         if (!pdfResult.success) {
-          failedSends.push({
+          failedPublishes.push({
             studentName: student.name,
             reason: 'PDF generation failed'
           });
@@ -479,73 +452,51 @@ export const sendMultipleResultsToParents = async (req, res) => {
 
         // Store in MongoDB
         result.pdfBase64 = pdfResult.base64;
+        result.status = 'sent';
+        result.sentToParentAt = new Date();
         await result.save();
 
-        // Create download link
-        const downloadLink = `${baseUrl}/api/results/download/${result._id}`;
-
-        // Prepare SMS
-        const message = `Dear ${student.parentName || 'Parent'},\n\n` +
-          `${result.term} result for ${student.name} (${result.classId.name}) is ready.\n\n` +
-          `Overall: ${result.overallTotal}/${result.subjects.length * 100} (${result.overallAverage}%) - Grade ${result.overallGrade}\n` +
-          `Position: ${result.overallPosition || 'N/A'}\n\n` +
-          `Download full result PDF:\n${downloadLink}\n\n` +
-          `Or visit school to collect printed copy.\n\n` +
-          `${school.name}\n${school.phone}`;
-
-        messages.push({
-          to: student.parentPhone,
-          message,
-          resultId: result._id
+        successfulPublishes.push({
+          studentName: student.name,
+          resultId: result._id,
+          hasParentAccount: !!student.parentId
         });
+
+        // Count parent access status
+        if (student.parentId) {
+          parentsWithAccess++;
+        } else {
+          parentsWithoutAccess++;
+        }
 
       } catch (pdfError) {
         console.error('[PDF Generation Error]', pdfError);
-        failedSends.push({
+        failedPublishes.push({
           studentName: student.name,
           reason: 'PDF generation error: ' + pdfError.message
         });
       }
     }
 
-    console.log(`[SendMultipleResults] Sending ${messages.length} SMS messages...`);
-
-    // Send all messages
-    const smsResults = await SMSService.sendBulkMessages(messages);
-
-    // Update results that were sent successfully
-    for (let i = 0; i < smsResults.length; i++) {
-      const smsResult = smsResults[i];
-      const messageData = messages[i];
-
-      if (smsResult.success) {
-        await Result.findByIdAndUpdate(messageData.resultId, {
-          status: 'sent',
-          sentToParentAt: new Date()
-        });
-        successfulSends.push(messageData.resultId);
-      } else {
-        failedSends.push({
-          resultId: messageData.resultId,
-          reason: smsResult.error || 'Unknown SMS error'
-        });
-      }
-    }
-
     res.json({
-      message: `Sent ${successfulSends.length}/${messages.length} results with PDF links successfully.`,
-      successCount: successfulSends.length,
-      failureCount: failedSends.length,
-      pdfsGenerated: messages.length,
-      failed: failedSends
+      message: `Published ${successfulPublishes.length}/${results.length} results successfully!`,
+      successCount: successfulPublishes.length,
+      failureCount: failedPublishes.length,
+      pdfsGenerated: successfulPublishes.length,
+      parentsWithAccess,
+      parentsWithoutAccess,
+      accessSummary: parentsWithoutAccess > 0 
+        ? `${parentsWithoutAccess} parent(s) need to register to view results.`
+        : 'All parents can now view results in their dashboard!',
+      failed: failedPublishes
     });
   } catch (err) {
-    console.error('[SendMultipleResultsToParents]', err);
-    res.status(500).json({ message: 'Failed to send results to parents.' });
+    console.error('[PublishMultipleResults]', err);
+    res.status(500).json({ message: 'Failed to publish results to parents.' });
   }
 };
 
-// ✅ UPDATED: Download result PDF (PUBLIC ENDPOINT)
+// ✅ DOWNLOAD RESULT PDF (PUBLIC ENDPOINT - No Auth Required)
 export const downloadResultPDF = async (req, res) => {
   try {
     const { resultId } = req.params;
@@ -555,13 +506,12 @@ export const downloadResultPDF = async (req, res) => {
       status: { $in: ['approved', 'sent'] }
     })
     .populate('student', 'name regNo')
-    .populate('schoolId', 'name phone'); // ✅ NEW: Populate schoolId to verify
+    .populate('schoolId', 'name phone');
 
     if (!result) {
       return res.status(404).json({ message: 'Result not found or not available for download.' });
     }
 
-    // ✅ NEW: Verify schoolId exists (prevents orphaned results)
     if (!result.schoolId || !result.schoolId._id) {
       console.error('[DownloadResultPDF] Missing schoolId for result:', resultId);
       return res.status(500).json({ 
@@ -569,7 +519,6 @@ export const downloadResultPDF = async (req, res) => {
       });
     }
 
-    // ✅ NEW: Verify student exists (additional safety check)
     if (!result.student || !result.student._id) {
       console.error('[DownloadResultPDF] Missing student for result:', resultId);
       return res.status(500).json({ 
@@ -602,7 +551,9 @@ export const downloadResultPDF = async (req, res) => {
     console.error('[DownloadResultPDF]', err);
     res.status(500).json({ message: 'Failed to download result PDF.' });
   }
-};// Get all results (for admin overview)
+};
+
+// ✅ GET ALL RESULTS (Admin Overview)
 export const getAllResults = async (req, res) => {
   try {
     const { term, session, status, classId } = req.query;
@@ -615,7 +566,7 @@ export const getAllResults = async (req, res) => {
     if (classId) query.classId = classId;
 
     const results = await Result.find(query)
-      .populate('student', 'name regNo')
+      .populate('student', 'name regNo parentId')
       .populate('classId', 'name')
       .populate('teacher', 'name')
       .sort({ createdAt: -1 });

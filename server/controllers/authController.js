@@ -1,7 +1,10 @@
+// server/controllers/authController.js - UPDATED WITH PARENT SUPPORT
+
 import jwt from 'jsonwebtoken';
 import { validationResult } from 'express-validator';
 import User from '../models/User.js';
 import School from '../models/School.js';
+import Student from '../models/Student.js';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -25,24 +28,41 @@ const generateSchoolCode = () => {
 };
 
 // ----------------------
-// REGISTER
+// REGISTER - UPDATED WITH PARENT SUPPORT
 // ----------------------
 const register = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-  const { name, email, phone, password, role, schoolName, schoolCode, classes, courses } = req.body;
+  const { 
+    name, 
+    email, 
+    phone, 
+    password, 
+    role, 
+    schoolName, 
+    schoolCode, 
+    classes, 
+    courses,
+    studentRegNo // ✅ NEW: For parent registration
+  } = req.body;
+  
   const normalizedEmail = email.toLowerCase();
 
   try {
     const userExists = await User.findOne({ $or: [{ email: normalizedEmail }, { phone }] });
-    if (userExists) return res.status(400).json({ message: 'Email or phone number already registered.' });
+    if (userExists) {
+      return res.status(400).json({ message: 'Email or phone number already registered.' });
+    }
 
     let school;
     let schoolId;
 
+    // ========== ADMIN REGISTRATION ==========
     if (role === 'admin') {
-      if (!schoolName) return res.status(400).json({ message: 'Admin registration requires a school name.' });
+      if (!schoolName) {
+        return res.status(400).json({ message: 'Admin registration requires a school name.' });
+      }
 
       const passwordHash = await User.hashPassword(password);
       const tempUser = await User.create({
@@ -74,12 +94,18 @@ const register = async (req, res) => {
       tempUser.schoolId = school._id;
       await tempUser.save();
       schoolId = school._id;
-
-    } else if (role === 'teacher') {
-      if (!schoolCode || schoolCode.length !== 16) return res.status(400).json({ message: 'A valid 16-digit school code is required.' });
+    } 
+    
+    // ========== TEACHER REGISTRATION ==========
+    else if (role === 'teacher') {
+      if (!schoolCode || schoolCode.length !== 16) {
+        return res.status(400).json({ message: 'A valid 16-digit school code is required.' });
+      }
 
       school = await School.findOne({ schoolCode });
-      if (!school) return res.status(400).json({ message: 'Invalid school code.' });
+      if (!school) {
+        return res.status(400).json({ message: 'Invalid school code.' });
+      }
 
       schoolId = school._id;
       const passwordHash = await User.hashPassword(password);
@@ -93,7 +119,76 @@ const register = async (req, res) => {
         classes: classes || [],
         courses: courses || [],
       });
-    } else {
+    } 
+    
+    // ========== ✅ PARENT REGISTRATION (NEW) ==========
+    else if (role === 'parent') {
+      if (!schoolCode || schoolCode.length !== 16) {
+        return res.status(400).json({ 
+          message: 'A valid 16-digit school code is required for parent registration.' 
+        });
+      }
+
+      if (!studentRegNo || !studentRegNo.trim()) {
+        return res.status(400).json({ 
+          message: 'Student registration number is required.' 
+        });
+      }
+
+      // Find school
+      school = await School.findOne({ schoolCode });
+      if (!school) {
+        return res.status(400).json({ message: 'Invalid school code.' });
+      }
+
+      // Find student by registration number
+      const student = await Student.findOne({ 
+        regNo: studentRegNo.trim(), 
+        schoolId: school._id 
+      });
+
+      if (!student) {
+        return res.status(400).json({ 
+          message: 'No student found with this registration number in the specified school.' 
+        });
+      }
+
+      // Check if student already has a parent account
+      if (student.parentId) {
+        return res.status(400).json({ 
+          message: 'This student already has a parent account linked. Please contact the school admin.' 
+        });
+      }
+
+      // Verify parent phone matches student's parent phone (optional security check)
+      if (student.parentPhone && phone !== student.parentPhone) {
+        return res.status(400).json({ 
+          message: 'Phone number does not match the student\'s parent phone on record. Please contact the school.' 
+        });
+      }
+
+      schoolId = school._id;
+      const passwordHash = await User.hashPassword(password);
+      
+      // Create parent user
+      const parentUser = await User.create({
+        name,
+        email: normalizedEmail,
+        phone,
+        passwordHash,
+        role: 'parent',
+        schoolId,
+        children: [student._id], // Link student to parent
+      });
+
+      // Update student to link parent
+      student.parentId = parentUser._id;
+      await student.save();
+
+      console.log(`[ParentRegistration] Parent ${name} linked to student ${student.name} (${student.regNo})`);
+    } 
+    
+    else {
       return res.status(400).json({ message: 'Invalid role.' });
     }
 
@@ -121,7 +216,7 @@ const register = async (req, res) => {
 };
 
 // ----------------------
-// LOGIN
+// LOGIN - SAME (supports all roles)
 // ----------------------
 const login = async (req, res) => {
   const { email, password } = req.body;
@@ -129,7 +224,9 @@ const login = async (req, res) => {
 
   try {
     const user = await User.findOne({ email: normalizedEmail });
-    if (!user || !(await user.matchPassword(password))) return res.status(401).json({ message: 'Invalid credentials' });
+    if (!user || !(await user.matchPassword(password))) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
 
     const accessToken = generateAccessToken(user._id, user.schoolId, user.role);
     const refreshToken = generateRefreshToken(user._id);
@@ -174,10 +271,9 @@ const refreshToken = async (req, res) => {
 };
 
 // ----------------------
-// LOGOUT (OPTIONAL: if storing refresh in DB)
+// LOGOUT
 // ----------------------
 const logout = async (req, res) => {
-  // If refresh tokens stored in DB, remove it here
   res.json({ message: 'Logged out successfully' });
 };
 
@@ -212,7 +308,9 @@ const adminExists = async (req, res) => {
 // ----------------------
 const resetPassword = async (req, res) => {
   const { userId, password } = req.body;
-  if (!userId || !password || password.length < 6) return res.status(400).json({ message: 'Invalid request.' });
+  if (!userId || !password || password.length < 6) {
+    return res.status(400).json({ message: 'Invalid request.' });
+  }
 
   try {
     const user = await User.findById(userId);
