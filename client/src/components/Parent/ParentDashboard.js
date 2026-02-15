@@ -1,4 +1,4 @@
-// src/components/Parent/ParentDashboard.js - NEW FILE
+// src/components/Parent/ParentDashboard.js - CORRECTED VERSION
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -154,7 +154,7 @@ const ParentDashboard = () => {
                   <div 
                     className="card border-0 shadow-sm rounded-3 h-100"
                     style={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/parent/children/${child._id}`)}
+                    onClick={() => navigate(`/parent/children/${child._id}/results`)} 
                   >
                     <div className="card-body p-3">
                       <div className="d-flex align-items-center mb-3">
@@ -175,16 +175,29 @@ const ParentDashboard = () => {
                         <span className="badge bg-secondary">{child.status}</span>
                       </div>
                       
-                      <button 
-                        className="btn btn-sm btn-outline-primary rounded-3 w-100 mt-2"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/parent/children/${child._id}/results`);
-                        }}
-                      >
-                        <i className="bi bi-file-earmark-text me-1"></i>
-                        View Results
-                      </button>
+                      {/* ✅ UPDATED: Added two action buttons */}
+                      <div className="d-flex gap-2">
+                        <button 
+                          className="btn btn-sm btn-outline-primary rounded-3 flex-grow-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/parent/children/${child._id}/results`);
+                          }}
+                        >
+                          <i className="bi bi-file-earmark-text me-1"></i>
+                          Results
+                        </button>
+                        <button 
+                          className="btn btn-sm btn-outline-success rounded-3 flex-grow-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/parent/children/${child._id}/analytics`);
+                          }}
+                        >
+                          <i className="bi bi-graph-up me-1"></i>
+                          Analytics
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
