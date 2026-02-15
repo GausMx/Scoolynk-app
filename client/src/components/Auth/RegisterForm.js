@@ -95,10 +95,11 @@ const RegisterForm = () => {
         payload.classes = formData.classes;
         payload.courses = formData.courses;
       } else if (formData.role === 'parent') {
-        // ✅ Ensure studentRegNo is included for parent registration
+        // Ensure studentRegNo is included for parent registration
+        payload.schoolCode = formData.schoolCode;
         payload.studentRegNo = formData.studentRegNo;
       }
-
+       console.log('[Registration] Sending payload:', payload);
       const response = await API.post('/api/auth/register', payload);
 
       if (response.data.needsOnboarding) {
@@ -134,8 +135,16 @@ const RegisterForm = () => {
         studentRegNo: '',
       });
     } catch (error) {
-      setMessage(error.response?.data?.message || 'Something went wrong.');
-      setIsLoading(false);
+    console.error('[Registration Error] Full error:', error);
+    console.error('[Registration Error] Response:', error.response);
+    console.error('[Registration Error] Data:', error.response?.data);
+    
+    const errorMessage = error.response?.data?.message 
+      || error.response?.data?.errors?.[0]?.msg 
+      || 'Something went wrong.';
+    
+    setMessage(errorMessage);
+    setIsLoading(false);
     }
   };
 
