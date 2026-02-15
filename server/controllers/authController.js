@@ -26,18 +26,36 @@ const generateSchoolCode = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   return Array.from({ length: 16 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 };
-
+const normalizePhoneNumber = (phone) => {
+  if (!phone) return '';
+  
+  // Remove all non-digit characters
+  let normalized = phone.replace(/\D/g, '');
+  
+  // Handle different Nigerian formats
+  if (normalized.startsWith('234')) {
+    // +234 or 234 format -> keep as is
+    normalized = normalized;
+  } else if (normalized.startsWith('0')) {
+    // 0 prefix -> replace with 234
+    normalized = '234' + normalized.slice(1);
+  } else if (normalized.length === 10) {
+    // 10 digits without prefix -> add 234
+    normalized = '234' + normalized;
+  }
+  
+  return normalized;
+};
 // ----------------------
-// REGISTER - UPDATED WITH PARENT SUPPORT
+// REGISTER - UPDATED WITH PHONE NORMALIZATION
 // ----------------------
 const register = async (req, res) => {
-  // ✅ CHECK VALIDATION ERRORS FIRST
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     console.error('[Registration Validation Error]', errors.array());
     return res.status(400).json({ 
-      message: errors.array()[0].msg, // Send first error message
-      errors: errors.array() // Send all errors for debugging
+      message: errors.array()[0].msg,
+      errors: errors.array()
     });
   }
 
@@ -51,9 +69,19 @@ const register = async (req, res) => {
     schoolCode, 
     classes, 
     courses,
-    studentRegNo // For parent registration
+    studentRegNo
   } = req.body;
   
+  console.log('[Registration] Received data:', { 
+    name, 
+    email, 
+    phone, 
+    role, 
+    schoolName: schoolName || 'N/A',
+    schoolCode: schoolCode || 'N/A',
+    studentRegNo: studentRegNo || 'N/A'
+  });
+
   const normalizedEmail = email.toLowerCase();
 
   try {
@@ -129,7 +157,7 @@ const register = async (req, res) => {
     } 
     
     // ========== ✅ PARENT REGISTRATION (NEW) ==========
-    else if (role === 'parent') {
+  else if (role === 'parent') {
       if (!schoolCode || schoolCode.length !== 16) {
         return res.status(400).json({ 
           message: 'A valid 16-digit school code is required for parent registration.' 
@@ -167,10 +195,23 @@ const register = async (req, res) => {
         });
       }
 
+      // ✅ UPDATED: Normalize both phone numbers before comparison
+      const normalizedInputPhone = normalizePhoneNumber(phone);
+      const normalizedStudentPhone = normalizePhoneNumber(student.parentPhone);
+
+      console.log('[ParentRegistration] Phone comparison:', {
+        inputPhone: phone,
+        normalizedInput: normalizedInputPhone,
+        studentPhone: student.parentPhone,
+        normalizedStudent: normalizedStudentPhone
+      });
+
       // Verify parent phone matches student's parent phone (optional security check)
-      if (student.parentPhone && phone !== student.parentPhone) {
+      if (student.parentPhone && normalizedInputPhone !== normalizedStudentPhone) {
         return res.status(400).json({ 
-          message: 'Phone number does not match the student\'s parent phone on record. Please contact the school.' 
+          message: `Phone number does not match the student's parent phone on record. 
+                   Registered: ${student.parentPhone}. 
+                   Please contact the school if this is incorrect.` 
         });
       }
 
@@ -185,7 +226,7 @@ const register = async (req, res) => {
         passwordHash,
         role: 'parent',
         schoolId,
-        children: [student._id], // Link student to parent
+        children: [student._id],
       });
 
       // Update student to link parent
