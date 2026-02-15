@@ -24,7 +24,25 @@ router.post(
     check('email', 'Valid email required').isEmail(),
     check('phone', 'Phone number required').notEmpty(),
     check('password', 'Password min 6 chars').isLength({ min: 6 }),
-    check('role', 'Role required').isIn(['admin', 'teacher']),
+    check('role', 'Role required').isIn(['admin', 'teacher', 'parent']),
+     // ✅ Conditional validation based on role
+    check('schoolName')
+      .if(check('role').equals('admin'))
+      .notEmpty()
+      .withMessage('School name is required for admin registration'),
+    
+    check('schoolCode')
+      .if((value, { req }) => req.body.role === 'teacher' || req.body.role === 'parent')
+      .notEmpty()
+      .withMessage('School code is required for teacher/parent registration')
+      .isLength({ min: 16, max: 16 })
+      .withMessage('School code must be 16 characters'),
+    
+    check('studentRegNo')
+      .if(check('role').equals('parent'))
+      .notEmpty()
+      .withMessage('Student registration number is required for parent registration'),
+  
   ],
   register
 );

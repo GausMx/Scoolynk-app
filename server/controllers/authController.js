@@ -31,8 +31,15 @@ const generateSchoolCode = () => {
 // REGISTER - UPDATED WITH PARENT SUPPORT
 // ----------------------
 const register = async (req, res) => {
+  // ✅ CHECK VALIDATION ERRORS FIRST
   const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+  if (!errors.isEmpty()) {
+    console.error('[Registration Validation Error]', errors.array());
+    return res.status(400).json({ 
+      message: errors.array()[0].msg, // Send first error message
+      errors: errors.array() // Send all errors for debugging
+    });
+  }
 
   const { 
     name, 
@@ -44,7 +51,7 @@ const register = async (req, res) => {
     schoolCode, 
     classes, 
     courses,
-    studentRegNo // ✅ NEW: For parent registration
+    studentRegNo // For parent registration
   } = req.body;
   
   const normalizedEmail = email.toLowerCase();
