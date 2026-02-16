@@ -1,14 +1,10 @@
-// src/utils/authRefresh.js - NEW FILE (Create this in src/utils/)
+// src/utils/authRefresh.js - IMPROVED ERROR HANDLING
 
 import axios from 'axios';
 import { getRefreshToken, setAccessToken, setUser, clearAuth } from '../components/utils/auth';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
-/**
- * Automatically refresh access token using refresh token
- * @returns {Promise<boolean>} - Returns true if refresh successful, false otherwise
- */
 export const autoRefreshToken = async () => {
   const refreshToken = getRefreshToken();
   
@@ -19,64 +15,86 @@ export const autoRefreshToken = async () => {
 
   try {
     console.log('[AutoRefresh] Attempting to refresh token...');
+    console.log('[AutoRefresh] Refresh token:', refreshToken.substring(0, 20) + '...');
     
     const response = await axios.post(`${API_URL}/api/auth/refresh`, {
       token: refreshToken
     });
 
+    console.log('[AutoRefresh] Refresh response received');
+
     const { accessToken, user } = response.data;
+
+    if (!accessToken) {
+      console.error('[AutoRefresh] No access token in response');
+      return false;
+    }
 
     // Update stored tokens and user
     setAccessToken(accessToken);
-    setUser(user);
+    if (user) {
+      setUser(user);
+      console.log('[AutoRefresh] User data updated:', user.email);
+    }
 
     console.log('[AutoRefresh] Token refreshed successfully');
     return true;
   } catch (error) {
-    console.error('[AutoRefresh] Token refresh failed:', error.response?.data?.message || error.message);
+    console.error('[AutoRefresh] Token refresh failed:', {
+      message: error.response?.data?.message || error.message,
+      status: error.response?.status,
+      hasRefreshToken: !!refreshToken
+    });
     
-    // If refresh fails, clear auth and redirect to login
-    clearAuth();
+    // ✅ DON'T clear auth here - let ProtectedRoute handle it
+    // This prevents premature logout
     return false;
   }
 };
 
-/**
- * Check if access token is expired or about to expire
- * @returns {boolean}
- */
 export const isTokenExpiringSoon = () => {
   const token = localStorage.getItem('accessToken');
-  if (!token) return true;
+  if (!token) {
+    console.log('[TokenCheck] No token found');
+    return true;
+  }
 
   try {
-    // Decode JWT (manually parse the payload)
     const payload = JSON.parse(atob(token.split('.')[1]));
-    const expirationTime = payload.exp * 1000; // Convert to milliseconds
+    const expirationTime = payload.exp * 1000;
     const currentTime = Date.now();
     const timeUntilExpiry = expirationTime - currentTime;
 
-    // Return true if token expires in less than 5 minutes
-    return timeUntilExpiry < 5 * 60 * 1000;
+    const expiringSoon = timeUntilExpiry < 5 * 60 * 1000;
+    
+    console.log('[TokenCheck]', {
+      expiresIn: Math.round(timeUntilExpiry / 1000 / 60) + ' minutes',
+      expiringSoon
+    });
+
+    return expiringSoon;
   } catch (error) {
     console.error('[TokenCheck] Error checking token expiration:', error);
     return true;
   }
 };
 
-/**
- * Setup automatic token refresh on interval
- */
 export const setupAutoRefresh = () => {
-  // Check token every 5 minutes
+  console.log('[SetupAutoRefresh] Starting automatic token refresh check (every 5 minutes)');
+  
   const intervalId = setInterval(async () => {
     const rememberMe = localStorage.getItem('rememberMe') === 'true';
     
+    console.log('[AutoRefresh Interval] Checking token...', { rememberMe });
+    
     if (rememberMe && isTokenExpiringSoon()) {
-      console.log('[AutoRefresh] Token expiring soon, refreshing...');
+      console.log('[AutoRefresh Interval] Token expiring soon, refreshing...');
       await autoRefreshToken();
     }
-  }, 5 * 60 * 1000); // Check every 5 minutes
+  }, 5 * 60 * 1000);
 
-  return () => clearInterval(intervalId);
+  return () => {
+    console.log('[SetupAutoRefresh] Cleaning up auto-refresh interval');
+    clearInterval(intervalId);
+  };
 };

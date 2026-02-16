@@ -37,14 +37,14 @@ const LoginForm = () => {
       });
       
       const { accessToken, refreshToken, role, name, _id, schoolId, mustChangePassword } = res.data;
+      //store rememberMe preference in localStorage for auto-refresh logic
+      localStorage.setItem('rememberMe', rememberMe.toString());
 
       // Save tokens and user info
       setAccessToken(accessToken);
       setRefreshToken(refreshToken);
       setUser({ id: _id, name, email, role, schoolId, mustChangePassword });
 
-      // ✅ Store rememberMe preference
-      localStorage.setItem('rememberMe', rememberMe.toString());
 
       console.log('[Login] Success:', { role, rememberMe });
 
