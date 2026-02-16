@@ -1,4 +1,4 @@
-// src/App.js - FINAL WORKING VERSION
+// src/App.js - ADD SERVICE WORKER UPDATE DETECTION
 
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
@@ -100,7 +100,40 @@ const ProtectedRoute = ({ children, roles }) => {
 
 const App = () => {
   useEffect(() => {
+    // ✅ Setup auto-refresh for tokens
     const cleanup = setupAutoRefresh();
+
+    // ✅ NEW: Service Worker update detection
+    if ('serviceWorker' in navigator) {
+      // Check for service worker updates every 30 seconds
+      const updateInterval = setInterval(() => {
+        navigator.serviceWorker.getRegistration().then((registration) => {
+          if (registration) {
+            registration.update();
+          }
+        });
+      }, 30000);
+
+      // Listen for controller change (new SW activated)
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          console.log('[App] New version detected, reloading in 2 seconds...');
+          
+          // Wait 2 seconds before reload to ensure SW is ready
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        }
+      });
+
+      return () => {
+        clearInterval(updateInterval);
+        cleanup();
+      };
+    }
+
     return cleanup;
   }, []);
 
