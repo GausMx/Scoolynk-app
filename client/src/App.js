@@ -1,8 +1,8 @@
-// src/App.js - CORRECTED IMPORTS
+// src/App.js - CORRECTED VERSION
 
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { getUser, getAccessToken } from './components/utils/auth'; // ✅ Removed getRefreshToken (not used here)
+import { getUser, getAccessToken } from './components/utils/auth';
 import { autoRefreshToken, setupAutoRefresh, isTokenExpiringSoon } from './utils/authRefresh';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -23,91 +23,47 @@ import ChildResults from './components/Parent/ChildResults';
 import ResultDetails from './components/Parent/ResultDetails';
 import PerformanceAnalytics from './components/Parent/PerformanceAnalytics';
 
-// ✅ ProtectedRoute with detailed logging
-// src/App.js - FIX THE LOGGING
-
 const ProtectedRoute = ({ children, roles }) => {
   const [isValidating, setIsValidating] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   useEffect(() => {
     const validateAuth = async () => {
-      console.log('=== [ProtectedRoute] Starting validation ===');
-      
-      // Get all auth data
       const user = getUser();
       const token = getAccessToken();
       const refreshToken = localStorage.getItem('refreshToken');
       const rememberMe = localStorage.getItem('rememberMe') === 'true';
 
-      console.log('[ProtectedRoute] Raw localStorage check:', {
-        rememberMe: localStorage.getItem('rememberMe'),
-        hasAccessToken: !!localStorage.getItem('accessToken'),
-        hasRefreshToken: !!localStorage.getItem('refreshToken'),
-        hasUser: !!localStorage.getItem('user')
-      });
-
-      console.log('[ProtectedRoute] Parsed auth state:', {
-        user: user ? { email: user.email, role: user.role } : null,
-        hasToken: !!token,
-        tokenLength: token?.length,
-        hasRefreshToken: !!refreshToken,
-        refreshTokenLength: refreshToken?.length,
-        rememberMe
-      });
-
-      let authResult = false; // ✅ Track the actual result
-
       // ✅ CASE 1: No token but we have refresh token and rememberMe
       if (!token && refreshToken && rememberMe) {
-        console.log('[ProtectedRoute] Case 1: No access token, attempting refresh...');
         const refreshed = await autoRefreshToken();
-        console.log('[ProtectedRoute] Refresh result:', refreshed);
-        
         if (refreshed) {
           const refreshedUser = getUser();
-          console.log('[ProtectedRoute] User after refresh:', refreshedUser ? 'exists' : 'missing');
-          authResult = !!refreshedUser;
+          setIsAuthenticated(!!refreshedUser);
+        } else {
+          setIsAuthenticated(false);
         }
-        setIsAuthenticated(authResult);
       } 
       // ✅ CASE 2: We have token and user
       else if (token && user) {
-        console.log('[ProtectedRoute] Case 2: Valid token and user found');
-        
         if (isTokenExpiringSoon()) {
-          console.log('[ProtectedRoute] Token expiring soon, refreshing...');
           const refreshed = await autoRefreshToken();
-          console.log('[ProtectedRoute] Refresh result:', refreshed);
-          authResult = refreshed;
+          setIsAuthenticated(refreshed);
         } else {
-          console.log('[ProtectedRoute] Token still valid');
-          authResult = true; // ✅ Set to true
+          setIsAuthenticated(true); // ✅ Fixed: Set to true directly
         }
-        setIsAuthenticated(authResult);
       } 
       // ✅ CASE 3: No valid session
       else {
-        console.log('[ProtectedRoute] Case 3: No valid session found');
-        console.log('[ProtectedRoute] Missing:', {
-          token: !token,
-          user: !user,
-          refreshToken: !refreshToken,
-          rememberMe: !rememberMe
-        });
-        authResult = false;
-        setIsAuthenticated(authResult);
+        setIsAuthenticated(false);
       }
       
-      console.log('[ProtectedRoute] Final auth state:', authResult); // ✅ Log the actual value
-      console.log('=== [ProtectedRoute] Validation complete ===\n');
       setIsValidating(false);
     };
 
     validateAuth();
   }, []);
 
-  // Show loading spinner while validating
   if (isValidating) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
@@ -122,38 +78,28 @@ const ProtectedRoute = ({ children, roles }) => {
   }
 
   if (!isAuthenticated) {
-    console.log('[ProtectedRoute] Not authenticated, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
   const user = getUser();
 
   if (!user) {
-    console.log('[ProtectedRoute] No user found after authentication, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
-  console.log('[ProtectedRoute] User authenticated:', user.email, user.role);
-
   if (user.mustChangePassword) {
-    console.log('[ProtectedRoute] User must change password');
     return <Navigate to="/reset-password" replace />;
   }
 
   if (roles && !roles.includes(user.role)) {
-    console.log('[ProtectedRoute] User role not authorized for this route');
-    console.log('[ProtectedRoute] Required roles:', roles, 'User role:', user.role);
     return <Navigate to={`/${user.role}`} replace />;
   }
 
-  console.log('[ProtectedRoute] ✅ Access granted to', user.role, 'dashboard');
   return children;
 };
 
 const App = () => {
-  // ✅ Setup automatic token refresh on app mount
   useEffect(() => {
-    console.log('[App] Setting up auto-refresh...');
     const cleanup = setupAutoRefresh();
     return cleanup;
   }, []);
