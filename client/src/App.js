@@ -1,8 +1,8 @@
-// src/App.js - UPDATED WITH AUTO-REFRESH
+// src/App.js - CORRECTED IMPORTS
 
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { getUser, getAccessToken } from './components/utils/auth';
+import { getUser, getAccessToken } from './components/utils/auth'; // ✅ Removed getRefreshToken (not used here)
 import { autoRefreshToken, setupAutoRefresh, isTokenExpiringSoon } from './utils/authRefresh';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -23,8 +23,7 @@ import ChildResults from './components/Parent/ChildResults';
 import ResultDetails from './components/Parent/ResultDetails';
 import PerformanceAnalytics from './components/Parent/PerformanceAnalytics';
 
-// src/App.js - IMPROVED ProtectedRoute
-
+// ✅ ProtectedRoute with detailed logging
 const ProtectedRoute = ({ children, roles }) => {
   const [isValidating, setIsValidating] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -36,7 +35,7 @@ const ProtectedRoute = ({ children, roles }) => {
       // Get all auth data
       const user = getUser();
       const token = getAccessToken();
-      const refreshToken = getRefreshToken();
+      const refreshToken = localStorage.getItem('refreshToken'); // ✅ Get directly from localStorage
       const rememberMe = localStorage.getItem('rememberMe') === 'true';
 
       console.log('[ProtectedRoute] Raw localStorage check:', {
@@ -103,11 +102,10 @@ const ProtectedRoute = ({ children, roles }) => {
     };
 
     validateAuth();
-  }, []); // ✅ Empty dependency array
+  }, []);
 
   // Show loading spinner while validating
   if (isValidating) {
-    console.log('[ProtectedRoute] Rendering loading spinner...');
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
         <div className="text-center">
@@ -170,7 +168,6 @@ const App = () => {
         draggable
         pauseOnHover
       />
-
       <Routes>
         {/* Auth routes */}
         <Route path="/" element={<LoginForm />} />
