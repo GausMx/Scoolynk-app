@@ -1,37 +1,27 @@
-// src/utils/api.js
-
 import axios from 'axios';
+import { getAccessToken, setAccessToken, clearAuth } from './auth'; // ✅ Import from same folder
+import { autoRefreshToken } from '../../utils/authRefresh'; // ✅ Import from utils folder
 
-// Create a new Axios instance with a base URL and CORS configuration
 const API = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'https://scoolynk-app.onrender.com',
-  withCredentials: false, // CRITICAL: Allows cookies and credentials to be sent
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: process.env.REACT_APP_API_URL,
 });
-// Temporary debug log
-console.log('API baseURL configured as:', API.defaults.baseURL);
-console.log('Environment variable:', process.env.REACT_APP_API_URL);
-// Use an interceptor to attach the JWT token to every request
+
+// Request interceptor - Add token to headers
 API.interceptors.request.use(
   (config) => {
-    // Get the token from localStorage
-    const token = localStorage.getItem('token');
-
-    // If the token exists, add it to the Authorization header
+    const token = getAccessToken();
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
-
     return config;
   },
   (error) => {
+    console.error('[API Request Error]', error);
     return Promise.reject(error);
   }
 );
 
-// Optional: Response interceptor for better error handling
+// ✅ Response interceptor - Auto-refresh on 401
 API.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -70,4 +60,5 @@ API.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 export default API;
