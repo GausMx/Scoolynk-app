@@ -31,53 +31,83 @@ const ProtectedRoute = ({ children, roles }) => {
   
   useEffect(() => {
     const validateAuth = async () => {
-      console.log('[ProtectedRoute] Starting validation...');
+      console.log('=== [ProtectedRoute] Starting validation ===');
       
+      // Get all auth data
       const user = getUser();
       const token = getAccessToken();
-      const refreshToken = localStorage.getItem('refreshToken');
+      const refreshToken = getRefreshToken();
       const rememberMe = localStorage.getItem('rememberMe') === 'true';
 
-      console.log('[ProtectedRoute] Auth state:', {
-        hasUser: !!user,
+      console.log('[ProtectedRoute] Raw localStorage check:', {
+        rememberMe: localStorage.getItem('rememberMe'),
+        hasAccessToken: !!localStorage.getItem('accessToken'),
+        hasRefreshToken: !!localStorage.getItem('refreshToken'),
+        hasUser: !!localStorage.getItem('user')
+      });
+
+      console.log('[ProtectedRoute] Parsed auth state:', {
+        user: user ? { email: user.email, role: user.role } : null,
         hasToken: !!token,
+        tokenLength: token?.length,
         hasRefreshToken: !!refreshToken,
+        refreshTokenLength: refreshToken?.length,
         rememberMe
       });
 
-      // ✅ If no token but we have refreshToken and rememberMe, try to refresh
-      if ((!user || !token) && refreshToken && rememberMe) {
-        console.log('[ProtectedRoute] No active session, attempting auto-refresh...');
+      // ✅ CASE 1: No token but we have refresh token and rememberMe
+      if (!token && refreshToken && rememberMe) {
+        console.log('[ProtectedRoute] Case 1: No access token, attempting refresh...');
         const refreshed = await autoRefreshToken();
         console.log('[ProtectedRoute] Refresh result:', refreshed);
-        setIsAuthenticated(refreshed);
+        
+        if (refreshed) {
+          // Double-check user is set after refresh
+          const refreshedUser = getUser();
+          console.log('[ProtectedRoute] User after refresh:', refreshedUser ? 'exists' : 'missing');
+          setIsAuthenticated(!!refreshedUser);
+        } else {
+          setIsAuthenticated(false);
+        }
       } 
-      // ✅ If we have user and token, check if token is expiring
-      else if (user && token) {
+      // ✅ CASE 2: We have token and user
+      else if (token && user) {
+        console.log('[ProtectedRoute] Case 2: Valid token and user found');
+        
+        // Check if token is expiring soon
         if (isTokenExpiringSoon()) {
           console.log('[ProtectedRoute] Token expiring soon, refreshing...');
           const refreshed = await autoRefreshToken();
           console.log('[ProtectedRoute] Refresh result:', refreshed);
           setIsAuthenticated(refreshed);
         } else {
-          console.log('[ProtectedRoute] Valid session found');
+          console.log('[ProtectedRoute] Token still valid');
           setIsAuthenticated(true);
         }
       } 
-      // ✅ No valid session and can't refresh
+      // ✅ CASE 3: No valid session
       else {
-        console.log('[ProtectedRoute] No valid session, redirecting to login');
+        console.log('[ProtectedRoute] Case 3: No valid session found');
+        console.log('[ProtectedRoute] Missing:', {
+          token: !token,
+          user: !user,
+          refreshToken: !refreshToken,
+          rememberMe: !rememberMe
+        });
         setIsAuthenticated(false);
       }
       
+      console.log('[ProtectedRoute] Final auth state:', isAuthenticated);
+      console.log('=== [ProtectedRoute] Validation complete ===\n');
       setIsValidating(false);
     };
 
     validateAuth();
-  }, []);
+  }, []); // ✅ Empty dependency array
 
   // Show loading spinner while validating
   if (isValidating) {
+    console.log('[ProtectedRoute] Rendering loading spinner...');
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
         <div className="text-center">
@@ -102,17 +132,20 @@ const ProtectedRoute = ({ children, roles }) => {
     return <Navigate to="/login" replace />;
   }
 
+  console.log('[ProtectedRoute] User authenticated:', user.email, user.role);
+
   if (user.mustChangePassword) {
     console.log('[ProtectedRoute] User must change password');
     return <Navigate to="/reset-password" replace />;
   }
 
   if (roles && !roles.includes(user.role)) {
-    console.log('[ProtectedRoute] User role not authorized, redirecting to user dashboard');
+    console.log('[ProtectedRoute] User role not authorized for this route');
+    console.log('[ProtectedRoute] Required roles:', roles, 'User role:', user.role);
     return <Navigate to={`/${user.role}`} replace />;
   }
 
-  console.log('[ProtectedRoute] Access granted');
+  console.log('[ProtectedRoute] ✅ Access granted to', user.role, 'dashboard');
   return children;
 };
 
@@ -121,7 +154,7 @@ const App = () => {
   useEffect(() => {
     console.log('[App] Setting up auto-refresh...');
     const cleanup = setupAutoRefresh();
-    return cleanup; // Cleanup interval on unmount
+    return cleanup;
   }, []);
 
   return (
@@ -137,6 +170,7 @@ const App = () => {
         draggable
         pauseOnHover
       />
+
       <Routes>
         {/* Auth routes */}
         <Route path="/" element={<LoginForm />} />
