@@ -1,4 +1,4 @@
-// src/App.js - CORRECTED VERSION
+// src/App.js - FINAL WORKING VERSION
 
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
@@ -34,7 +34,7 @@ const ProtectedRoute = ({ children, roles }) => {
       const refreshToken = localStorage.getItem('refreshToken');
       const rememberMe = localStorage.getItem('rememberMe') === 'true';
 
-      // ✅ CASE 1: No token but we have refresh token and rememberMe
+      // CASE 1: No token but we have refresh token and rememberMe
       if (!token && refreshToken && rememberMe) {
         const refreshed = await autoRefreshToken();
         if (refreshed) {
@@ -44,16 +44,16 @@ const ProtectedRoute = ({ children, roles }) => {
           setIsAuthenticated(false);
         }
       } 
-      // ✅ CASE 2: We have token and user
+      // CASE 2: We have token and user
       else if (token && user) {
         if (isTokenExpiringSoon()) {
           const refreshed = await autoRefreshToken();
           setIsAuthenticated(refreshed);
         } else {
-          setIsAuthenticated(true); // ✅ Fixed: Set to true directly
+          setIsAuthenticated(true);
         }
       } 
-      // ✅ CASE 3: No valid session
+      // CASE 3: No valid session
       else {
         setIsAuthenticated(false);
       }
