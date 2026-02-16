@@ -1,4 +1,4 @@
-// src/App.js - ADD SERVICE WORKER UPDATE DETECTION
+// src/App.js - COMPLETE FILE - COPY THIS ENTIRELY
 
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
@@ -34,7 +34,6 @@ const ProtectedRoute = ({ children, roles }) => {
       const refreshToken = localStorage.getItem('refreshToken');
       const rememberMe = localStorage.getItem('rememberMe') === 'true';
 
-      // CASE 1: No token but we have refresh token and rememberMe
       if (!token && refreshToken && rememberMe) {
         const refreshed = await autoRefreshToken();
         if (refreshed) {
@@ -44,7 +43,6 @@ const ProtectedRoute = ({ children, roles }) => {
           setIsAuthenticated(false);
         }
       } 
-      // CASE 2: We have token and user
       else if (token && user) {
         if (isTokenExpiringSoon()) {
           const refreshed = await autoRefreshToken();
@@ -53,7 +51,6 @@ const ProtectedRoute = ({ children, roles }) => {
           setIsAuthenticated(true);
         }
       } 
-      // CASE 3: No valid session
       else {
         setIsAuthenticated(false);
       }
@@ -100,12 +97,9 @@ const ProtectedRoute = ({ children, roles }) => {
 
 const App = () => {
   useEffect(() => {
-    // ✅ Setup auto-refresh for tokens
     const cleanup = setupAutoRefresh();
 
-    // ✅ NEW: Service Worker update detection
     if ('serviceWorker' in navigator) {
-      // Check for service worker updates every 30 seconds
       const updateInterval = setInterval(() => {
         navigator.serviceWorker.getRegistration().then((registration) => {
           if (registration) {
@@ -114,14 +108,10 @@ const App = () => {
         });
       }, 30000);
 
-      // Listen for controller change (new SW activated)
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!refreshing) {
           refreshing = true;
-          console.log('[App] New version detected, reloading in 2 seconds...');
-          
-          // Wait 2 seconds before reload to ensure SW is ready
           setTimeout(() => {
             window.location.reload();
           }, 2000);
@@ -151,13 +141,11 @@ const App = () => {
         pauseOnHover
       />
       <Routes>
-        {/* Auth routes */}
         <Route path="/" element={<LoginForm />} />
         <Route path="/login" element={<LoginForm />} />
         <Route path="/register" element={<RegisterForm />} />
         <Route path="/reset-password" element={<PasswordResetForm />} />
 
-        {/* Admin routes */}
         <Route
           path="/admin/*"
           element={
@@ -167,7 +155,6 @@ const App = () => {
           }
         />
 
-        {/* Teacher routes */}
         <Route path="/teacher/onboarding" element={<TeacherOnboarding />} />
         <Route
           path="/teacher/*"
@@ -178,7 +165,6 @@ const App = () => {
           }
         />
 
-        {/* Parent routes */}
         <Route
           path="/parent"
           element={
@@ -212,11 +198,9 @@ const App = () => {
           }
         />
 
-        {/* Public payment routes */}
         <Route path="/pay/:token" element={<PublicPaymentPage />} />
         <Route path="/payment/verify" element={<PaymentVerification />} />
 
-        {/* Catch-all */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
