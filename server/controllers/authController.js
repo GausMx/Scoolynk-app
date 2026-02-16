@@ -12,13 +12,13 @@ dotenv.config();
 // Generate access token
 const generateAccessToken = (id, schoolId, role) =>
   jwt.sign({ id, schoolId, role }, process.env.JWT_SECRET, {
-    expiresIn: process.env.ACCESS_TOKEN_EXPIRES || '15m',
+    expiresIn: process.env.ACCESS_TOKEN_EXPIRES || '1h', // 1 hour
   });
 
 // Generate refresh token
 const generateRefreshToken = (id) =>
   jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, {
-    expiresIn: process.env.REFRESH_TOKEN_EXPIRES || '7d',
+    expiresIn: process.env.REFRESH_TOKEN_EXPIRES || '30d', // 30 days
   });
 
 // Helper: generate unique school code
@@ -267,7 +267,7 @@ const register = async (req, res) => {
 // LOGIN - SAME (supports all roles)
 // ----------------------
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, rememberMe } = req.body;
   const normalizedEmail = email.toLowerCase();
 
   try {
@@ -288,6 +288,7 @@ const login = async (req, res) => {
       mustChangePassword: user.mustChangePassword,
       accessToken,
       refreshToken,
+      rememberMe: rememberMe || false,
     });
   } catch (error) {
     console.error('[Login Error]', error);
@@ -304,13 +305,28 @@ const refreshToken = async (req, res) => {
 
   try {
     jwt.verify(token, process.env.JWT_REFRESH_SECRET, async (err, decoded) => {
-      if (err) return res.status(403).json({ message: 'Invalid refresh token' });
+      if (err) {
+        console.error('[RefreshToken] Token verification failed:', err.message);
+        return res.status(403).json({ message: 'Invalid refresh token' });
+      }
 
-      const user = await User.findById(decoded.id);
+      const user = await User.findById(decoded.id).select('-passwordHash');
       if (!user) return res.status(404).json({ message: 'User not found' });
 
       const newAccessToken = generateAccessToken(user._id, user.schoolId, user.role);
-      res.json({ accessToken: newAccessToken });
+      
+      console.log('[RefreshToken] Token refreshed for user:', user.email);
+      
+      res.json({ 
+        accessToken: newAccessToken,
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          schoolId: user.schoolId
+        }
+      });
     });
   } catch (error) {
     console.error('[Refresh Token Error]', error);
