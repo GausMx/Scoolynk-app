@@ -1,4 +1,4 @@
-// src/components/Auth/LoginForm.js - UPDATED WITH REMEMBER ME
+// src/components/Auth/LoginForm.js - CRITICAL FIX
 
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -11,7 +11,7 @@ const LoginForm = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    rememberMe: true // ✅ NEW: Default to true for better UX
+    rememberMe: true // ✅ Default to true
   });
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -33,22 +33,29 @@ const LoginForm = () => {
       const res = await API.post('/api/auth/login', { 
         email, 
         password,
-        rememberMe // ✅ Send rememberMe to backend
+        rememberMe 
       });
       
       const { accessToken, refreshToken, role, name, _id, schoolId, mustChangePassword } = res.data;
-      //store rememberMe preference in localStorage for auto-refresh logic
-      localStorage.setItem('rememberMe', rememberMe.toString());
 
-      // Save tokens and user info
+      // ✅ CRITICAL: Store rememberMe FIRST, before anything else
+      localStorage.setItem('rememberMe', String(rememberMe));
+      
+      // Then save tokens and user info
       setAccessToken(accessToken);
       setRefreshToken(refreshToken);
       setUser({ id: _id, name, email, role, schoolId, mustChangePassword });
 
+      // ✅ Verify it was stored
+      const storedRememberMe = localStorage.getItem('rememberMe');
+      console.log('[Login] Stored values:', {
+        rememberMe: storedRememberMe,
+        hasAccessToken: !!localStorage.getItem('accessToken'),
+        hasRefreshToken: !!localStorage.getItem('refreshToken'),
+        hasUser: !!localStorage.getItem('user')
+      });
 
-      console.log('[Login] Success:', { role, rememberMe });
-
-      // Redirect based on mustChangePassword or role
+      // Redirect
       if (mustChangePassword) {
         navigate('/reset-password');
       } else {
@@ -135,12 +142,9 @@ const LoginForm = () => {
                       <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
                     </button>
                   </div>
-                  <div className="form-text">
-                    <Link to="/forgot-password" className="text-decoration-none small">Forgot Password?</Link>
-                  </div>
                 </div>
 
-                {/* ✅ NEW: Remember Me Checkbox */}
+                {/* ✅ Remember Me Checkbox */}
                 <div className="mb-3">
                   <div className="form-check">
                     <input
