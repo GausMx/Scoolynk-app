@@ -1,4 +1,4 @@
-// src/components/utils/auth.js - UPDATED
+// src/components/utils/auth.js - KEEP AS IS, JUST ADD THESE EXPORTS
 
 // ----------------------
 // Local Storage Helpers
@@ -22,10 +22,11 @@ export const clearAuth = () => {
   localStorage.removeItem('user');
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
+  localStorage.removeItem('rememberMe'); // ✅ NEW: Also clear rememberMe flag
 };
 
 // ----------------------
-// Redirect Helper - ✅ UPDATED WITH PARENT
+// Redirect Helper
 // ----------------------
 export const redirectByRole = (role) => {
   switch (role) {
@@ -33,7 +34,7 @@ export const redirectByRole = (role) => {
       return '/admin';
     case 'teacher':
       return '/teacher';
-    case 'parent': // ✅ NEW
+    case 'parent':
       return '/parent';
     default:
       return '/';
@@ -41,11 +42,12 @@ export const redirectByRole = (role) => {
 };
 
 // ----------------------
-// Fetch Wrapper w/ Auto Refresh
+// ✅ UPDATED: Fetch Wrapper w/ Auto Refresh (Enhanced)
 // ----------------------
 export const fetchWithAuth = async (url, options = {}) => {
   let token = getAccessToken();
   const refreshToken = getRefreshToken();
+  const rememberMe = localStorage.getItem('rememberMe') === 'true';
 
   if (!options.headers) options.headers = {};
   options.headers['Authorization'] = `Bearer ${token}`;
@@ -54,8 +56,10 @@ export const fetchWithAuth = async (url, options = {}) => {
   let res = await fetch(url, options);
 
   // If access token expired
-  if (res.status === 401 && refreshToken) {
-    const refreshRes = await fetch('/api/auth/refresh', {
+  if (res.status === 401 && refreshToken && rememberMe) {
+    console.log('[FetchWithAuth] Token expired, attempting refresh...');
+    
+    const refreshRes = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: refreshToken }),
@@ -65,16 +69,29 @@ export const fetchWithAuth = async (url, options = {}) => {
       const data = await refreshRes.json();
       token = data.accessToken;
       setAccessToken(token);
+      
+      if (data.user) {
+        setUser(data.user);
+      }
+
+      console.log('[FetchWithAuth] Token refreshed, retrying request...');
 
       // Retry original request
       options.headers['Authorization'] = `Bearer ${token}`;
       res = await fetch(url, options);
     } else {
       // Refresh failed → logout
+      console.log('[FetchWithAuth] Refresh failed, clearing auth...');
       clearAuth();
       window.location.href = '/login';
       return;
     }
+  } else if (res.status === 401) {
+    // 401 but no refresh token or rememberMe disabled
+    console.log('[FetchWithAuth] Unauthorized, clearing auth...');
+    clearAuth();
+    window.location.href = '/login';
+    return;
   }
 
   return res;

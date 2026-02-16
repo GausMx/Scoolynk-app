@@ -1,39 +1,54 @@
-// src/components/Auth/LoginForm.js
+// src/components/Auth/LoginForm.js - UPDATED WITH REMEMBER ME
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import API from '../utils/api';
-import { setAccessToken, setUser } from '../utils/auth';
+import { setAccessToken, setUser, setRefreshToken } from '../utils/auth';
 import { redirectByRole } from '../utils/auth';
 
 const LoginForm = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
+    rememberMe: true // ✅ NEW: Default to true for better UX
   });
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { email, password } = formData;
+  
+  const { email, password, rememberMe } = formData;
 
-  // handle input change
-  const onChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const onChange = (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setFormData({ ...formData, [e.target.name]: value });
+  };
 
-  // handle form submit
   const onSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+    
     try {
-      const res = await API.post('/api/auth/login', { email, password });
-      const { accessToken, role, name, _id, schoolId, mustChangePassword } = res.data;
+      const res = await API.post('/api/auth/login', { 
+        email, 
+        password,
+        rememberMe // ✅ Send rememberMe to backend
+      });
+      
+      const { accessToken, refreshToken, role, name, _id, schoolId, mustChangePassword } = res.data;
 
-      // save accessToken and user info using your helpers
+      // Save tokens and user info
       setAccessToken(accessToken);
+      setRefreshToken(refreshToken);
       setUser({ id: _id, name, email, role, schoolId, mustChangePassword });
 
-      // redirect based on mustChangePassword or role
+      // ✅ Store rememberMe preference
+      localStorage.setItem('rememberMe', rememberMe.toString());
+
+      console.log('[Login] Success:', { role, rememberMe });
+
+      // Redirect based on mustChangePassword or role
       if (mustChangePassword) {
         navigate('/reset-password');
       } else {
@@ -123,6 +138,28 @@ const LoginForm = () => {
                   <div className="form-text">
                     <Link to="/forgot-password" className="text-decoration-none small">Forgot Password?</Link>
                   </div>
+                </div>
+
+                {/* ✅ NEW: Remember Me Checkbox */}
+                <div className="mb-3">
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      name="rememberMe"
+                      id="rememberMe"
+                      checked={rememberMe}
+                      onChange={onChange}
+                      disabled={isLoading}
+                    />
+                    <label className="form-check-label" htmlFor="rememberMe">
+                      <i className="bi bi-shield-check me-1"></i>
+                      Keep me logged in for 30 days
+                    </label>
+                  </div>
+                  <small className="text-muted">
+                    You won't need to log in again on this device for a month
+                  </small>
                 </div>
 
                 <div className="d-grid mb-3">
