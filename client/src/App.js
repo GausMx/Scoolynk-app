@@ -1,8 +1,8 @@
-// src/App.js - COMPLETE FILE - COPY THIS ENTIRELY
+// src/App.js - FIX ROOT ROUTE
 
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { getUser, getAccessToken } from './components/utils/auth';
+import { getUser, getAccessToken, redirectByRole } from './components/utils/auth';
 import { autoRefreshToken, setupAutoRefresh, isTokenExpiringSoon } from './utils/authRefresh';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -22,6 +22,21 @@ import ParentDashboard from './components/Parent/ParentDashboard';
 import ChildResults from './components/Parent/ChildResults';
 import ResultDetails from './components/Parent/ResultDetails';
 import PerformanceAnalytics from './components/Parent/PerformanceAnalytics';
+
+// ✅ NEW: Root redirect component
+const RootRedirect = () => {
+  const user = getUser();
+  const token = getAccessToken();
+  const rememberMe = localStorage.getItem('rememberMe') === 'true';
+
+  // If user is logged in, redirect to their dashboard
+  if (user && token && rememberMe) {
+    return <Navigate to={redirectByRole(user.role)} replace />;
+  }
+
+  // Otherwise go to login
+  return <Navigate to="/login" replace />;
+};
 
 const ProtectedRoute = ({ children, roles }) => {
   const [isValidating, setIsValidating] = useState(true);
@@ -141,11 +156,15 @@ const App = () => {
         pauseOnHover
       />
       <Routes>
-        <Route path="/" element={<LoginForm />} />
+        {/* ✅ FIXED: Root now checks auth and redirects appropriately */}
+        <Route path="/" element={<RootRedirect />} />
+        
+        {/* Auth routes */}
         <Route path="/login" element={<LoginForm />} />
         <Route path="/register" element={<RegisterForm />} />
         <Route path="/reset-password" element={<PasswordResetForm />} />
 
+        {/* Admin routes */}
         <Route
           path="/admin/*"
           element={
@@ -155,6 +174,7 @@ const App = () => {
           }
         />
 
+        {/* Teacher routes */}
         <Route path="/teacher/onboarding" element={<TeacherOnboarding />} />
         <Route
           path="/teacher/*"
@@ -165,6 +185,7 @@ const App = () => {
           }
         />
 
+        {/* Parent routes */}
         <Route
           path="/parent"
           element={
@@ -198,9 +219,11 @@ const App = () => {
           }
         />
 
+        {/* Public payment routes */}
         <Route path="/pay/:token" element={<PublicPaymentPage />} />
         <Route path="/payment/verify" element={<PaymentVerification />} />
 
+        {/* Catch-all */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
@@ -208,3 +231,4 @@ const App = () => {
 };
 
 export default App;
+
