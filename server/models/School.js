@@ -17,6 +17,9 @@ const schoolSchema = new mongoose.Schema({
   gradingSystem: { type: String }, // e.g., A-F, 1-5, etc.
   termStart: { type: Date },
   termEnd: { type: Date },
+  logoBase64:    { type: String, default: null },
+email:         { type: String, default: '' },
+principalName: { type: String, default: '' },
 
   // Fee Settings
   defaultFee: { type: Number },

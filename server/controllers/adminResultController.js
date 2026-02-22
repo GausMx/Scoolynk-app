@@ -1,4 +1,4 @@
-// server/controllers/adminResultController.js - CORRECTED VERSION (NO SMS)
+// server/controllers/adminResultController.js
 
 import Result from '../models/Result.js'; 
 import ResultTemplate from '../models/ResultTemplate.js';
@@ -6,102 +6,69 @@ import Student from '../models/Student.js';
 import School from '../models/School.js';
 import { generateResultPDFBase64 } from '../services/pdfResultService.js';
 
-// ✅ CREATE RESULT TEMPLATE (Visual Builder)
+// ─── School branding fields needed by pdfResultService ───────────────────────
+// Used in every place we call generateResultPDFBase64()
+const SCHOOL_BRANDING_SELECT = 'name address phone email motto logoBase64 principalName';
+
+// ─── Templates ────────────────────────────────────────────────────────────────
+
 export const createResultTemplate = async (req, res) => {
   try {
     const { name, term, session, schoolId, components } = req.body;
+    if (!name || !term || !session || !components)
+      return res.status(400).json({ message: 'Name, term, session, and components are required.' });
 
-    if (!name || !term || !session || !components) {
-      return res.status(400).json({ 
-        message: 'Name, term, session, and components are required.' 
-      });
-    }
+    const existing = await ResultTemplate.findOne({
+      schoolId: schoolId || req.user.schoolId, term, session, isActive: true,
+    });
+    if (existing)
+      return res.status(400).json({ message: `A template already exists for ${term}, ${session}. Please edit or deactivate it first.` });
 
-    // Check if template already exists for this term/session
-    const existingTemplate = await ResultTemplate.findOne({
+    const template = await new ResultTemplate({
       schoolId: schoolId || req.user.schoolId,
-      term,
-      session,
-      isActive: true
-    });
+      name, term, session, templateType: 'visual', components,
+      createdBy: req.user._id, isActive: true,
+    }).save();
 
-    if (existingTemplate) {
-      return res.status(400).json({
-        message: `A template already exists for ${term}, ${session}. Please edit or deactivate it first.`
-      });
-    }
-
-    // Create new template with component-based structure
-    const template = new ResultTemplate({
-      schoolId: schoolId || req.user.schoolId,
-      name,
-      term,
-      session,
-      templateType: 'visual',
-      components,
-      createdBy: req.user._id,
-      isActive: true
-    });
-
-    await template.save();
-
-    res.status(201).json({ 
-      message: 'Result template created successfully.',
-      template 
-    });
+    res.status(201).json({ message: 'Result template created successfully.', template });
   } catch (err) {
     console.error('[CreateResultTemplate]', err);
     res.status(500).json({ message: 'Failed to create template.', error: err.message });
   }
 };
 
-// ✅ UPDATE RESULT TEMPLATE
 export const updateResultTemplate = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, term, session, components, isActive } = req.body;
 
-    const template = await ResultTemplate.findOne({
-      _id: id,
-      schoolId: req.user.schoolId
-    });
+    const template = await ResultTemplate.findOne({ _id: id, schoolId: req.user.schoolId });
+    if (!template) return res.status(404).json({ message: 'Template not found.' });
 
-    if (!template) {
-      return res.status(404).json({ message: 'Template not found.' });
-    }
-
-    if (name) template.name = name;
-    if (term) template.term = term;
-    if (session) template.session = session;
-    if (components) template.components = components;
-    if (isActive !== undefined) template.isActive = isActive;
-
+    if (name      !== undefined) template.name       = name;
+    if (term      !== undefined) template.term       = term;
+    if (session   !== undefined) template.session    = session;
+    if (components!== undefined) template.components = components;
+    if (isActive  !== undefined) template.isActive   = isActive;
     await template.save();
 
-    res.json({ 
-      message: 'Template updated successfully.',
-      template 
-    });
+    res.json({ message: 'Template updated successfully.', template });
   } catch (err) {
     console.error('[UpdateResultTemplate]', err);
     res.status(500).json({ message: 'Failed to update template.' });
   }
 };
 
-// ✅ GET ALL TEMPLATES
 export const getResultTemplates = async (req, res) => {
   try {
     const { term, session, isActive } = req.query;
-
     const query = { schoolId: req.user.schoolId };
-    if (term) query.term = term;
-    if (session) query.session = session;
+    if (term     ) query.term     = term;
+    if (session  ) query.session  = session;
     if (isActive !== undefined) query.isActive = isActive === 'true';
 
     const templates = await ResultTemplate.find(query)
-      .populate('createdBy', 'name email')
-      .sort({ createdAt: -1 });
-
+      .populate('createdBy', 'name email').sort({ createdAt: -1 });
     res.json({ templates });
   } catch (err) {
     console.error('[GetResultTemplates]', err);
@@ -109,20 +76,11 @@ export const getResultTemplates = async (req, res) => {
   }
 };
 
-// ✅ GET SINGLE TEMPLATE
 export const getResultTemplate = async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const template = await ResultTemplate.findOne({
-      _id: id,
-      schoolId: req.user.schoolId
-    }).populate('createdBy', 'name email');
-
-    if (!template) {
-      return res.status(404).json({ message: 'Template not found.' });
-    }
-
+    const template = await ResultTemplate.findOne({ _id: req.params.id, schoolId: req.user.schoolId })
+      .populate('createdBy', 'name email');
+    if (!template) return res.status(404).json({ message: 'Template not found.' });
     res.json({ template });
   } catch (err) {
     console.error('[GetResultTemplate]', err);
@@ -130,110 +88,63 @@ export const getResultTemplate = async (req, res) => {
   }
 };
 
-// ✅ DELETE TEMPLATE (soft delete for active, hard delete for inactive)
 export const deleteResultTemplate = async (req, res) => {
   try {
-    const { id } = req.params;
-    const schoolId = req.user.schoolId;
-
-    const template = await ResultTemplate.findOne({ 
-      _id: id, 
-      schoolId 
-    });
-
-    if (!template) {
-      return res.status(404).json({ message: 'Template not found.' });
-    }
+    const template = await ResultTemplate.findOne({ _id: req.params.id, schoolId: req.user.schoolId });
+    if (!template) return res.status(404).json({ message: 'Template not found.' });
 
     if (template.isActive) {
       template.isActive = false;
       await template.save();
-      return res.json({ 
-        message: 'Template deactivated successfully. You can delete it permanently from the inactive templates section.',
-        deactivated: true
-      });
+      return res.json({ message: 'Template deactivated successfully.', deactivated: true });
     }
 
-    await ResultTemplate.findByIdAndDelete(id);
-    
-    res.json({ 
-      message: 'Template permanently deleted.',
-      deleted: true
-    });
+    await ResultTemplate.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Template permanently deleted.', deleted: true });
   } catch (err) {
     console.error('[DeleteResultTemplate]', err);
     res.status(500).json({ message: 'Failed to delete template.' });
   }
 };
 
-// ✅ DUPLICATE TEMPLATE FOR NEW TERM/SESSION
 export const duplicateResultTemplate = async (req, res) => {
   try {
-    const { id } = req.params;
     const { newTerm, newSession, newName } = req.body;
+    if (!newTerm || !newSession)
+      return res.status(400).json({ message: 'New term and session are required.' });
 
-    if (!newTerm || !newSession) {
-      return res.status(400).json({ 
-        message: 'New term and session are required.' 
-      });
-    }
+    const original = await ResultTemplate.findOne({ _id: req.params.id, schoolId: req.user.schoolId });
+    if (!original) return res.status(404).json({ message: 'Original template not found.' });
 
-    const originalTemplate = await ResultTemplate.findOne({
-      _id: id,
-      schoolId: req.user.schoolId
-    });
+    const existing = await ResultTemplate.findOne({ schoolId: req.user.schoolId, term: newTerm, session: newSession, isActive: true });
+    if (existing)
+      return res.status(400).json({ message: `A template already exists for ${newTerm}, ${newSession}.` });
 
-    if (!originalTemplate) {
-      return res.status(404).json({ message: 'Original template not found.' });
-    }
+    const newTemplate = await new ResultTemplate({
+      schoolId:     original.schoolId,
+      name:         newName || `${original.name} (${newTerm} - ${newSession})`,
+      term:         newTerm,
+      session:      newSession,
+      templateType: original.templateType,
+      components:   original.components,
+      createdBy:    req.user._id,
+      isActive:     true,
+    }).save();
 
-    const existingTemplate = await ResultTemplate.findOne({
-      schoolId: req.user.schoolId,
-      term: newTerm,
-      session: newSession,
-      isActive: true
-    });
-
-    if (existingTemplate) {
-      return res.status(400).json({
-        message: `A template already exists for ${newTerm}, ${newSession}.`
-      });
-    }
-
-    const newTemplate = new ResultTemplate({
-      schoolId: originalTemplate.schoolId,
-      name: newName || `${originalTemplate.name} (${newTerm} - ${newSession})`,
-      term: newTerm,
-      session: newSession,
-      templateType: originalTemplate.templateType,
-      components: originalTemplate.components,
-      createdBy: req.user._id,
-      isActive: true
-    });
-
-    await newTemplate.save();
-
-    res.status(201).json({
-      message: 'Template duplicated successfully.',
-      template: newTemplate
-    });
+    res.status(201).json({ message: 'Template duplicated successfully.', template: newTemplate });
   } catch (err) {
     console.error('[DuplicateResultTemplate]', err);
     res.status(500).json({ message: 'Failed to duplicate template.' });
   }
 };
 
-// ✅ GET SUBMITTED RESULTS
+// ─── Results ──────────────────────────────────────────────────────────────────
+
 export const getSubmittedResults = async (req, res) => {
   try {
     const { term, session, classId } = req.query;
-
-    const query = {
-      schoolId: req.user.schoolId,
-      status: 'submitted'
-    };
-
-    if (term) query.term = term;
+    const query = { schoolId: req.user.schoolId, status: 'submitted' };
+    if (term   ) query.term    = term;
     if (session) query.session = session;
     if (classId) query.classId = classId;
 
@@ -250,89 +161,55 @@ export const getSubmittedResults = async (req, res) => {
   }
 };
 
-// ✅ REVIEW RESULT
 export const reviewResult = async (req, res) => {
   try {
     const { resultId } = req.params;
     const { action, comments, rejectionReason } = req.body;
 
-    console.log('[ReviewResult] Processing:', { resultId, action });
-
     const result = await Result.findById(resultId)
-      .populate('student')
-      .populate('classId', 'name');
+      .populate('student').populate('classId', 'name');
+    if (!result) return res.status(404).json({ message: 'Result not found.' });
 
-    if (!result) {
-      return res.status(404).json({ message: 'Result not found.' });
-    }
-
-    if (String(result.student.schoolId) !== String(req.user.schoolId)) {
+    if (String(result.student.schoolId) !== String(req.user.schoolId))
       return res.status(403).json({ message: 'Not authorized for this school.' });
-    }
 
     if (action === 'approve' || action === 'verify') {
-      result.status = 'approved';
+      result.status     = 'approved';
       result.approvedAt = new Date();
       result.approvedBy = req.user._id;
-      
-      if (comments) {
-        result.comments = {
-          teacher: comments.teacher || result.comments?.teacher || '',
-          principal: comments.principal || result.comments?.principal || ''
-        };
-      }
-
+      if (comments) result.comments = {
+        teacher:   comments.teacher   || result.comments?.teacher   || '',
+        principal: comments.principal || result.comments?.principal || '',
+      };
       await result.save();
 
-      console.log('[ReviewResult] Result approved/verified:', resultId);
-
+      // Recalculate class positions
       try {
-        await Result.calculateClassPositions(
-          result.classId._id,
-          result.term,
-          result.session,
-          req.user.schoolId
-        );
-        console.log('[ReviewResult] Class positions recalculated');
+        await Result.calculateClassPositions(result.classId._id, result.term, result.session, req.user.schoolId);
       } catch (posErr) {
-        console.error('[ReviewResult] Position calculation failed:', posErr);
+        console.error('[ReviewResult] Position recalc failed:', posErr);
       }
 
-      return res.json({ 
-        message: 'Result approved and verified successfully.',
-        result 
-      });
-    } 
-    
-    else if (action === 'reject') {
-      result.status = 'rejected';
-      result.rejectionReason = rejectionReason || 'No reason provided';
-      result.rejectedAt = new Date();
-      result.rejectedBy = req.user._id;
-      
-      await result.save();
-
-      console.log('[ReviewResult] Result rejected:', resultId);
-
-      return res.json({ 
-        message: 'Result rejected and sent back to teacher.',
-        result 
-      });
-    } 
-    
-    else {
-      return res.status(400).json({ 
-        message: 'Invalid action. Use "approve", "verify", or "reject".' 
-      });
+      return res.json({ message: 'Result approved successfully.', result });
     }
 
+    if (action === 'reject') {
+      result.status          = 'rejected';
+      result.rejectionReason = rejectionReason || 'No reason provided';
+      result.rejectedAt      = new Date();
+      result.rejectedBy      = req.user._id;
+      await result.save();
+      return res.json({ message: 'Result rejected and sent back to teacher.', result });
+    }
+
+    return res.status(400).json({ message: 'Invalid action. Use "approve", "verify", or "reject".' });
   } catch (err) {
-    console.error('[ReviewResult Error]', err);
+    console.error('[ReviewResult]', err);
     res.status(500).json({ message: 'Failed to review result.' });
   }
 };
 
-// ✅ UPDATED: PUBLISH RESULT TO PARENT (NO SMS - Direct Dashboard Access)
+// ✅ FIX 3: School fetched with ALL branding fields so logo/motto/address appear on PDF
 export const sendResultToParent = async (req, res) => {
   try {
     const { resultId } = req.params;
@@ -340,229 +217,157 @@ export const sendResultToParent = async (req, res) => {
     const result = await Result.findOne({
       _id: resultId,
       schoolId: req.user.schoolId,
-      status: 'approved'
+      status: 'approved',
     })
-    .populate('student', 'name regNo parentPhone parentName parentId')
-    .populate('classId', 'name');
+    .populate('student',  'name regNo parentPhone parentName parentId gender dob passportBase64 club')
+    .populate('classId',  'name')
+    .populate('teacher',  'name');
 
-    if (!result) {
-      return res.status(404).json({ 
-        message: 'Result not found or not approved.' 
-      });
-    }
+    if (!result)
+      return res.status(404).json({ message: 'Result not found or not approved.' });
 
-    const student = result.student;
-    const school = await School.findById(req.user.schoolId).select('name phone address');
+    // ✅ Fetch school with ALL fields pdfResultService needs
+    const school = await School.findById(req.user.schoolId).select(SCHOOL_BRANDING_SELECT);
+    if (!school)
+      return res.status(404).json({ message: 'School not found.' });
 
-    try {
-      // Generate PDF as Base64
-      console.log('[PublishResultToParent] Generating PDF...');
-      const pdfResult = await generateResultPDFBase64(result, school);
+    console.log('[PublishResult] Generating PDF for:', result.student.name);
+    console.log('[PublishResult] School logo present:', !!school.logoBase64);
 
-      if (!pdfResult.success) {
-        throw new Error('Failed to generate PDF');
-      }
+    const pdfResult = await generateResultPDFBase64(result, school);
+    if (!pdfResult.success) throw new Error('PDF generation returned failure');
 
-      console.log('[PublishResultToParent] PDF generated, size:', pdfResult.size, 'bytes');
+    result.pdfBase64      = pdfResult.base64;
+    result.status         = 'sent';
+    result.sentToParentAt = new Date();
+    await result.save();
 
-      // Store Base64 PDF in MongoDB
-      result.pdfBase64 = pdfResult.base64;
+    const baseUrl      = process.env.APP_URL || 'http://localhost:5000';
+    const downloadLink = `${baseUrl}/api/results/download/${result._id}`;
 
-      // ✅ Mark as sent (parent can now access via dashboard)
-      result.status = 'sent';
-      result.sentToParentAt = new Date();
-      await result.save();
-
-      // Create download link
-      const baseUrl = process.env.APP_URL || 'http://localhost:5000';
-      const downloadLink = `${baseUrl}/api/results/download/${result._id}`;
-
-      const response = {
-        message: 'Result published successfully!',
-        pdfGenerated: true,
-        pdfSize: pdfResult.size,
-        downloadLink,
-        studentName: student.name,
-        parentAccess: student.parentId 
-          ? '✅ Parent can now view in their dashboard' 
-          : '⚠️ No parent account linked yet. Parent needs to register.'
-      };
-
-      console.log('[PublishResultToParent] Success:', response);
-
-      res.json(response);
-
-    } catch (error) {
-      console.error('[PDF Error]', error);
-      return res.status(500).json({ 
-        message: 'Failed to generate result PDF.',
-        error: error.message
-      });
-    }
+    res.json({
+      message:      'Result published successfully!',
+      pdfGenerated: true,
+      pdfSize:      pdfResult.size,
+      downloadLink,
+      studentName:  result.student.name,
+      parentAccess: result.student.parentId
+        ? '✅ Parent can now view in their dashboard'
+        : '⚠️ No parent account linked yet.',
+    });
   } catch (err) {
-    console.error('[PublishResultToParent]', err);
-    res.status(500).json({ message: 'Failed to publish result to parent.' });
+    console.error('[PublishResult]', err);
+    res.status(500).json({ message: 'Failed to publish result.', error: err.message });
   }
 };
 
-// ✅ UPDATED: PUBLISH MULTIPLE RESULTS TO PARENTS (NO SMS - Direct Dashboard Access)
+// ✅ FIX 3 (batch): same fix — fetch school once with all branding fields
 export const sendMultipleResultsToParents = async (req, res) => {
   try {
     const { resultIds } = req.body;
-
-    if (!resultIds || !Array.isArray(resultIds) || resultIds.length === 0) {
+    if (!Array.isArray(resultIds) || resultIds.length === 0)
       return res.status(400).json({ message: 'Result IDs array is required.' });
-    }
 
     const results = await Result.find({
       _id: { $in: resultIds },
       schoolId: req.user.schoolId,
-      status: 'approved'
+      status: 'approved',
     })
-    .populate('student', 'name regNo parentPhone parentName parentId')
-    .populate('classId', 'name');
+    .populate('student', 'name regNo parentPhone parentName parentId gender dob passportBase64 club')
+    .populate('classId', 'name')
+    .populate('teacher', 'name');
 
-    if (results.length === 0) {
+    if (results.length === 0)
       return res.status(404).json({ message: 'No approved results found.' });
-    }
 
-    const school = await School.findById(req.user.schoolId).select('name phone address');
-    
+    // ✅ Fetch school ONCE with all branding fields
+    const school = await School.findById(req.user.schoolId).select(SCHOOL_BRANDING_SELECT);
+    if (!school) return res.status(404).json({ message: 'School not found.' });
+
+    console.log(`[PublishMultiple] Processing ${results.length} results. Logo present: ${!!school.logoBase64}`);
+
     const successfulPublishes = [];
-    const failedPublishes = [];
-    let parentsWithAccess = 0;
+    const failedPublishes     = [];
+    let parentsWithAccess    = 0;
     let parentsWithoutAccess = 0;
 
-    console.log(`[PublishMultipleResults] Processing ${results.length} results...`);
-    
     for (const result of results) {
-      const student = result.student;
-
       try {
-        // Generate PDF as Base64
         const pdfResult = await generateResultPDFBase64(result, school);
+        if (!pdfResult.success) throw new Error('PDF generation returned failure');
 
-        if (!pdfResult.success) {
-          failedPublishes.push({
-            studentName: student.name,
-            reason: 'PDF generation failed'
-          });
-          continue;
-        }
-
-        // Store in MongoDB
-        result.pdfBase64 = pdfResult.base64;
-        result.status = 'sent';
+        result.pdfBase64      = pdfResult.base64;
+        result.status         = 'sent';
         result.sentToParentAt = new Date();
         await result.save();
 
-        successfulPublishes.push({
-          studentName: student.name,
-          resultId: result._id,
-          hasParentAccount: !!student.parentId
-        });
-
-        // Count parent access status
-        if (student.parentId) {
-          parentsWithAccess++;
-        } else {
-          parentsWithoutAccess++;
-        }
-
+        successfulPublishes.push({ studentName: result.student.name, resultId: result._id, hasParentAccount: !!result.student.parentId });
+        result.student.parentId ? parentsWithAccess++ : parentsWithoutAccess++;
       } catch (pdfError) {
-        console.error('[PDF Generation Error]', pdfError);
-        failedPublishes.push({
-          studentName: student.name,
-          reason: 'PDF generation error: ' + pdfError.message
-        });
+        console.error('[PDF Error] Student:', result.student.name, pdfError.message);
+        failedPublishes.push({ studentName: result.student.name, reason: pdfError.message });
       }
     }
 
     res.json({
-      message: `Published ${successfulPublishes.length}/${results.length} results successfully!`,
-      successCount: successfulPublishes.length,
-      failureCount: failedPublishes.length,
-      pdfsGenerated: successfulPublishes.length,
+      message:             `Published ${successfulPublishes.length}/${results.length} results successfully!`,
+      successCount:        successfulPublishes.length,
+      failureCount:        failedPublishes.length,
+      pdfsGenerated:       successfulPublishes.length,
       parentsWithAccess,
       parentsWithoutAccess,
-      accessSummary: parentsWithoutAccess > 0 
+      accessSummary:       parentsWithoutAccess > 0
         ? `${parentsWithoutAccess} parent(s) need to register to view results.`
         : 'All parents can now view results in their dashboard!',
-      failed: failedPublishes
+      failed: failedPublishes,
     });
   } catch (err) {
-    console.error('[PublishMultipleResults]', err);
-    res.status(500).json({ message: 'Failed to publish results to parents.' });
+    console.error('[PublishMultiple]', err);
+    res.status(500).json({ message: 'Failed to publish results.', error: err.message });
   }
 };
 
-// ✅ DOWNLOAD RESULT PDF (PUBLIC ENDPOINT - No Auth Required)
+// ─── Download PDF ─────────────────────────────────────────────────────────────
+
 export const downloadResultPDF = async (req, res) => {
   try {
     const { resultId } = req.params;
 
     const result = await Result.findOne({
       _id: resultId,
-      status: { $in: ['approved', 'sent'] }
+      status: { $in: ['approved', 'sent'] },
     })
     .populate('student', 'name regNo')
     .populate('schoolId', 'name phone');
 
-    if (!result) {
+    if (!result)
       return res.status(404).json({ message: 'Result not found or not available for download.' });
-    }
 
-    if (!result.schoolId || !result.schoolId._id) {
-      console.error('[DownloadResultPDF] Missing schoolId for result:', resultId);
-      return res.status(500).json({ 
-        message: 'Result configuration error. Please contact the school.' 
-      });
-    }
+    if (!result.pdfBase64)
+      return res.status(404).json({ message: 'PDF not yet generated. Please contact the school.', schoolContact: result.schoolId?.phone || 'N/A' });
 
-    if (!result.student || !result.student._id) {
-      console.error('[DownloadResultPDF] Missing student for result:', resultId);
-      return res.status(500).json({ 
-        message: 'Student information missing. Please contact the school.' 
-      });
-    }
-
-    if (!result.pdfBase64) {
-      return res.status(404).json({ 
-        message: 'PDF not available. Please contact school to regenerate.',
-        schoolContact: result.schoolId?.phone || 'N/A'
-      });
-    }
-
-    // Convert Base64 back to Buffer
     const pdfBuffer = Buffer.from(result.pdfBase64, 'base64');
+    const filename  = `Result_${result.student.regNo}_${result.term.replace(/\s+/g, '_')}.pdf`;
 
-    // Set headers for PDF download
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition', 
-      `attachment; filename="Result_${result.student.regNo}_${result.term.replace(/\s+/g, '_')}.pdf"`
-    );
-    res.setHeader('Content-Length', pdfBuffer.length);
-
-    // Send the PDF
+    res.setHeader('Content-Type',        'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length',       pdfBuffer.length);
     res.send(pdfBuffer);
-
   } catch (err) {
     console.error('[DownloadResultPDF]', err);
     res.status(500).json({ message: 'Failed to download result PDF.' });
   }
 };
 
-// ✅ GET ALL RESULTS (Admin Overview)
+// ─── All Results (Admin Overview) ─────────────────────────────────────────────
+
 export const getAllResults = async (req, res) => {
   try {
     const { term, session, status, classId } = req.query;
-
     const query = { schoolId: req.user.schoolId };
-
-    if (term) query.term = term;
+    if (term   ) query.term    = term;
     if (session) query.session = session;
-    if (status) query.status = status;
+    if (status ) query.status  = status;
     if (classId) query.classId = classId;
 
     const results = await Result.find(query)
