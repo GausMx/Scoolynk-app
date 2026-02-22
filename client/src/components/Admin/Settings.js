@@ -542,7 +542,7 @@ const Settings = () => {
               {/* School info */}
               <div className="text-center flex-grow-1">
                 <div className="fw-bold" style={{ fontSize: 13 }}>
-                  {branding.address ? branding.address.split(',')[0].toUpperCase() || 'SCHOOL NAME' : 'SCHOOL NAME'}
+                  {profile.schoolName ? profile.schoolName.toUpperCase() : 'SCHOOL NAME'}
                 </div>
                 {branding.motto && (
                   <div className="fst-italic text-muted" style={{ fontSize: 10 }}>
