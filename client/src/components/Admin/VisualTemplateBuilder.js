@@ -1,891 +1,470 @@
 // src/components/Admin/VisualTemplateBuilder.js
-// Visual drag-and-drop template builder for non-tech admins - Mobile Responsive
+// Simplified template builder — admin configures subjects list + term metadata.
+// Preview renders a real NigerianResultSheet with sample data.
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Save, Eye, EyeOff, ChevronDown, ChevronUp, 
-  Plus, Trash2, Check, X 
-} from 'lucide-react';
+import { Save, Plus, Trash2, X, Eye, EyeOff, GripVertical } from 'lucide-react';
 import axios from 'axios';
 import Loading from '../common/Loading';
+import NigerianResultSheet from '../common/NigerianResultSheet';
 
 const { REACT_APP_API_URL } = process.env;
 
-const DEFAULT_SCORE_COLUMNS = [
-  { name: 'CA1', maxScore: 20, enabled: true, editable: true },
-  { name: 'CA2', maxScore: 20, enabled: true, editable: true },
-  { name: 'Exam', maxScore: 60, enabled: true, editable: true },
-  { name: 'Total', maxScore: 100, enabled: true, editable: false, calculated: true },
-  { name: 'Grade', maxScore: 0, enabled: true, editable: false, calculated: true }
+// ─── Default subjects for a new template ─────────────────────────────────────
+const DEFAULT_SUBJECTS = [
+  'English Language', 'Mathematics', 'Basic Science', 'Social Studies',
+  'Civic Education', 'Agricultural Science', 'Home Economics',
+  'Physical & Health Education', 'Fine Arts', 'Computer Studies',
+  'Islamic Religious Studies', 'Hausa Language',
 ];
 
-const DEFAULT_AFFECTIVE_TRAITS = [
-  { name: 'Punctuality', enabled: true },
-  { name: 'Behaviour', enabled: true },
-  { name: 'Neatness', enabled: true },
-  { name: 'Relationship', enabled: true },
-  { name: 'Attentiveness', enabled: true },
-  { name: 'Initiative', enabled: true }
-];
+// ─── Sample data for the live preview ────────────────────────────────────────
+const PREVIEW_STUDENT = {
+  name: 'Aisha Musa Ibrahim',
+  admNo: 'AQA/2024/001',
+  regNo: 'AQA/2024/001',
+  gender: 'Female',
+  dob: '12-Mar-2012',
+  className: 'JSS 1A',
+  club: 'Science Club',
+  passportBase64: null,
+};
 
-const DEFAULT_FEE_TYPES = [
-  { name: 'Tuition', enabled: true },
-  { name: 'Uniform', enabled: true },
-  { name: 'Books', enabled: true },
-  { name: 'Lesson', enabled: true },
-  { name: 'Other', enabled: true }
-];
+const PREVIEW_RESULT = {
+  term: 'Third Term',
+  session: '2023/2024',
+  attendance: { opened: 87, present: 82, absent: 5 },
+  comments: {
+    teacher: 'Aisha has shown remarkable dedication and improvement this term.',
+    principal: 'An outstanding student. Keep it up!',
+  },
+  overallPosition: 3,
+  overallAverage: 78,
+  affectiveTraits: {
+    attentiveness: 5, honesty: 4, neatness: 5, politeness: 4,
+    punctuality: 4, selfControl: 3, obedience: 4, reliability: 4,
+    responsibility: 5, relationship: 4,
+    handlingOfTools: 3, drawingPainting: 3, handwriting: 4,
+    publicSpeaking: 3, speechFluency: 4, sportsGames: 5,
+  },
+};
 
-const VisualTemplateBuilder = ({ 
-  schoolId, 
-  token: propToken, 
-  onClose, 
-  existingTemplate = null 
+// ─── Component ────────────────────────────────────────────────────────────────
+const VisualTemplateBuilder = ({
+  schoolId,
+  token: propToken,
+  onClose,
+  existingTemplate = null,
 }) => {
   const token = propToken || localStorage.getItem('accessToken');
-  
-  const [loading, setLoading] = useState(true);
-  const [loadingPercent, setLoadingPercent] = useState(0);
-  const [templateName, setTemplateName] = useState(existingTemplate?.name || '');
-  const [term, setTerm] = useState(existingTemplate?.term || 'First Term');
-  const [session, setSession] = useState(existingTemplate?.session || '');
-  
-  const [schoolInfo, setSchoolInfo] = useState({
-    name: '',
-    address: '',
-    motto: ''
-  });
-  
-  const [components, setComponents] = useState({
-    header: existingTemplate?.components?.header?.enabled ?? true,
-    studentInfo: existingTemplate?.components?.studentInfo?.enabled ?? true,
-    scoresTable: existingTemplate?.components?.scoresTable?.enabled ?? true,
-    affectiveTraits: existingTemplate?.components?.affectiveTraits?.enabled ?? true,
-    fees: existingTemplate?.components?.fees?.enabled ?? true,
-    attendance: existingTemplate?.components?.attendance?.enabled ?? true,
-    comments: existingTemplate?.components?.comments?.enabled ?? true,
-    signatures: existingTemplate?.components?.signatures?.enabled ?? false
+  const authHeader = token?.startsWith('Bearer ') ? token : `Bearer ${token}`;
+
+  // ── Loading ──────────────────────────────────────────────────────────────────
+  const [loading,       setLoading]       = useState(true);
+  const [loadingPct,    setLoadingPct]    = useState(0);
+  const [saving,        setSaving]        = useState(false);
+  const [error,         setError]         = useState('');
+  const [showPreview,   setShowPreview]   = useState(false);
+
+  // ── School branding (for preview) ────────────────────────────────────────────
+  const [school, setSchool] = useState({
+    name: '', address: '', phone: '', email: '', motto: '', logoBase64: '', principalName: '',
   });
 
-  const [expanded, setExpanded] = useState({
-    header: false,
-    studentInfo: false,
-    scoresTable: true,
-    affectiveTraits: false,
-    fees: false,
-    attendance: false,
-    comments: false,
-    signatures: false
+  // ── Template config fields ────────────────────────────────────────────────────
+  const [templateName, setTemplateName] = useState(existingTemplate?.name    || '');
+  const [term,         setTerm]         = useState(existingTemplate?.term    || 'Third Term');
+  const [session,      setSession]      = useState(existingTemplate?.session || '');
+  const [termBegins,   setTermBegins]   = useState(existingTemplate?.components?.termBegins   || '');
+  const [termEnds,     setTermEnds]     = useState(existingTemplate?.components?.termEnds     || '');
+  const [nextTerm,     setNextTerm]     = useState(existingTemplate?.components?.nextTermBegins|| '');
+  const [classSize,    setClassSize]    = useState(existingTemplate?.components?.classSize    || '');
+
+  // ── Subjects list ─────────────────────────────────────────────────────────────
+  const [subjects, setSubjects] = useState(() => {
+    const saved = existingTemplate?.components?.subjects;
+    if (Array.isArray(saved) && saved.length) {
+      return saved.map(s => (typeof s === 'string' ? s : s.name || s.subject || ''));
+    }
+    return [...DEFAULT_SUBJECTS];
   });
 
-  const [scoreColumns, setScoreColumns] = useState(
-    existingTemplate?.components?.scoresTable?.columns || DEFAULT_SCORE_COLUMNS
-  );
-  const [defaultSubjectRows, setDefaultSubjectRows] = useState(
-    existingTemplate?.components?.scoresTable?.defaultSubjects || 12
-  );
+  const [newSubjectName, setNewSubjectName] = useState('');
+  const [dragIdx, setDragIdx] = useState(null);
 
-  const [affectiveTraits, setAffectiveTraits] = useState(
-    existingTemplate?.components?.affectiveTraits?.traits || DEFAULT_AFFECTIVE_TRAITS
-  );
-
-  const [feeTypes, setFeeTypes] = useState(
-    existingTemplate?.components?.fees?.types || DEFAULT_FEE_TYPES
-  );
-
-  const [enableTeacherComment, setEnableTeacherComment] = useState(
-    existingTemplate?.components?.comments?.teacher ?? true
-  );
-  const [enablePrincipalComment, setEnablePrincipalComment] = useState(
-    existingTemplate?.components?.comments?.principal ?? true
-  );
-
-  const [showPreview, setShowPreview] = useState(false); // Changed default to false for mobile
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
+  // ── Fetch school branding ─────────────────────────────────────────────────────
   useEffect(() => {
-    const fetchSchoolInfo = async () => {
+    const fetch = async () => {
       try {
         setLoading(true);
-        setLoadingPercent(10);
-
+        setLoadingPct(20);
         const res = await axios.get(`${REACT_APP_API_URL}/api/admin/settings`, {
-          headers: { Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}` }
+          headers: { Authorization: authHeader },
         });
-        
-        setLoadingPercent(70);
-
-        const { school } = res.data;
-        setSchoolInfo({
-          name: school.name || 'Your School Name',
-          address: school.address || 'School Address, City, State',
-          motto: school.motto || ''
+        setLoadingPct(80);
+        const s = res.data.school || {};
+        setSchool({
+          name:          s.name          || '',
+          address:       s.address       || '',
+          phone:         s.phone         || '',
+          email:         s.email         || '',
+          motto:         s.motto         || '',
+          logoBase64:    s.logoBase64    || '',
+          principalName: s.principalName || '',
         });
-
-        setLoadingPercent(100);
+        setLoadingPct(100);
       } catch (err) {
-        console.error('Failed to fetch school info:', err);
-        setSchoolInfo({
-          name: 'Your School Name',
-          address: 'School Address, City, State',
-          motto: ''
-        });
-        setLoadingPercent(100);
+        console.error('[TemplateBuilder] Failed to fetch school:', err);
       } finally {
         setLoading(false);
       }
     };
-
-    if (token) {
-      fetchSchoolInfo();
-    } else {
-      setLoading(false);
-    }
+    if (token) fetch();
+    else setLoading(false);
   }, [token]);
 
-  const toggleComponent = (component) => {
-    setComponents({ ...components, [component]: !components[component] });
+  // ── Subject CRUD ──────────────────────────────────────────────────────────────
+  const addSubject = () => {
+    const name = newSubjectName.trim();
+    if (!name) return;
+    if (subjects.includes(name)) { setError(`"${name}" is already in the list.`); return; }
+    setSubjects(prev => [...prev, name]);
+    setNewSubjectName('');
+    setError('');
   };
 
-  const toggleExpanded = (section) => {
-    setExpanded({ ...expanded, [section]: !expanded[section] });
-  };
+  const removeSubject = (idx) => setSubjects(prev => prev.filter((_, i) => i !== idx));
 
-  const updateScoreColumn = (index, field, value) => {
-    const updated = [...scoreColumns];
-    updated[index][field] = value;
-    setScoreColumns(updated);
-  };
+  const updateSubject = (idx, val) =>
+    setSubjects(prev => prev.map((s, i) => i === idx ? val : s));
 
-  const addScoreColumn = () => {
-    setScoreColumns([
-      ...scoreColumns,
-      { name: 'New Column', maxScore: 0, enabled: true, editable: true }
-    ]);
+  // ── Drag-to-reorder ───────────────────────────────────────────────────────────
+  const handleDragStart = (idx) => setDragIdx(idx);
+  const handleDragOver  = (e, idx) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === idx) return;
+    const reordered = [...subjects];
+    const [moved]   = reordered.splice(dragIdx, 1);
+    reordered.splice(idx, 0, moved);
+    setSubjects(reordered);
+    setDragIdx(idx);
   };
+  const handleDragEnd = () => setDragIdx(null);
 
-  const removeScoreColumn = (index) => {
-    setScoreColumns(scoreColumns.filter((_, i) => i !== index));
-  };
-
-  const addAffectiveTrait = () => {
-    setAffectiveTraits([
-      ...affectiveTraits,
-      { name: 'New Trait', enabled: true }
-    ]);
-  };
-
-  const updateAffectiveTrait = (index, value) => {
-    const updated = [...affectiveTraits];
-    updated[index].name = value;
-    setAffectiveTraits(updated);
-  };
-
-  const removeAffectiveTrait = (index) => {
-    setAffectiveTraits(affectiveTraits.filter((_, i) => i !== index));
-  };
-
-  const addFeeType = () => {
-    setFeeTypes([
-      ...feeTypes,
-      { name: 'New Fee', enabled: true }
-    ]);
-  };
-
-  const updateFeeType = (index, value) => {
-    const updated = [...feeTypes];
-    updated[index].name = value;
-    setFeeTypes(updated);
-  };
-
-  const removeFeeType = (index) => {
-    setFeeTypes(feeTypes.filter((_, i) => i !== index));
-  };
-
+  // ── Save ──────────────────────────────────────────────────────────────────────
   const handleSave = async () => {
+    setError('');
+    if (!templateName.trim()) { setError('Please enter a template name.'); return; }
+    if (!term)                 { setError('Please select a term.'); return; }
+    if (!session.trim())       { setError('Please enter the session e.g. 2024/2025.'); return; }
+    if (!subjects.filter(s => s.trim()).length) {
+      setError('Please add at least one subject.'); return;
+    }
+
+    const templateData = {
+      name:     templateName.trim(),
+      term,
+      session:  session.trim(),
+      schoolId: schoolId || undefined,
+      components: {
+        subjects:      subjects.filter(s => s.trim()),
+        termBegins:    termBegins  || undefined,
+        termEnds:      termEnds    || undefined,
+        nextTermBegins: nextTerm   || undefined,
+        classSize:     classSize   ? Number(classSize) : undefined,
+        // Keep legacy structure so existing result-entry code that reads
+        // components.scoresTable.subjects still works
+        scoresTable: {
+          enabled:  true,
+          subjects: subjects.filter(s => s.trim()).map(name => ({ name })),
+          defaultSubjects: subjects.filter(s => s.trim()).length,
+          columns: [
+            { name: 'CA',    maxScore: 40,  enabled: true, editable: true },
+            { name: 'Exam',  maxScore: 60,  enabled: true, editable: true },
+            { name: 'Total', maxScore: 100, enabled: true, editable: false, calculated: true },
+            { name: 'Grade', maxScore: 0,   enabled: true, editable: false, calculated: true },
+          ],
+        },
+        affectiveTraits: { enabled: true },
+        attendance:      { enabled: true },
+        comments:        { enabled: true, teacher: true, principal: true },
+      },
+    };
+
     try {
       setSaving(true);
-      setError('');
-
-      if (!token) {
-        setError('Authentication token is missing. Please log in again.');
-        setSaving(false);
-        return;
-      }
-
-      if (!templateName || !term || !session) {
-        setError('Please fill in template name, term, and session');
-        setSaving(false);
-        return;
-      }
-
-      const templateData = {
-        name: templateName,
-        term,
-        session,
-        schoolId,
-        components: {
-          header: { enabled: components.header },
-          studentInfo: { enabled: components.studentInfo },
-          scoresTable: {
-            enabled: components.scoresTable,
-            columns: scoreColumns,
-            defaultSubjects: defaultSubjectRows
-          },
-          affectiveTraits: {
-            enabled: components.affectiveTraits,
-            traits: affectiveTraits
-          },
-          fees: {
-            enabled: components.fees,
-            types: feeTypes
-          },
-          attendance: { enabled: components.attendance },
-          comments: {
-            enabled: components.comments,
-            teacher: enableTeacherComment,
-            principal: enablePrincipalComment
-          },
-          signatures: { enabled: components.signatures }
-        }
-      };
-
-      const url = existingTemplate
+      const url    = existingTemplate
         ? `${REACT_APP_API_URL}/api/admin/templates/${existingTemplate._id}`
         : `${REACT_APP_API_URL}/api/admin/templates`;
-
       const method = existingTemplate ? 'put' : 'post';
 
-      const authHeader = token.startsWith('Bearer ') 
-        ? token 
-        : `Bearer ${token}`;
-
-      const res = await axios[method](url, templateData, {
-        headers: { Authorization: authHeader }
+      await axios[method](url, templateData, {
+        headers: { Authorization: authHeader },
       });
 
-      alert(res.data.message || 'Template saved successfully!');
       if (onClose) onClose();
-
     } catch (err) {
-      console.error('Save error:', err);
-      setError(err.response?.data?.message || 'Failed to save template');
+      console.error('[TemplateBuilder] Save error:', err);
+      setError(err.response?.data?.message || 'Failed to save template.');
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) {
-    return <Loading percentage={loadingPercent} />;
-  }
+  // ── Build preview result with current subjects ────────────────────────────────
+  const previewSubjects = subjects.filter(s => s.trim()).slice(0, 8).map((name, i) => {
+    const ca   = 28 + (i % 7);
+    const exam = 44 + (i % 11);
+    const total = ca + exam;
+    return { subject: name, ca, exam, total };
+  });
+
+  const previewResult = {
+    ...PREVIEW_RESULT,
+    term,
+    session: session || '2024/2025',
+    subjects: previewSubjects,
+  };
+
+  if (loading) return <Loading percentage={loadingPct} />;
 
   return (
-    <div className="container-fluid py-3 py-md-4" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
-      {/* Header - Mobile Optimized */}
-      <div className="row mb-3">
-        <div className="col-12 d-flex justify-content-between align-items-center">
-          <h4 className="mb-0 fs-5 fs-md-4">
-            {existingTemplate ? 'Edit' : 'Create'} Template
+    <div className="container-fluid py-3" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
+
+      {/* ── Header bar ────────────────────────────────────────────────────────── */}
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h4 className="mb-0 fs-5">
+            {existingTemplate ? '✏️ Edit' : '➕ Create'} Result Template
           </h4>
-          <button className="btn btn-outline-secondary btn-sm" onClick={onClose}>
-            <X size={18} />
-          </button>
+          <small className="text-muted">
+            Define subjects for {term || '—'} · {session || '—'}
+          </small>
         </div>
+        <button className="btn btn-outline-secondary btn-sm" onClick={onClose}>
+          <X size={18} />
+        </button>
       </div>
 
       {error && (
-        <div className="alert alert-danger alert-dismissible">
+        <div className="alert alert-danger alert-dismissible py-2">
           {error}
-          <button type="button" className="btn-close" onClick={() => setError('')}></button>
+          <button type="button" className="btn-close btn-sm" onClick={() => setError('')} />
         </div>
       )}
 
-      {/* Basic Info - Mobile Optimized */}
-      <div className="row g-2 g-md-3 mb-3 mb-md-4">
-        <div className="col-12 col-md-4">
-          <label className="form-label small fw-semibold">Template Name *</label>
-          <input
-            type="text"
-            className="form-control form-control-sm"
-            value={templateName}
-            onChange={(e) => setTemplateName(e.target.value)}
-            placeholder="e.g., Primary 3 Result Sheet"
-          />
+      {/* ── Branding warning if logo missing ─────────────────────────────────── */}
+      {!school.logoBase64 && (
+        <div className="alert alert-warning py-2 d-flex align-items-center gap-2">
+          ⚠️ <span>No school logo found. <a href="/admin/settings" target="_blank" rel="noreferrer">Upload one in Settings → Branding</a> so it appears on result sheets.</span>
         </div>
-        <div className="col-6 col-md-4">
-          <label className="form-label small fw-semibold">Term *</label>
-          <select className="form-select form-select-sm" value={term} onChange={(e) => setTerm(e.target.value)}>
-            <option value="First Term">First Term</option>
-            <option value="Second Term">Second Term</option>
-            <option value="Third Term">Third Term</option>
-          </select>
-        </div>
-        <div className="col-6 col-md-4">
-          <label className="form-label small fw-semibold">Session *</label>
-          <input
-            type="text"
-            className="form-control form-control-sm"
-            value={session}
-            onChange={(e) => setSession(e.target.value)}
-            placeholder="2024/2025"
-          />
-        </div>
-      </div>
+      )}
 
-      {/* Toggle Preview - Mobile Optimized */}
-      <div className="row mb-3">
-        <div className="col-12">
-          <button 
-            className="btn btn-sm btn-outline-primary d-flex align-items-center w-100 w-md-auto justify-content-center"
-            onClick={() => setShowPreview(!showPreview)}
-          >
-            {showPreview ? <EyeOff size={16} /> : <Eye size={16} />}
-            <span className="ms-2">{showPreview ? 'Hide' : 'Show'} Preview</span>
-          </button>
-        </div>
-      </div>
+      <div className="row g-3">
 
-      <div className="row g-2 g-md-3">
-        {/* Configuration Panel */}
-        <div className={showPreview ? 'col-12 col-lg-6 mb-3 mb-lg-0' : 'col-12'}>
-          <div className="card h-100 d-flex flex-column">
-            <div className="card-header bg-primary text-white py-2">
-              <h6 className="mb-0 small">Template Components</h6>
-            </div>
-            <div className="card-body overflow-auto flex-grow-1 p-2 p-md-3">
-              
-              {/* Header Section */}
-              <div className="border rounded mb-2 mb-md-3">
-                <div 
-                  className="d-flex justify-content-between align-items-center p-2 p-md-3 bg-light"
-                  role="button"
-                  onClick={() => toggleExpanded('header')}
-                >
-                  <div className="form-check mb-0">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      checked={components.header}
-                      onChange={() => toggleComponent('header')}
-                      onClick={(e) => e.stopPropagation()}
-                      id="headerToggle"
-                    />
-                    <label className="form-check-label fw-bold small" htmlFor="headerToggle">
-                      School Header
-                    </label>
-                  </div>
-                  {expanded.header ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+        {/* ═══════════════════════ LEFT: Config Panel ═══════════════════════════ */}
+        <div className={showPreview ? 'col-12 col-xl-5' : 'col-12 col-lg-8 col-xl-6 mx-auto'}>
+
+          {/* ── Basic info ──────────────────────────────────────────────────── */}
+          <div className="card mb-3">
+            <div className="card-header fw-bold py-2 bg-primary text-white">Template Info</div>
+            <div className="card-body p-3">
+              <div className="row g-2">
+                <div className="col-12">
+                  <label className="form-label small fw-semibold">Template Name *</label>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm"
+                    value={templateName}
+                    onChange={e => setTemplateName(e.target.value)}
+                    placeholder="e.g. JSS 1 Third Term 2024/2025"
+                  />
                 </div>
-                {expanded.header && components.header && (
-                  <div className="p-2 p-md-3">
-                    <small className="text-muted">
-                      Includes school name, logo, address, and motto
-                    </small>
-                  </div>
-                )}
-              </div>
-
-              {/* Student Info Section */}
-              <div className="border rounded mb-2 mb-md-3">
-                <div 
-                  className="d-flex justify-content-between align-items-center p-2 p-md-3 bg-light"
-                  role="button"
-                  onClick={() => toggleExpanded('studentInfo')}
-                >
-                  <div className="form-check mb-0">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      checked={components.studentInfo}
-                      onChange={() => toggleComponent('studentInfo')}
-                      onClick={(e) => e.stopPropagation()}
-                      id="studentInfoToggle"
-                    />
-                    <label className="form-check-label fw-bold small" htmlFor="studentInfoToggle">
-                      Student Information
-                    </label>
-                  </div>
-                  {expanded.studentInfo ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                <div className="col-6">
+                  <label className="form-label small fw-semibold">Term *</label>
+                  <select className="form-select form-select-sm" value={term} onChange={e => setTerm(e.target.value)}>
+                    <option value="First Term">First Term</option>
+                    <option value="Second Term">Second Term</option>
+                    <option value="Third Term">Third Term</option>
+                  </select>
                 </div>
-                {expanded.studentInfo && components.studentInfo && (
-                  <div className="p-2 p-md-3">
-                    <small className="text-muted">
-                      Includes name, registration number, class, and session
-                    </small>
-                  </div>
-                )}
-              </div>
-
-              {/* Scores Table Section */}
-              <div className="border rounded mb-2 mb-md-3">
-                <div 
-                  className="d-flex justify-content-between align-items-center p-2 p-md-3 bg-light"
-                  role="button"
-                  onClick={() => toggleExpanded('scoresTable')}
-                >
-                  <div className="form-check mb-0">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      checked={components.scoresTable}
-                      onChange={() => toggleComponent('scoresTable')}
-                      onClick={(e) => e.stopPropagation()}
-                      id="scoresTableToggle"
-                    />
-                    <label className="form-check-label fw-bold small" htmlFor="scoresTableToggle">
-                      Subject Scores Table
-                    </label>
-                  </div>
-                  {expanded.scoresTable ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                </div>
-                {expanded.scoresTable && components.scoresTable && (
-                  <div className="p-2 p-md-3">
-                    <div className="mb-3">
-                      <label className="form-label small">Default Number of Subject Rows</label>
-                      <input
-                        type="number"
-                        className="form-control form-control-sm"
-                        value={defaultSubjectRows}
-                        onChange={(e) => setDefaultSubjectRows(Math.max(1, Number(e.target.value)))}
-                        min="1"
-                        max="20"
-                      />
-                      <small className="text-muted d-block">Teachers can add/remove rows as needed</small>
-                    </div>
-
-                    <label className="form-label small fw-bold">Score Columns</label>
-                    {scoreColumns.map((col, index) => (
-                      <div key={index} className="d-flex gap-2 mb-2">
-                        <input
-                          type="text"
-                          className="form-control form-control-sm flex-grow-1"
-                          value={col.name}
-                          onChange={(e) => updateScoreColumn(index, 'name', e.target.value)}
-                          placeholder="Column name"
-                          disabled={col.calculated}
-                        />
-                        <input
-                          type="number"
-                          className="form-control form-control-sm"
-                          value={col.maxScore}
-                          onChange={(e) => updateScoreColumn(index, 'maxScore', Number(e.target.value))}
-                          placeholder="Max"
-                          style={{ width: '70px' }}
-                          disabled={col.calculated}
-                        />
-                        {!col.calculated && (
-                          <button
-                            className="btn btn-sm btn-outline-danger px-2"
-                            onClick={() => removeScoreColumn(index)}
-                            type="button"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    <button
-                      className="btn btn-sm btn-outline-primary mt-2 w-100"
-                      onClick={addScoreColumn}
-                      type="button"
-                    >
-                      <Plus size={14} className="me-1" />
-                      Add Column
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Affective Traits Section */}
-              <div className="border rounded mb-2 mb-md-3">
-                <div 
-                  className="d-flex justify-content-between align-items-center p-2 p-md-3 bg-light"
-                  role="button"
-                  onClick={() => toggleExpanded('affectiveTraits')}
-                >
-                  <div className="form-check mb-0">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      checked={components.affectiveTraits}
-                      onChange={() => toggleComponent('affectiveTraits')}
-                      onClick={(e) => e.stopPropagation()}
-                      id="affectiveTraitsToggle"
-                    />
-                    <label className="form-check-label fw-bold small" htmlFor="affectiveTraitsToggle">
-                      Affective Traits
-                    </label>
-                  </div>
-                  {expanded.affectiveTraits ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                </div>
-                {expanded.affectiveTraits && components.affectiveTraits && (
-                  <div className="p-2 p-md-3">
-                    <small className="text-muted d-block mb-2">Rating scale: 1-5</small>
-                    {affectiveTraits.map((trait, index) => (
-                      <div key={index} className="d-flex gap-2 mb-2">
-                        <input
-                          type="text"
-                          className="form-control form-control-sm flex-grow-1"
-                          value={trait.name}
-                          onChange={(e) => updateAffectiveTrait(index, e.target.value)}
-                          placeholder="Trait name"
-                        />
-                        <button
-                          className="btn btn-sm btn-outline-danger px-2"
-                          onClick={() => removeAffectiveTrait(index)}
-                          type="button"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      className="btn btn-sm btn-outline-primary mt-2 w-100"
-                      onClick={addAffectiveTrait}
-                      type="button"
-                    >
-                      <Plus size={14} className="me-1" />
-                      Add Trait
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Fees Section */}
-              <div className="border rounded mb-2 mb-md-3">
-                <div 
-                  className="d-flex justify-content-between align-items-center p-2 p-md-3 bg-light"
-                  role="button"
-                  onClick={() => toggleExpanded('fees')}
-                >
-                  <div className="form-check mb-0">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      checked={components.fees}
-                      onChange={() => toggleComponent('fees')}
-                      onClick={(e) => e.stopPropagation()}
-                      id="feesToggle"
-                    />
-                    <label className="form-check-label fw-bold small" htmlFor="feesToggle">
-                      School Fees
-                    </label>
-                  </div>
-                  {expanded.fees ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                </div>
-                {expanded.fees && components.fees && (
-                  <div className="p-2 p-md-3">
-                    {feeTypes.map((fee, index) => (
-                      <div key={index} className="d-flex gap-2 mb-2">
-                        <input
-                          type="text"
-                          className="form-control form-control-sm flex-grow-1"
-                          value={fee.name}
-                          onChange={(e) => updateFeeType(index, e.target.value)}
-                          placeholder="Fee type"
-                        />
-                        <button
-                          className="btn btn-sm btn-outline-danger px-2"
-                          onClick={() => removeFeeType(index)}
-                          type="button"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      className="btn btn-sm btn-outline-primary mt-2 w-100"
-                      onClick={addFeeType}
-                      type="button"
-                    >
-                      <Plus size={14} className="me-1" />
-                      Add Fee Type
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Attendance Section */}
-              <div className="border rounded mb-2 mb-md-3">
-                <div className="d-flex justify-content-between align-items-center p-2 p-md-3 bg-light">
-                  <div className="form-check mb-0">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      checked={components.attendance}
-                      onChange={() => toggleComponent('attendance')}
-                      id="attendanceToggle"
-                    />
-                    <label className="form-check-label fw-bold small" htmlFor="attendanceToggle">
-                      Attendance
-                    </label>
-                  </div>
+                <div className="col-6">
+                  <label className="form-label small fw-semibold">Session *</label>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm"
+                    value={session}
+                    onChange={e => setSession(e.target.value)}
+                    placeholder="2024/2025"
+                  />
                 </div>
               </div>
-
-              {/* Comments Section */}
-              <div className="border rounded mb-2 mb-md-3">
-                <div 
-                  className="d-flex justify-content-between align-items-center p-2 p-md-3 bg-light"
-                  role="button"
-                  onClick={() => toggleExpanded('comments')}
-                >
-                  <div className="form-check mb-0">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      checked={components.comments}
-                      onChange={() => toggleComponent('comments')}
-                      onClick={(e) => e.stopPropagation()}
-                      id="commentsToggle"
-                    />
-                    <label className="form-check-label fw-bold small" htmlFor="commentsToggle">
-                      Comments
-                    </label>
-                  </div>
-                  {expanded.comments ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                </div>
-                {expanded.comments && components.comments && (
-                  <div className="p-2 p-md-3">
-                    <div className="form-check mb-2">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        checked={enableTeacherComment}
-                        onChange={(e) => setEnableTeacherComment(e.target.checked)}
-                        id="teacherCommentToggle"
-                      />
-                      <label className="form-check-label small" htmlFor="teacherCommentToggle">Teacher's Comment</label>
-                    </div>
-                    <div className="form-check">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        checked={enablePrincipalComment}
-                        onChange={(e) => setEnablePrincipalComment(e.target.checked)}
-                        id="principalCommentToggle"
-                      />
-                      <label className="form-check-label small" htmlFor="principalCommentToggle">Principal's Comment</label>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Signatures Section */}
-              <div className="border rounded mb-2 mb-md-3">
-                <div className="d-flex justify-content-between align-items-center p-2 p-md-3 bg-light">
-                  <div className="form-check mb-0">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      checked={components.signatures}
-                      onChange={() => toggleComponent('signatures')}
-                      id="signaturesToggle"
-                    />
-                    <label className="form-check-label fw-bold small" htmlFor="signaturesToggle">
-                      Signatures
-                    </label>
-                  </div>
-                </div>
-              </div>
-
             </div>
           </div>
 
-          {/* Save Button - Mobile Optimized */}
-          <div className="mt-2 mt-md-3">
-            <button 
-              className="btn btn-success w-100 py-2"
+          {/* ── Term dates (default dates shown on result sheets) ───────────── */}
+          <div className="card mb-3">
+            <div className="card-header fw-bold py-2">
+              📅 Term Dates
+              <small className="text-muted fw-normal ms-2">— defaults shown on result sheets</small>
+            </div>
+            <div className="card-body p-3">
+              <div className="row g-2">
+                <div className="col-12 col-sm-4">
+                  <label className="form-label small fw-semibold">Term Begins</label>
+                  <input type="date" className="form-control form-control-sm" value={termBegins} onChange={e => setTermBegins(e.target.value)} />
+                </div>
+                <div className="col-12 col-sm-4">
+                  <label className="form-label small fw-semibold">Term Ends</label>
+                  <input type="date" className="form-control form-control-sm" value={termEnds} onChange={e => setTermEnds(e.target.value)} />
+                </div>
+                <div className="col-12 col-sm-4">
+                  <label className="form-label small fw-semibold">Next Term Begins</label>
+                  <input type="date" className="form-control form-control-sm" value={nextTerm} onChange={e => setNextTerm(e.target.value)} />
+                </div>
+                <div className="col-12 col-sm-4">
+                  <label className="form-label small fw-semibold">Default Class Size</label>
+                  <input type="number" min={1} className="form-control form-control-sm" value={classSize} onChange={e => setClassSize(e.target.value)} placeholder="e.g. 35" />
+                  <small className="text-muted">Teacher can adjust per student</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Subjects list ────────────────────────────────────────────────── */}
+          <div className="card mb-3">
+            <div className="card-header fw-bold py-2 d-flex justify-content-between align-items-center">
+              <span>📚 Subjects List <span className="badge bg-secondary ms-1">{subjects.filter(s => s.trim()).length}</span></span>
+              <small className="text-muted fw-normal">Drag to reorder</small>
+            </div>
+            <div className="card-body p-2">
+
+              {/* Add subject input */}
+              <div className="input-group input-group-sm mb-2">
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Type subject name and press Add"
+                  value={newSubjectName}
+                  onChange={e => setNewSubjectName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addSubject()}
+                />
+                <button className="btn btn-primary" type="button" onClick={addSubject}>
+                  <Plus size={14} className="me-1" />Add
+                </button>
+              </div>
+
+              {/* Subject rows */}
+              <div style={{ maxHeight: '340px', overflowY: 'auto' }}>
+                {subjects.map((subj, idx) => (
+                  <div
+                    key={idx}
+                    draggable
+                    onDragStart={() => handleDragStart(idx)}
+                    onDragOver={e => handleDragOver(e, idx)}
+                    onDragEnd={handleDragEnd}
+                    className="d-flex align-items-center gap-2 mb-1 p-1 rounded"
+                    style={{
+                      backgroundColor: dragIdx === idx ? '#e0f2fe' : idx % 2 === 0 ? '#f8f9fa' : '#fff',
+                      border: '1px solid #e2e8f0',
+                      cursor: 'grab',
+                    }}
+                  >
+                    <GripVertical size={14} className="text-muted flex-shrink-0" />
+                    <span className="text-muted small flex-shrink-0" style={{ width: '20px' }}>{idx + 1}.</span>
+                    <input
+                      type="text"
+                      className="form-control form-control-sm border-0 bg-transparent p-0"
+                      value={subj}
+                      onChange={e => updateSubject(idx, e.target.value)}
+                      style={{ fontWeight: '500' }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-danger border-0 p-1 flex-shrink-0"
+                      onClick={() => removeSubject(idx)}
+                      title="Remove subject"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {subjects.length === 0 && (
+                <div className="text-center text-muted py-3">
+                  No subjects added yet. Type above to add.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Info note about what else is on the sheet ─────────────────── */}
+          <div className="card mb-3 border-info">
+            <div className="card-body p-3 bg-info bg-opacity-10">
+              <p className="mb-1 small fw-semibold">ℹ️ What's automatically included on every result sheet:</p>
+              <ul className="mb-0 small text-muted">
+                <li>School logo, name, motto and address (from Settings → Branding)</li>
+                <li>Student's personal data and passport photo</li>
+                <li>CA (40) + Exam (60) = Total (100) columns</li>
+                <li>All 10 affective domain traits</li>
+                <li>All 6 psychomotor skills</li>
+                <li>Grade scale legend and rating indices</li>
+                <li>Teacher and principal comment sections</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* ── Buttons ──────────────────────────────────────────────────────── */}
+          <div className="d-flex gap-2">
+            <button
+              type="button"
+              className="btn btn-outline-primary flex-grow-1"
+              onClick={() => setShowPreview(!showPreview)}
+            >
+              {showPreview ? <EyeOff size={15} className="me-1" /> : <Eye size={15} className="me-1" />}
+              {showPreview ? 'Hide Preview' : 'Preview Sheet'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-success flex-grow-1"
               onClick={handleSave}
               disabled={saving}
-              type="button"
             >
-              {saving ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save size={18} className="me-2" />
-                  Save Template
-                </>
-              )}
+              {saving
+                ? <><span className="spinner-border spinner-border-sm me-2" />Saving...</>
+                : <><Save size={15} className="me-1" />Save Template</>
+              }
             </button>
           </div>
         </div>
 
-        {/* Live Preview Panel - Mobile Optimized */}
+        {/* ═══════════════════════ RIGHT: Live Preview ══════════════════════════ */}
         {showPreview && (
-          <div className="col-12 col-lg-6">
-            <div className="card position-sticky" style={{ top: '20px' }}>
-              <div className="card-header bg-info text-white py-2">
-                <h6 className="mb-0 small">Live Preview</h6>
+          <div className="col-12 col-xl-7">
+            <div className="card">
+              <div className="card-header bg-dark text-white py-2 d-flex justify-content-between">
+                <span className="fw-bold">📄 Live Preview — actual result sheet</span>
+                <small className="text-muted">(Sample data — your school branding)</small>
               </div>
-              <div className="card-body p-2 p-md-4" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-                <div className="border p-2 p-md-4 bg-white" style={{ fontSize: '12px' }}>
-                  
-                  {/* Header */}
-                  {components.header && (
-                    <div className="text-center mb-3 pb-2 border-bottom">
-                      <h6 className="fw-bold mb-1 small">{schoolInfo.name}</h6>
-                      <small className="text-muted" style={{ fontSize: '10px' }}>{schoolInfo.address}</small>
-                      {schoolInfo.motto && (
-                        <div className="fst-italic text-muted" style={{ fontSize: '10px' }}>"{schoolInfo.motto}"</div>
-                      )}
-                      <div className="mt-1 fw-bold" style={{ fontSize: '11px' }}>{term} Report - {session}</div>
-                    </div>
-                  )}
-
-                  {/* Student Info */}
-                  {components.studentInfo && (
-                    <div className="row mb-2" style={{ fontSize: '10px' }}>
-                      <div className="col-6">
-                        <small><strong>Name:</strong> Student Name</small>
-                      </div>
-                      <div className="col-6">
-                        <small><strong>Reg No:</strong> ABC/001</small>
-                      </div>
-                      <div className="col-6">
-                        <small><strong>Class:</strong> Primary 3</small>
-                      </div>
-                      <div className="col-6">
-                        <small><strong>Session:</strong> {session}</small>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Scores Table */}
-                  {components.scoresTable && (
-                    <div className="mb-2">
-                      <h6 className="fw-bold mb-1 small">Academic Performance</h6>
-                      <div className="table-responsive">
-                        <table className="table table-sm table-bordered" style={{ fontSize: '10px' }}>
-                          <thead className="table-light">
-                            <tr>
-                              <th>Subject</th>
-                              {scoreColumns.filter(c => c.enabled).slice(0, 3).map((col, i) => (
-                                <th key={i} className="text-center">
-                                  {col.name}
-                                  {col.maxScore > 0 && <small className="d-block text-muted">({col.maxScore})</small>}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td>Mathematics</td>
-                              {scoreColumns.filter(c => c.enabled).slice(0, 3).map((col, i) => (
-                                <td key={i} className="text-center">-</td>
-                              ))}
-                            </tr>
-                            <tr>
-                              <td>English</td>
-                              {scoreColumns.filter(c => c.enabled).slice(0, 3).map((col, i) => (
-                                <td key={i} className="text-center">-</td>
-                              ))}
-                            </tr>
-                            <tr>
-                              <td colSpan={scoreColumns.filter(c => c.enabled).slice(0, 3).length + 1} className="text-muted text-center">
-                                <small>+ More subjects...</small>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Affective Traits */}
-                  {components.affectiveTraits && affectiveTraits.length > 0 && (
-                    <div className="mb-2">
-                      <h6 className="fw-bold mb-1 small">Affective Traits (1-5)</h6>
-                      <div className="row" style={{ fontSize: '10px' }}>
-                        {affectiveTraits.slice(0, 6).map((trait, i) => (
-                          <div key={i} className="col-6 mb-1">
-                            <small>{trait.name}: ___</small>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Fees */}
-                  {components.fees && feeTypes.length > 0 && (
-                    <div className="mb-2">
-                      <h6 className="fw-bold mb-1 small">School Fees</h6>
-                      {feeTypes.slice(0, 4).map((fee, i) => (
-                        <div key={i} className="d-flex justify-content-between mb-1" style={{ fontSize: '10px' }}>
-                          <small>{fee.name}:</small>
-                          <small>₦ ________</small>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Attendance */}
-                  {components.attendance && (
-                    <div className="mb-2">
-                      <h6 className="fw-bold mb-1 small">Attendance</h6>
-                      <div className="row" style={{ fontSize: '10px' }}>
-                        <div className="col-4">
-                          <small>Opened: ___</small>
-                        </div>
-                        <div className="col-4">
-                          <small>Present: ___</small>
-                        </div>
-                        <div className="col-4">
-                          <small>Absent: ___</small>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Comments */}
-                  {components.comments && (
-                    <div className="mb-2">
-                      {enableTeacherComment && (
-                        <div className="mb-2">
-                          <small className="fw-bold">Teacher's Comment:</small>
-                          <div className="border p-2 mt-1" style={{ minHeight: '30px', fontSize: '10px' }}>
-                            <small className="text-muted">Comment text will appear here...</small>
-                          </div>
-                        </div>
-                      )}
-                      {enablePrincipalComment && (
-                        <div>
-                          <small className="fw-bold">Principal's Comment:</small>
-                          <div className="border p-2 mt-1" style={{ minHeight: '30px', fontSize: '10px' }}>
-                            <small className="text-muted">Comment text will appear here...</small>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Signatures */}
-                  {components.signatures && (
-                    <div className="row mt-3" style={{ fontSize: '10px' }}>
-                      <div className="col-6">
-                        <div className="border-top pt-2">
-                          <small>Teacher's Signature</small>
-                        </div>
-                      </div>
-                      <div className="col-6">
-                        <div className="border-top pt-2">
-                          <small>Principal's Signature</small>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
+              <div className="card-body p-2" style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '85vh' }}>
+                <div style={{ transform: 'scale(0.72)', transformOrigin: 'top left', width: '139%' }}>
+                  <NigerianResultSheet
+                    result={previewResult}
+                    school={school}
+                    student={PREVIEW_STUDENT}
+                    classSize={classSize ? Number(classSize) : 35}
+                    termBegins={termBegins}
+                    termEnds={termEnds}
+                    nextTermBegins={nextTerm}
+                  />
                 </div>
               </div>
             </div>
           </div>
         )}
-      </div>
+
+      </div>{/* end row */}
     </div>
   );
 };
