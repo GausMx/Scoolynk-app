@@ -159,13 +159,46 @@ const VisualResultEntry = ({
       club:   student?.club   || '',
     });
 
+    // Helper: fetch SubjectScore records for this student and merge into rows
+    const mergeSubjectScores = (baseRows, token, authHdr, setter) => {
+      if (!token || !student?._id) { setter(baseRows); return; }
+      axios.get(`${REACT_APP_API_URL}/api/teacher/subject-scores/for-student`, {
+        headers: { Authorization: authHdr() },
+        params:  { studentId: student._id, term, session },
+      })
+      .then(res => {
+        const fresh = res.data.scores || [];
+        if (!fresh.length) { setter(baseRows); return; }
+        const freshMap = {};
+        fresh.forEach(f => { freshMap[f.subject.toLowerCase().trim()] = f; });
+        const filled = baseRows.map(row => {
+          const match = freshMap[row.subject.toLowerCase().trim()];
+          // Only overwrite if class teacher hasn't already filled this row
+          if (match && !row.ca && !row.exam) {
+            return { ...row, ca: match.ca || 0, exam: match.exam || 0 };
+          }
+          return row;
+        });
+        // Append subjects entered by subject teachers not present in template
+        const templateNames = new Set(baseRows.map(r => r.subject.toLowerCase().trim()));
+        fresh.forEach(f => {
+          if (!templateNames.has(f.subject.toLowerCase().trim())) {
+            filled.push({ subject: f.subject, ca: f.ca || 0, exam: f.exam || 0 });
+          }
+        });
+        setter(filled);
+      })
+      .catch(() => setter(baseRows)); // silently degrade — not critical
+    };
+
     if (existingResult) {
       const s = (existingResult.subjects || []).map(sub => ({
         subject: sub.subject || '',
         ca:   sub.ca   ?? sub.ca1 ?? 0,
         exam: sub.exam ?? 0,
       }));
-      setSubjects(s.length ? s : buildEmptySubjects());
+      const baseRows = s.length ? s : buildEmptySubjects();
+      mergeSubjectScores(baseRows, token, authHdr, setSubjects);
       setTraits(existingResult.affectiveTraits || defaultTraits());
       setAttendance(existingResult.attendance   || { opened:'', present:'', absent:'' });
       setComments(existingResult.comments       || { teacher:'', principal:'' });
@@ -183,13 +216,14 @@ const VisualResultEntry = ({
       return;
     }
 
-    setSubjects(buildEmptySubjects());
+    // No existing result — build from template then merge SubjectScores
+    const emptyRows = buildEmptySubjects();
     setTraits(defaultTraits());
-    // Pre-fill term dates from template if set
     if (template?.components?.termBegins)     setTermBegins(template.components.termBegins);
     if (template?.components?.termEnds)       setTermEnds(template.components.termEnds);
     if (template?.components?.nextTermBegins) setNextTerm(template.components.nextTermBegins);
     if (template?.components?.classSize)      setClassSize(String(template.components.classSize));
+    mergeSubjectScores(emptyRows, token, authHdr, setSubjects);
   }, [existingResult, template, student, buildEmptySubjects, defaultTraits]);
 
   // ── Subject helpers ───────────────────────────────────────────────────────────
@@ -251,7 +285,9 @@ const VisualResultEntry = ({
         setError('Session expired. Redirecting to login...');
         setTimeout(() => { window.location.href = '/login'; }, 2500);
       } else {
-        setError(err.response?.data?.message || 'Failed to save result.');
+        const msg = err.response?.data?.message || err.response?.data?.error || (err.response?.data ? JSON.stringify(err.response.data) : null) || err.message || 'Failed to save result.';
+        setError(msg);
+        console.error('[SaveResult] Full error:', err.response?.data || err);
       }
     } finally {
       setLoading(false);
