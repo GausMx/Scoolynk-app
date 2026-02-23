@@ -25,12 +25,15 @@ import {
   submitMultipleResults,
   deleteResult
 } from '../controllers/resultController.js';
-
+import {
+  getSchoolBranding
+} from '../controllers/adminController.js';
 const router = express.Router();
 
 // ========== DASHBOARD ==========
 router.get('/dashboard', protect, requireRole('teacher'), getTeacherDashboard);
-
+//school branding route for Nigerian result sheet
+router.get('/school-branding', protect, requireRole('teacher'), getSchoolBranding);
 // ========== CLASSES AND COURSES ==========
 router.get('/classes-courses', getClassesAndCourses);
 router.get('/school-classes', protect, requireRole('teacher'), getTeacherSchoolClasses);

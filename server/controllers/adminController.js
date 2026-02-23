@@ -625,3 +625,36 @@ export const updateAdminSettings = async (req, res) => {
     res.status(500).json({ message: 'Failed to update settings.' });
   }
 };
+
+// ─── Shared Branding Endpoint ─────────────────────────────────────────────────
+// GET /api/school/branding  (or any teacher-accessible route)
+// Returns only the branding fields needed to render result sheets.
+// Safe for any authenticated role — admin, teacher, parent.
+// Called by VisualResultEntry and VisualTemplateBuilder on the frontend.
+export const getSchoolBranding = async (req, res) => {
+  try {
+    const schoolId = req.user?.schoolId;
+    if (!schoolId)
+      return res.status(400).json({ message: 'No school associated with this account.' });
+
+    const school = await School.findById(schoolId)
+      .select('name address phone email motto logoBase64 principalName');
+    if (!school)
+      return res.status(404).json({ message: 'School not found.' });
+
+    res.json({
+      school: {
+        name:          school.name          || '',
+        address:       school.address       || '',
+        phone:         school.phone         || '',
+        email:         school.email         || '',
+        motto:         school.motto         || '',
+        logoBase64:    school.logoBase64    || '',
+        principalName: school.principalName || '',
+      },
+    });
+  } catch (err) {
+    console.error('[GetSchoolBranding]', err);
+    res.status(500).json({ message: 'Failed to load school branding.' });
+  }
+};

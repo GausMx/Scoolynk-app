@@ -1,9 +1,14 @@
-// server/controllers/parentController.js - NEW FILE
+// server/controllers/parentController.js
 
 import Result from '../models/Result.js';
 import Student from '../models/Student.js';
 import User from '../models/User.js';
 import School from '../models/School.js';
+
+// ─── Branding fields NigerianResultSheet needs ────────────────────────────────
+const BRANDING_SELECT = 'name address phone email motto logoBase64 principalName';
+// ─── Student fields the sheet needs ──────────────────────────────────────────
+const STUDENT_SELECT  = 'name regNo admNo gender dob passportBase64 club classId schoolId parentId';
 
 // ========== GET PARENT DASHBOARD ==========
 export const getParentDashboard = async (req, res) => {
@@ -11,9 +16,6 @@ export const getParentDashboard = async (req, res) => {
     const parentId = req.user._id;
     const schoolId = req.user.schoolId;
 
-    console.log('[ParentDashboard] Loading for parent:', parentId);
-
-    // Get parent with children
     const parent = await User.findById(parentId)
       .populate({
         path: 'children',
@@ -22,24 +24,17 @@ export const getParentDashboard = async (req, res) => {
 
     if (!parent || !parent.children || parent.children.length === 0) {
       return res.json({
-        children: [],
-        totalChildren: 0,
-        recentResults: [],
-        notifications: [],
+        children: [], totalChildren: 0, recentResults: [], notifications: [],
         message: 'No children linked to this account. Please contact the school admin.'
       });
     }
 
-    // Get school info
     const school = await School.findById(schoolId).select('name address phone motto');
 
-    // Get all children IDs
     const childrenIds = parent.children.map(child => child._id);
 
-    // Get recent results for all children
     const recentResults = await Result.find({
-      student: { $in: childrenIds },
-      schoolId,
+      student: { $in: childrenIds }, schoolId,
       status: { $in: ['approved', 'sent', 'verified'] }
     })
     .populate('student', 'name regNo')
@@ -47,17 +42,13 @@ export const getParentDashboard = async (req, res) => {
     .sort({ createdAt: -1 })
     .limit(5);
 
-    // Count total results
     const totalResults = await Result.countDocuments({
-      student: { $in: childrenIds },
-      schoolId,
+      student: { $in: childrenIds }, schoolId,
       status: { $in: ['approved', 'sent', 'verified'] }
     });
 
-    // Calculate average performance across all children
     const allResults = await Result.find({
-      student: { $in: childrenIds },
-      schoolId,
+      student: { $in: childrenIds }, schoolId,
       status: { $in: ['approved', 'sent', 'verified'] }
     }).select('overallAverage overallGrade');
 
@@ -65,37 +56,19 @@ export const getParentDashboard = async (req, res) => {
       ? Math.round(allResults.reduce((sum, r) => sum + (r.overallAverage || 0), 0) / allResults.length)
       : 0;
 
-    // Get notifications (new results)
     const notifications = recentResults
-      .filter(r => {
-        const createdDate = new Date(r.createdAt);
-        const daysSinceCreated = (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
-        return daysSinceCreated <= 7; // New in last 7 days
-      })
+      .filter(r => (Date.now() - new Date(r.createdAt)) / (1000 * 60 * 60 * 24) <= 7)
       .map(r => ({
-        id: r._id,
-        type: 'new_result',
+        id: r._id, type: 'new_result',
         message: `New result available for ${r.student.name} - ${r.term}, ${r.session}`,
-        studentName: r.student.name,
-        resultId: r._id,
-        createdAt: r.createdAt
+        studentName: r.student.name, resultId: r._id, createdAt: r.createdAt
       }));
 
     res.json({
-      school: {
-        name: school.name,
-        address: school.address,
-        phone: school.phone,
-        motto: school.motto
-      },
-      children: parent.children,
-      totalChildren: parent.children.length,
-      totalResults,
-      avgPerformance,
-      recentResults,
-      notifications
+      school: { name: school.name, address: school.address, phone: school.phone, motto: school.motto },
+      children: parent.children, totalChildren: parent.children.length,
+      totalResults, avgPerformance, recentResults, notifications
     });
-
   } catch (err) {
     console.error('[ParentDashboard Error]', err);
     res.status(500).json({ message: 'Failed to load dashboard data.' });
@@ -115,32 +88,17 @@ export const getMyChildren = async (req, res) => {
         populate: { path: 'classId', select: 'name' }
       });
 
-    if (!parent || !parent.children) {
-      return res.json({ children: [] });
-    }
+    if (!parent || !parent.children) return res.json({ children: [] });
 
-    // Get result counts for each child
     const childrenWithStats = await Promise.all(
       parent.children.map(async (child) => {
         const resultsCount = await Result.countDocuments({
-          student: child._id,
-          schoolId,
-          status: { $in: ['approved', 'sent', 'verified'] }
+          student: child._id, schoolId, status: { $in: ['approved', 'sent', 'verified'] }
         });
-
         const latestResult = await Result.findOne({
-          student: child._id,
-          schoolId,
-          status: { $in: ['approved', 'sent', 'verified'] }
-        })
-        .sort({ createdAt: -1 })
-        .select('overallAverage overallGrade term session');
-
-        return {
-          ...child.toObject(),
-          resultsCount,
-          latestResult
-        };
+          student: child._id, schoolId, status: { $in: ['approved', 'sent', 'verified'] }
+        }).sort({ createdAt: -1 }).select('overallAverage overallGrade term session');
+        return { ...child.toObject(), resultsCount, latestResult };
       })
     );
 
@@ -159,26 +117,13 @@ export const getChildResults = async (req, res) => {
     const parentId = req.user._id;
     const schoolId = req.user.schoolId;
 
-    // Verify parent owns this child
     const parent = await User.findById(parentId);
-    const hasAccess = parent.children.some(
-      childId => childId.toString() === studentId
-    );
+    const hasAccess = parent.children.some(id => id.toString() === studentId);
+    if (!hasAccess)
+      return res.status(403).json({ message: 'Access denied. This student is not linked to your account.' });
 
-    if (!hasAccess) {
-      return res.status(403).json({ 
-        message: 'Access denied. This student is not linked to your account.' 
-      });
-    }
-
-    // Build query
-    const query = {
-      student: studentId,
-      schoolId,
-      status: { $in: ['approved', 'sent', 'verified'] }
-    };
-
-    if (term) query.term = term;
+    const query = { student: studentId, schoolId, status: { $in: ['approved', 'sent', 'verified'] } };
+    if (term)    query.term    = term;
     if (session) query.session = session;
 
     const results = await Result.find(query)
@@ -187,15 +132,9 @@ export const getChildResults = async (req, res) => {
       .populate('teacher', 'name')
       .sort({ createdAt: -1 });
 
-    // Get student info
-    const student = await Student.findById(studentId)
-      .populate('classId', 'name');
+    const student = await Student.findById(studentId).populate('classId', 'name');
 
-    res.json({ 
-      student,
-      results,
-      totalResults: results.length
-    });
+    res.json({ student, results, totalResults: results.length });
   } catch (err) {
     console.error('[GetChildResults Error]', err);
     res.status(500).json({ message: 'Failed to fetch results.' });
@@ -214,27 +153,43 @@ export const getResultDetails = async (req, res) => {
       schoolId,
       status: { $in: ['approved', 'sent', 'verified'] }
     })
-    .populate('student', 'name regNo parentName parentPhone')
-    .populate('classId', 'name')
-    .populate('teacher', 'name');
+    // ✅ FIX: schoolId now populated with ALL branding fields.
+    //    Previously there was no .populate('schoolId') at all, so
+    //    result.schoolId.logoBase64 / .motto / .email were always undefined
+    //    in ResultDetails.js, causing the sheet to render without branding.
+    .populate('schoolId', BRANDING_SELECT)
+    // ✅ FIX: student now includes passport, dob, club, gender for the sheet
+    .populate('student',  STUDENT_SELECT)
+    .populate('classId',  'name')
+    .populate('teacher',  'name');
 
-    if (!result) {
+    if (!result)
       return res.status(404).json({ message: 'Result not found.' });
-    }
 
     // Verify parent owns this child
     const parent = await User.findById(parentId);
     const hasAccess = parent.children.some(
-      childId => childId.toString() === result.student._id.toString()
+      id => id.toString() === result.student._id.toString()
     );
+    if (!hasAccess)
+      return res.status(403).json({ message: 'Access denied. This result does not belong to your child.' });
 
-    if (!hasAccess) {
-      return res.status(403).json({ 
-        message: 'Access denied. This result does not belong to your child.' 
-      });
-    }
+    // Merge teacher-supplied extras (gender/dob/club) with DB student record
+    // so ResultDetails.js renders complete student data even if DB fields were blank
+    const extras = result.studentExtras || {};
+    const mergedStudent = {
+      ...result.student.toObject(),
+      gender: result.student.gender || extras.gender || '',
+      dob:    result.student.dob    || extras.dob    || '',
+      club:   result.student.club   || extras.club   || '',
+    };
 
-    res.json({ result });
+    res.json({
+      result: {
+        ...result.toObject(),
+        student: mergedStudent,
+      },
+    });
   } catch (err) {
     console.error('[GetResultDetails Error]', err);
     res.status(500).json({ message: 'Failed to fetch result details.' });
@@ -248,69 +203,45 @@ export const getPerformanceAnalytics = async (req, res) => {
     const parentId = req.user._id;
     const schoolId = req.user.schoolId;
 
-    // Verify parent owns this child
     const parent = await User.findById(parentId);
-    const hasAccess = parent.children.some(
-      childId => childId.toString() === studentId
-    );
+    const hasAccess = parent.children.some(id => id.toString() === studentId);
+    if (!hasAccess) return res.status(403).json({ message: 'Access denied.' });
 
-    if (!hasAccess) {
-      return res.status(403).json({ message: 'Access denied.' });
-    }
-
-    // Get all approved results for this student
     const results = await Result.find({
-      student: studentId,
-      schoolId,
+      student: studentId, schoolId,
       status: { $in: ['approved', 'sent', 'verified'] }
     })
     .sort({ createdAt: 1 })
     .select('term session overallAverage overallGrade overallTotal overallPosition subjects createdAt');
 
-    // Calculate trends
     const performanceTrend = results.map(r => ({
-      term: r.term,
-      session: r.session,
-      average: r.overallAverage,
-      grade: r.overallGrade,
-      position: r.overallPosition,
-      date: r.createdAt
+      term: r.term, session: r.session, average: r.overallAverage,
+      grade: r.overallGrade, position: r.overallPosition, date: r.createdAt
     }));
 
-    // Subject performance (average across all terms)
     const subjectStats = {};
     results.forEach(result => {
       result.subjects.forEach(subject => {
         if (!subjectStats[subject.subject]) {
-          subjectStats[subject.subject] = {
-            subject: subject.subject,
-            totalScore: 0,
-            count: 0,
-            grades: []
-          };
+          subjectStats[subject.subject] = { subject: subject.subject, totalScore: 0, count: 0, grades: [] };
         }
         subjectStats[subject.subject].totalScore += subject.total || 0;
-        subjectStats[subject.subject].count += 1;
+        subjectStats[subject.subject].count      += 1;
         subjectStats[subject.subject].grades.push(subject.grade);
       });
     });
 
-    const subjectPerformance = Object.values(subjectStats).map(stat => ({
-      subject: stat.subject,
-      averageScore: Math.round(stat.totalScore / stat.count),
-      averageGrade: stat.grades[stat.grades.length - 1] // Most recent grade
+    const subjectPerformance = Object.values(subjectStats).map(s => ({
+      subject:      s.subject,
+      averageScore: Math.round(s.totalScore / s.count),
+      averageGrade: s.grades[s.grades.length - 1],
     }));
 
     res.json({
-      performanceTrend,
-      subjectPerformance,
-      totalResults: results.length,
-      bestGrade: results.length > 0 
-        ? results.reduce((best, r) => r.overallAverage > best ? r.overallAverage : best, 0)
-        : null,
-      latestPosition: results.length > 0 
-        ? results[results.length - 1].overallPosition 
-        : null
+      performanceTrend, subjectPerformance, totalResults: results.length,
+      bestGrade:       results.length > 0
+        ? results.reduce((best, r) => r.overallAverage > best ? r.overallAverage : best, 0) : null,
+      latestPosition:  results.length > 0 ? results[results.length - 1].overallPosition : null,
     });
   } catch (err) {
     console.error('[GetPerformanceAnalytics Error]', err);

@@ -26,7 +26,8 @@ import {
   createStudent,
   updateStudent,
   deleteStudent,
-  uploadStudentsByClass
+  uploadStudentsByClass,
+  getSchoolBranding
 } from '../controllers/adminController.js';
 
 import {
@@ -76,6 +77,9 @@ router.get('/results', protect, requireRole('admin'), getAllResults);
 
 // Get submitted results for review
 router.get('/results/submitted', protect, requireRole('admin'), getSubmittedResults);
+//School branding (for Nigerian result sheet)
+router.get('/school-branding', protect, requireRole('admin'), getSchoolBranding);
+
 
 // Review result (approve/reject)
 router.put('/results/:resultId/review', protect, requireRole('admin'), reviewResult);
