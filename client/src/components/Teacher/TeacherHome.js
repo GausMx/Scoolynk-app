@@ -311,6 +311,15 @@ const TeacherHome = ({ teacherData, refreshData }) => {
                     <small className="fw-semibold">My Profile</small>
                   </button>
                 </div>
+                  <div className="col-6 col-md-6">
+                  <button 
+                    className="btn btn-outline-info w-100 rounded-3 py-3 h-100"
+                    onClick={() => navigate('/teacher/subject-score-entry')}
+                  >
+                    <Award size={24} className="mb-2 d-block mx-auto" />
+                    <small className="fw-semibold">Subject Score Entry</small>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
