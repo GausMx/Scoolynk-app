@@ -113,26 +113,50 @@ export const saveSubjectScores = async (req, res) => {
     if (invalid.length > 0)
       return res.status(400).json({ message: `${invalid.length} student ID(s) do not belong to this class.` });
 
+    // Grade helper — mirrors SubjectScore pre-save (bulkWrite bypasses hooks)
+    const calcGrade = (total) => {
+      if (total >= 95) return { grade: 'A+', remark: 'Exceptional' };
+      if (total >= 90) return { grade: 'A',  remark: 'Distinction' };
+      if (total >= 85) return { grade: 'A-', remark: 'Excellent' };
+      if (total >= 80) return { grade: 'B+', remark: 'Very Good' };
+      if (total >= 75) return { grade: 'B',  remark: 'Very Good' };
+      if (total >= 70) return { grade: 'B-', remark: 'Below Standard' };
+      if (total >= 60) return { grade: 'C',  remark: 'Good' };
+      if (total >= 40) return { grade: 'D',  remark: 'Average' };
+      return             { grade: 'F',  remark: 'Fail' };
+    };
+
     // Bulk upsert — one operation per student
-    const ops = scores.map(({ studentId, ca, exam }) => ({
-      updateOne: {
-        filter: { student: studentId, subject, term, session, schoolId },
-        update: {
-          $set: {
-            student:  studentId,
-            classId,
-            schoolId,
-            teacher:  teacherId,
-            term,
-            session,
-            subject,
-            ca:   Math.min(40, Math.max(0, Number(ca)   || 0)),
-            exam: Math.min(60, Math.max(0, Number(exam) || 0)),
-          }
-        },
-        upsert: true,
-      }
-    }));
+    // bulkWrite bypasses Mongoose pre-save hooks, so we calculate
+    // total, grade, remark here before writing.
+    const ops = scores.map(({ studentId, ca, exam }) => {
+      const safeCA   = Math.min(40, Math.max(0, Number(ca)   || 0));
+      const safeExam = Math.min(60, Math.max(0, Number(exam) || 0));
+      const total    = safeCA + safeExam;
+      const { grade, remark } = calcGrade(total);
+      return {
+        updateOne: {
+          filter: { student: studentId, subject, term, session, schoolId },
+          update: {
+            $set: {
+              student: studentId,
+              classId,
+              schoolId,
+              teacher: teacherId,
+              term,
+              session,
+              subject,
+              ca:     safeCA,
+              exam:   safeExam,
+              total,
+              grade,
+              remark,
+            }
+          },
+          upsert: true,
+        }
+      };
+    });
 
     await SubjectScore.bulkWrite(ops);
 

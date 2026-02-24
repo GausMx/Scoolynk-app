@@ -159,7 +159,9 @@ const VisualResultEntry = ({
       club:   student?.club   || '',
     });
 
-    // Helper: fetch SubjectScore records for this student and merge into rows
+    // Helper: fetch SubjectScore records for this student and merge into rows.
+    // Marks rows that came from subject teachers with { fromSubjectTeacher: true }
+    // so VisualResultEntry can show an indicator to the class teacher.
     const mergeSubjectScores = (baseRows, token, authHdr, setter) => {
       if (!token || !student?._id) { setter(baseRows); return; }
       axios.get(`${REACT_APP_API_URL}/api/teacher/subject-scores/for-student`, {
@@ -173,17 +175,33 @@ const VisualResultEntry = ({
         fresh.forEach(f => { freshMap[f.subject.toLowerCase().trim()] = f; });
         const filled = baseRows.map(row => {
           const match = freshMap[row.subject.toLowerCase().trim()];
-          // Only overwrite if class teacher hasn't already filled this row
-          if (match && !row.ca && !row.exam) {
-            return { ...row, ca: match.ca || 0, exam: match.exam || 0 };
+          // Merge if: subject teacher has a score AND the row has no class-teacher data yet.
+          // We consider a row "empty" if both ca and exam are exactly 0 (template default).
+          // We do NOT overwrite if class teacher has already saved non-zero values.
+          const rowIsEmpty = (row.ca === 0 || row.ca === '' || row.ca == null)
+                          && (row.exam === 0 || row.exam === '' || row.exam == null);
+          if (match && rowIsEmpty) {
+            return {
+              ...row,
+              ca:   match.ca   || 0,
+              exam: match.exam || 0,
+              fromSubjectTeacher: true,
+              subjectTeacherUpdatedAt: match.updatedAt || null,
+            };
           }
           return row;
         });
-        // Append subjects entered by subject teachers not present in template
+        // Append subjects entered by subject teachers not present in template rows
         const templateNames = new Set(baseRows.map(r => r.subject.toLowerCase().trim()));
         fresh.forEach(f => {
           if (!templateNames.has(f.subject.toLowerCase().trim())) {
-            filled.push({ subject: f.subject, ca: f.ca || 0, exam: f.exam || 0 });
+            filled.push({
+              subject: f.subject,
+              ca:   f.ca   || 0,
+              exam: f.exam || 0,
+              fromSubjectTeacher: true,
+              subjectTeacherUpdatedAt: f.updatedAt || null,
+            });
           }
         });
         setter(filled);
@@ -420,7 +438,7 @@ const VisualResultEntry = ({
 
         {/* Tip strip */}
         <div style={{ backgroundColor:'#fffbeb', borderLeft:'4px solid #f59e0b', padding:'6px 14px', fontSize:'12px', color:'#92400e' }}>
-          💡 <strong>Yellow cells</strong> are editable. Click 5–1 columns to rate traits. Totals calculate automatically.
+          💡 <strong>Yellow</strong> = editable. <strong style={{ color:'#1e40af' }}>Blue (✓ ST)</strong> = pre-filled by subject teacher, still editable. Click 5–1 to rate traits.
           {fetching && <span style={{ marginLeft:'10px', color:'#555' }}>⏳ Loading school branding…</span>}
         </div>
 
@@ -634,24 +652,33 @@ const VisualResultEntry = ({
               {computed.map((subj, idx) => (
                 <tr key={idx} style={{ backgroundColor: idx%2===0 ? '#fff':'#f9f9f9' }}>
                   <td style={S.tdL}>
-                    <input type="text" value={subj.subject}
-                      onChange={e => updateSubject(idx, 'subject', e.target.value)}
-                      style={{ ...inputStyle('100%','left'), ...EDITABLE_BG, textTransform:'uppercase' }}
-                      placeholder="Subject name"
-                    />
+                    <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                      <input type="text" value={subj.subject}
+                        onChange={e => updateSubject(idx, 'subject', e.target.value)}
+                        style={{ ...inputStyle('100%','left'), ...EDITABLE_BG, textTransform:'uppercase' }}
+                        placeholder="Subject name"
+                      />
+                      {subj.fromSubjectTeacher && (
+                        <span title={`Score entered by subject teacher${subj.subjectTeacherUpdatedAt ? ' on ' + new Date(subj.subjectTeacherUpdatedAt).toLocaleDateString('en-GB') : ''}`}
+                          style={{ fontSize:'8px', background:'#dbeafe', color:'#1e40af', borderRadius:'3px',
+                            padding:'1px 4px', whiteSpace:'nowrap', fontWeight:600, cursor:'default', flexShrink:0 }}>
+                          ✓ ST
+                        </span>
+                      )}
+                    </div>
                   </td>
-                  <td style={S.td}>
+                  <td style={{ ...S.td, background: subj.fromSubjectTeacher ? '#eff6ff' : undefined }}>
                     <input type="number" min={0} max={40}
                       value={subj.ca}
                       onChange={e => updateSubject(idx, 'ca', e.target.value)}
-                      style={{ ...numInput(), ...EDITABLE_BG, width:'38px' }}
+                      style={{ ...numInput(), ...(subj.fromSubjectTeacher ? { backgroundColor:'#eff6ff' } : EDITABLE_BG), width:'38px' }}
                     />
                   </td>
-                  <td style={S.td}>
+                  <td style={{ ...S.td, background: subj.fromSubjectTeacher ? '#eff6ff' : undefined }}>
                     <input type="number" min={0} max={60}
                       value={subj.exam}
                       onChange={e => updateSubject(idx, 'exam', e.target.value)}
-                      style={{ ...numInput(), ...EDITABLE_BG, width:'38px' }}
+                      style={{ ...numInput(), ...(subj.fromSubjectTeacher ? { backgroundColor:'#eff6ff' } : EDITABLE_BG), width:'38px' }}
                     />
                   </td>
                   <td style={{ ...S.td, fontWeight:'bold', ...COMPUTED_BG }}>{subj.total || ''}</td>
