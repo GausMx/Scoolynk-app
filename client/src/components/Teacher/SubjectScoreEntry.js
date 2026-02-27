@@ -102,7 +102,7 @@ const SubjectScoreEntry = () => {
 
   // ── Load rows ─────────────────────────────────────────────────────────────
   const loadScores = useCallback(() => {
-    if (!selectedClass || !selectedSubject || !selectedTerm || !selectedSession) return;
+    if (!selectedClass || !selectedSubject) return;
     setLoadingRows(true);
     setRowsError('');
     setSaved(false);

@@ -301,10 +301,10 @@ const ResultsTab = ({
       {/* Active term/session — set by admin, read-only for teachers */}
       <div className="d-flex align-items-center gap-2 mb-3 flex-wrap">
         <span className="badge bg-primary fs-6 fw-normal px-3 py-2">
-          {activeTerm || 'Loading…'}
+          {selectedTerm || 'Loading…'}
         </span>
         <span className="badge bg-secondary fs-6 fw-normal px-3 py-2">
-          {activeSession || '—'}
+          {selectedSession || '—'}
         </span>
         <span className="text-muted small ms-1">Active term set by admin</span>
       </div>
@@ -314,7 +314,7 @@ const ResultsTab = ({
         <div className="card shadow-sm mb-4">
           <div className="card-body pb-2">
             <h6 className="text-muted mb-3" style={{ fontSize:12, textTransform:'uppercase', letterSpacing:.5 }}>
-              Subject Score Completion ({activeTerm}, {activeSession})
+              Subject Score Completion ({selectedTerm}, {selectedSession})
             </h6>
             {loadingCompletion ? (
               <div className="text-center py-2"><div className="spinner-border spinner-border-sm" /></div>
