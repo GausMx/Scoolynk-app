@@ -99,9 +99,7 @@ const MyClassWithResults = () => {
             <Users className="me-2" size={28} />
             My Class Management
           </h2>
-          <p className="text-muted small">
-            Class teacher for: {classTeacherFor.map(c => c.name).join(', ') || 'No classes assigned'}
-          </p>
+
         </div>
       </div>
 
