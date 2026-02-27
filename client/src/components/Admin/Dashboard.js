@@ -197,6 +197,15 @@ const Dashboard = () => {
               <span className="fw-semibold">Template Builder</span>
             </button>
           </div>
+                    <div className="col-6 col-md-6 col-lg-3">
+            <button
+              className="btn btn-outline-warning w-100 rounded-3 py-3"
+              onClick={() => navigate('/admin/template-manager')}
+            >
+              <i className="bi-file-earmark-text d-block mb-2" style={{ fontSize: '2rem' }}></i>
+              <span className="fw-semibold">Template Manager</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

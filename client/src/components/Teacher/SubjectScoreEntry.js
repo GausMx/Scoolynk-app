@@ -93,8 +93,8 @@ const SubjectScoreEntry = () => {
       if (scheme?.caMax)   setCaMax(Number(scheme.caMax));
       if (scheme?.examMax) setExamMax(Number(scheme.examMax));
       // Active term/session set by admin — single source of truth
-      setActiveTerm(brandRes.data.school?.currentTerm    || 'First Term');
-      setActiveSession(brandRes.data.school?.currentSession || '');
+      setActiveTerm(brandRes.data.school?.currentTerm    || null);
+      setActiveSession(brandRes.data.school?.currentSession || null);
     })
     .catch(() => setMetaError('Failed to load your subjects and classes. Please refresh.'))
     .finally(() => setLoadingMeta(false));

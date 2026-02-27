@@ -13,6 +13,7 @@ import ManageCourses from '../Admin/ManageCourses';
 import AdminResultManagement from '../Admin/AdminResultManagement'; 
 import TemplateBuilder from '../Admin/VisualTemplateBuilder';
 import StudentsUpload from '../Admin/StudentsUpload';
+import TemplateManager from '../Admin/TemplateManager';
 const AdminDashboard = ({ user }) => {
   return (
     <Layout user={user} role="admin">
@@ -26,6 +27,7 @@ const AdminDashboard = ({ user }) => {
         <Route path="/result-management" element={<AdminResultManagement />} />
         <Route path="/template-builder" element={<TemplateBuilder />} />
         <Route path="/students-upload" element={<StudentsUpload />} />
+        <Route path="/template-manager" element={<TemplateManager />} />
       </Routes>
     </Layout>
   );

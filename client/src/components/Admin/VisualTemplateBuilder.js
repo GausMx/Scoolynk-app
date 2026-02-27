@@ -202,19 +202,8 @@ const VisualTemplateBuilder = ({
         headers: { Authorization: authHeader },
       });
 
-      // Propagate term/session to the school record so all teachers
-      // automatically use this term without any manual selection.
-      // Non-fatal: if this fails (e.g. network blip), template is already saved.
-      try {
-        await axios.put(
-          `${REACT_APP_API_URL}/api/admin/settings`,
-          { section: 'term', data: { currentTerm: term, currentSession: session.trim() } },
-          { headers: { Authorization: authHeader } }
-        );
-      } catch (settingsErr) {
-        console.warn('[TemplateBuilder] Could not update active term on school — template saved OK:', settingsErr?.response?.data?.message || settingsErr.message);
-      }
-
+      // Template save already writes currentTerm/currentSession/dates to School.
+      // No separate settings call needed.
       if (onClose) onClose();
     } catch (err) {
       console.error('[TemplateBuilder] Save error:', err);

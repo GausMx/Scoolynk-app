@@ -542,8 +542,8 @@ export const getAdminSettings = async (req, res) => {
           caMax:   school.scoringScheme?.caMax   ?? 40,
           examMax: school.scoringScheme?.examMax ?? 60,
         },
-        currentTerm:    school.currentTerm    || 'First Term',
-        currentSession: school.currentSession || '',
+        currentTerm:    school.currentTerm    || null,
+        currentSession: school.currentSession || null,
       },
     });
   } catch (err) {
@@ -612,18 +612,6 @@ export const updateAdminSettings = async (req, res) => {
         return res.json({ message: 'Password updated successfully.' });
       }
 
-      // ── Active term & session (single source of truth for all teachers) ─────
-      case 'term': {
-        const { currentTerm, currentSession } = data;
-        const validTerms = ['First Term', 'Second Term', 'Third Term'];
-        if (!validTerms.includes(currentTerm))
-          return res.status(400).json({ message: 'currentTerm must be First Term, Second Term, or Third Term.' });
-        if (!currentSession || !/^\d{4}\/\d{4}$/.test(currentSession))
-          return res.status(400).json({ message: 'currentSession must be in the format YYYY/YYYY.' });
-        await School.findByIdAndUpdate(schoolId, { currentTerm, currentSession }, { new: true });
-        return res.json({ message: 'Active term and session updated.', currentTerm, currentSession });
-      }
-
       // ── Scoring scheme (CA:Exam split, e.g. 40:60 or 30:70) ─────────────────
       case 'scoring': {
         const { caMax, examMax } = data;
@@ -670,7 +658,7 @@ export const getSchoolBranding = async (req, res) => {
       return res.status(400).json({ message: 'No school associated with this account.' });
 
     const school = await School.findById(schoolId)
-      .select('name address phone email motto logoBase64 principalName scoringScheme currentTerm currentSession');
+      .select('name address phone email motto logoBase64 principalName scoringScheme currentTerm currentSession currentTermBegins currentTermEnds currentNextTermBegins');
     if (!school)
       return res.status(404).json({ message: 'School not found.' });
 
@@ -687,8 +675,11 @@ export const getSchoolBranding = async (req, res) => {
           caMax:   school.scoringScheme?.caMax   ?? 40,
           examMax: school.scoringScheme?.examMax ?? 60,
         },
-        currentTerm:    school.currentTerm    || 'First Term',
-        currentSession: school.currentSession || '',
+        currentTerm:           school.currentTerm           || null,
+        currentSession:        school.currentSession        || null,
+        currentTermBegins:     school.currentTermBegins     || null,
+        currentTermEnds:       school.currentTermEnds       || null,
+        currentNextTermBegins: school.currentNextTermBegins || null,
       },
     });
   } catch (err) {

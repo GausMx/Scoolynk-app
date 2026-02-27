@@ -15,20 +15,27 @@ const SCHOOL_BRANDING_SELECT = 'name address phone email motto logoBase64 princi
 export const createResultTemplate = async (req, res) => {
   try {
     const { name, term, session, schoolId, components } = req.body;
+    const sid = schoolId || req.user.schoolId;
     if (!name || !term || !session || !components)
       return res.status(400).json({ message: 'Name, term, session, and components are required.' });
 
-    const existing = await ResultTemplate.findOne({
-      schoolId: schoolId || req.user.schoolId, term, session, isActive: true,
-    });
-    if (existing)
-      return res.status(400).json({ message: `A template already exists for ${term}, ${session}. Please edit or deactivate it first.` });
+    // Deactivate ALL existing active templates for this school — only one active at a time
+    await ResultTemplate.updateMany({ schoolId: sid, isActive: true }, { isActive: false });
 
     const template = await new ResultTemplate({
-      schoolId: schoolId || req.user.schoolId,
+      schoolId: sid,
       name, term, session, templateType: 'visual', components,
       createdBy: req.user._id, isActive: true,
     }).save();
+
+    // Write active term/session + dates directly to School so branding endpoint returns them
+    await School.findByIdAndUpdate(sid, {
+      currentTerm:    term,
+      currentSession: session,
+      currentTermBegins:    components.termBegins    || null,
+      currentTermEnds:      components.termEnds      || null,
+      currentNextTermBegins: components.nextTermBegins || null,
+    });
 
     res.status(201).json({ message: 'Result template created successfully.', template });
   } catch (err) {
@@ -41,16 +48,36 @@ export const updateResultTemplate = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, term, session, components, isActive } = req.body;
+    const sid = req.user.schoolId;
 
-    const template = await ResultTemplate.findOne({ _id: id, schoolId: req.user.schoolId });
+    const template = await ResultTemplate.findOne({ _id: id, schoolId: sid });
     if (!template) return res.status(404).json({ message: 'Template not found.' });
 
-    if (name      !== undefined) template.name       = name;
-    if (term      !== undefined) template.term       = term;
-    if (session   !== undefined) template.session    = session;
-    if (components!== undefined) template.components = components;
-    if (isActive  !== undefined) template.isActive   = isActive;
+    // If activating this template, deactivate all others first
+    if (isActive === true) {
+      await ResultTemplate.updateMany({ schoolId: sid, isActive: true, _id: { $ne: id } }, { isActive: false });
+    }
+
+    if (name       !== undefined) template.name       = name;
+    if (term       !== undefined) template.term       = term;
+    if (session    !== undefined) template.session    = session;
+    if (components !== undefined) template.components = components;
+    if (isActive   !== undefined) template.isActive   = isActive;
     await template.save();
+
+    // Sync active term/session to School whenever template is saved/activated
+    if (template.isActive) {
+      const t = term       !== undefined ? term       : template.term;
+      const s = session    !== undefined ? session    : template.session;
+      const c = components !== undefined ? components : template.components;
+      await School.findByIdAndUpdate(sid, {
+        currentTerm:           t,
+        currentSession:        s,
+        currentTermBegins:     c?.termBegins     || null,
+        currentTermEnds:       c?.termEnds       || null,
+        currentNextTermBegins: c?.nextTermBegins  || null,
+      });
+    }
 
     res.json({ message: 'Template updated successfully.', template });
   } catch (err) {
@@ -90,20 +117,54 @@ export const getResultTemplate = async (req, res) => {
 
 export const deleteResultTemplate = async (req, res) => {
   try {
-    const template = await ResultTemplate.findOne({ _id: req.params.id, schoolId: req.user.schoolId });
+    const sid = req.user.schoolId;
+    const template = await ResultTemplate.findOne({ _id: req.params.id, schoolId: sid });
     if (!template) return res.status(404).json({ message: 'Template not found.' });
 
-    if (template.isActive) {
-      template.isActive = false;
-      await template.save();
-      return res.json({ message: 'Template deactivated successfully.', deactivated: true });
+    const wasActive = template.isActive;
+    await ResultTemplate.findByIdAndDelete(req.params.id);
+
+    // If we deleted the active template, clear school's active term fields
+    if (wasActive) {
+      await School.findByIdAndUpdate(sid, {
+        currentTerm: null, currentSession: null,
+        currentTermBegins: null, currentTermEnds: null, currentNextTermBegins: null,
+      });
     }
 
-    await ResultTemplate.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Template permanently deleted.', deleted: true });
+    res.json({ message: 'Template deleted successfully.', deleted: true });
   } catch (err) {
     console.error('[DeleteResultTemplate]', err);
     res.status(500).json({ message: 'Failed to delete template.' });
+  }
+};
+
+// ─── PATCH /api/admin/templates/:id/activate ─────────────────────────────────
+// Sets one template as active and deactivates all others. Syncs School fields.
+export const activateResultTemplate = async (req, res) => {
+  try {
+    const sid = req.user.schoolId;
+    const template = await ResultTemplate.findOne({ _id: req.params.id, schoolId: sid });
+    if (!template) return res.status(404).json({ message: 'Template not found.' });
+
+    // Deactivate all others
+    await ResultTemplate.updateMany({ schoolId: sid, isActive: true }, { isActive: false });
+    template.isActive = true;
+    await template.save();
+
+    // Sync to School
+    await School.findByIdAndUpdate(sid, {
+      currentTerm:           template.term,
+      currentSession:        template.session,
+      currentTermBegins:     template.components?.termBegins     || null,
+      currentTermEnds:       template.components?.termEnds       || null,
+      currentNextTermBegins: template.components?.nextTermBegins  || null,
+    });
+
+    res.json({ message: 'Template activated. All others deactivated.', template });
+  } catch (err) {
+    console.error('[ActivateResultTemplate]', err);
+    res.status(500).json({ message: 'Failed to activate template.' });
   }
 };
 

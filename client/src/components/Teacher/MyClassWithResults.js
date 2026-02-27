@@ -33,8 +33,8 @@ const MyClassWithResults = () => {
       headers: { Authorization: `Bearer ${token}` }
     })
     .then(res => {
-      setActiveTerm(res.data.school?.currentTerm    || 'First Term');
-      setActiveSession(res.data.school?.currentSession || '');
+      setActiveTerm(res.data.school?.currentTerm    || null);
+      setActiveSession(res.data.school?.currentSession || null);
     })
     .catch(() => {});
   }, []);

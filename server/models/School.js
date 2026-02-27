@@ -15,8 +15,11 @@ const schoolSchema = new mongoose.Schema({
   classes: [{ type: String }], // Array of class names/levels
   subjects: [{ type: String }], // Array of subject names
   gradingSystem: { type: String }, // e.g., A-F, 1-5, etc.
-  termStart: { type: Date },
-  termEnd: { type: Date },
+ currentTerm:           { type: String,  default: null },
+ currentSession:        { type: String,  default: null },
+ currentTermBegins:     { type: String,  default: null },
+ currentTermEnds:       { type: String,  default: null },
+ currentNextTermBegins: { type: String,  default: null },
   logoBase64:    { type: String, default: null },
 email:         { type: String, default: '' },
 principalName: { type: String, default: '' },
