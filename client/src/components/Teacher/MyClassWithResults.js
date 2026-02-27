@@ -39,15 +39,16 @@ const MyClassWithResults = () => {
     .catch(() => {});
   }, []);
 
+  // Students don't need term/session — fetch immediately whenever tab is active
   useEffect(() => {
-    if (!activeSession) return; // wait until term/session loaded
-    if (activeTab === 'students') {
-      fetchStudents();
-    } else if (activeTab === 'results') {
-      fetchResults('draft');
-    } else if (activeTab === 'history') {
-      fetchResults();
-    }
+    if (activeTab === 'students') fetchStudents();
+  }, [activeTab]);
+
+  // Results need term/session — only fetch once they're loaded from school
+  useEffect(() => {
+    if (!activeSession) return;
+    if (activeTab === 'results') fetchResults('draft');
+    if (activeTab === 'history') fetchResults();
   }, [activeTab, activeTerm, activeSession]);
 
   const fetchStudents = async () => {
@@ -262,19 +263,20 @@ const ResultsTab = ({
   const classId = students[0]?.classId?._id || students[0]?.classId;
 
   useEffect(() => {
+    if (!selectedTerm || !selectedSession) return; // wait for active term from school
     const fetchTemplate = async () => {
       setLoadingTemplate(true);
       try {
         const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/results/template`, {
           headers: { Authorization: `Bearer ${token}` },
-          params:  {}
+          params:  { term: selectedTerm, session: selectedSession }
         });
         setTemplate(res.data?.template || null);
       } catch { setTemplate(null); }
       finally  { setLoadingTemplate(false); }
     };
     fetchTemplate();
-  }, [token]);
+  }, [token, selectedTerm, selectedSession]);
 
   useEffect(() => {
     if (!classId) return;

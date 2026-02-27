@@ -204,16 +204,26 @@ const VisualTemplateBuilder = ({
 
       // Propagate term/session to the school record so all teachers
       // automatically use this term without any manual selection.
-      await axios.put(
-        `${REACT_APP_API_URL}/api/admin/settings`,
-        { section: 'term', data: { currentTerm: term, currentSession: session.trim() } },
-        { headers: { Authorization: authHeader } }
-      );
+      // Non-fatal: if this fails (e.g. network blip), template is already saved.
+      try {
+        await axios.put(
+          `${REACT_APP_API_URL}/api/admin/settings`,
+          { section: 'term', data: { currentTerm: term, currentSession: session.trim() } },
+          { headers: { Authorization: authHeader } }
+        );
+      } catch (settingsErr) {
+        console.warn('[TemplateBuilder] Could not update active term on school — template saved OK:', settingsErr?.response?.data?.message || settingsErr.message);
+      }
 
       if (onClose) onClose();
     } catch (err) {
       console.error('[TemplateBuilder] Save error:', err);
-      setError(err.response?.data?.message || 'Failed to save template.');
+      const msg = err.response?.data?.message || '';
+      if (msg.includes('already exists')) {
+        setError(msg + ' You can edit the existing template from the templates list.');
+      } else {
+        setError(msg || 'Failed to save template. Please try again.');
+      }
     } finally {
       setSaving(false);
     }
