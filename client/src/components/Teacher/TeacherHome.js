@@ -1,332 +1,202 @@
-// src/components/Teacher/TeacherHome.js - WITH STATS FROM API
+// src/components/Teacher/TeacherHome.jsx
+// Clean, modern teacher dashboard.
+// Reads teacher.courses directly from teacherData — NO extra API calls.
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { 
-  Users, BookOpen, FileText, 
-  TrendingUp, Award, Calendar, ChevronRight 
+import {
+  Users, BookOpen, PenLine, UserCircle,
+  CalendarDays, ChevronRight, Star
 } from 'lucide-react';
-import Loading from '../common/Loading';
 
-const { REACT_APP_API_URL } = process.env;
+const TeacherHome = ({ teacherData }) => {
+  const navigate  = useNavigate();
+  const teacher   = teacherData?.teacher  || {};
+  const school    = teacherData?.school   || {};
+  const stats     = teacherData?.stats    || {};
 
-const TeacherHome = ({ teacherData, refreshData }) => {
-  const navigate = useNavigate();
-  const [courses, setCourses] = useState([]);
-  const [stats, setStats] = useState({
-    totalStudents: 0,
-    classesTeaching: 0
+  const activeTerm    = school.currentTerm    || null;
+  const activeSession = school.currentSession || null;
+
+  const today = new Date().toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
-  const [loading, setLoading] = useState(true);
-  const [loadingPercent, setLoadingPercent] = useState(0);
-
-  const token = localStorage.getItem('accessToken');
-
-  useEffect(() => {
-    fetchCoursesAndStats();
-  }, []);
-
-  const fetchCoursesAndStats = async () => {
-    try {
-      setLoading(true);
-      setLoadingPercent(10);
-
-      // ✅ Use stats from teacherData if available (from dashboard API)
-      if (teacherData.stats) {
-        // Remove pendingResults and submittedResults from stats
-        const { totalStudents, classesTeaching } = teacherData.stats;
-        setStats({ totalStudents, classesTeaching });
-        setLoadingPercent(40);
-      } else {
-        // Fallback: calculate stats manually
-        const totalStudents = teacherData.students?.length || 0;
-        const classesTeaching = teacherData.teacher.classes?.length || 0;
-        setStats({
-          totalStudents,
-          classesTeaching
-        });
-        setLoadingPercent(40);
-      }
-
-      // Fetch courses for all classes the teacher teaches
-      const classIds = teacherData.teacher.classes?.map(c => c._id) || [];
-      
-      if (classIds.length === 0) {
-        setCourses([]);
-        setLoadingPercent(100);
-        return;
-      }
-
-      setLoadingPercent(60);
-
-      const coursePromises = classIds.map(classId =>
-        axios.get(
-          `${REACT_APP_API_URL}/api/teacher/class/${classId}/courses`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        ).catch(err => {
-          console.error(`Failed to fetch courses for class ${classId}:`, err);
-          return { data: { courses: [] } };
-        })
-      );
-
-      const courseResponses = await Promise.all(coursePromises);
-      const allCourses = courseResponses.flatMap(res => res.data.courses || []);
-      
-      setLoadingPercent(80);
-      
-      // Remove duplicates based on course ID
-      const uniqueCourses = Array.from(
-        new Map(allCourses.map(course => [course._id, course])).values()
-      );
-      
-      setCourses(uniqueCourses);
-      setLoadingPercent(100);
-
-    } catch (err) {
-      console.error('Failed to fetch courses and stats:', err);
-      setLoadingPercent(100);
-    } finally {
-      setTimeout(() => setLoading(false), 300);
-    }
-  };
-
-  const teacher = teacherData.teacher;
-
-  if (loading) {
-    return <Loading percentage={loadingPercent} />;
-  }
 
   return (
-    <div className="container-fluid py-4" style={{ paddingTop: '80px' }}>
-      {/* Welcome Header */}
-      <div className="row mb-4">
-        <div className="col-12">
-          <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
-            <div>
-              <h2 className="fw-bold text-primary mb-1">
-                Welcome back, {teacher.name}! 👋
-              </h2>
-              <p className="text-muted mb-0 small">
-                Here's an overview of your teaching activities
-              </p>
-            </div>
-            <div className="text-end d-none d-md-block">
-              <div className="badge bg-primary-subtle text-primary px-3 py-2">
-                <Calendar size={16} className="me-2" />
-                {new Date().toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
-              </div>
-            </div>
+    <div className="container-fluid px-3 px-md-4 py-4" style={{ maxWidth: 860 }}>
+
+      {/* ── Greeting ─────────────────────────────────────────────────────── */}
+      <div className="mb-4">
+        <h4 className="fw-bold mb-0">
+          Welcome back, {teacher.name?.split(' ')[0] || teacher.name} 👋
+        </h4>
+        <p className="text-muted small mb-0">{today}</p>
+        {activeTerm && (
+          <div className="d-inline-flex align-items-center gap-2 mt-2 px-3 py-1 rounded-pill bg-primary-subtle text-primary" style={{ fontSize: 13 }}>
+            <CalendarDays size={13} />
+            <span><strong>{activeTerm}</strong>{activeSession ? ` · ${activeSession}` : ''}</span>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Stats Cards */}
+      {/* ── Stats ────────────────────────────────────────────────────────── */}
       <div className="row g-3 mb-4">
-        <div className="col-6 col-lg-6">
+        <div className="col-6">
           <div className="card border-0 shadow-sm rounded-4 bg-primary text-white h-100">
-            <div className="card-body p-3">
-              <div className="d-flex justify-content-between align-items-start">
-                <div>
-                  <p className="mb-1 opacity-75 small">My Students</p>
-                  <h3 className="fw-bold mb-0">{stats.totalStudents}</h3>
-                </div>
-                <div className="bg-white bg-opacity-25 rounded-3 p-2">
-                  <Users size={24} />
-                </div>
+            <div className="card-body d-flex align-items-center gap-3 p-3">
+              <div className="bg-white bg-opacity-25 rounded-3 p-2 flex-shrink-0">
+                <Users size={20} />
+              </div>
+              <div>
+                <div className="opacity-75" style={{ fontSize: 12 }}>My Students</div>
+                <div className="fw-bold fs-4 lh-1">{stats.totalStudents ?? 0}</div>
               </div>
             </div>
           </div>
         </div>
-
-        <div className="col-6 col-lg-6">
+        <div className="col-6">
           <div className="card border-0 shadow-sm rounded-4 bg-success text-white h-100">
-            <div className="card-body p-3">
-              <div className="d-flex justify-content-between align-items-start">
-                <div>
-                  <p className="mb-1 opacity-75 small">Classes Teaching</p>
-                  <h3 className="fw-bold mb-0">{stats.classesTeaching}</h3>
-                </div>
-                <div className="bg-white bg-opacity-25 rounded-3 p-2">
-                  <BookOpen size={24} />
-                </div>
+            <div className="card-body d-flex align-items-center gap-3 p-3">
+              <div className="bg-white bg-opacity-25 rounded-3 p-2 flex-shrink-0">
+                <BookOpen size={20} />
+              </div>
+              <div>
+                <div className="opacity-75" style={{ fontSize: 12 }}>Classes</div>
+                <div className="fw-bold fs-4 lh-1">{stats.classesTeaching ?? teacher.classes?.length ?? 0}</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="row g-4">
-        {/* Classes Card */}
-        <div className="col-lg-6">
+      {/* ── Classes & Subjects ───────────────────────────────────────────── */}
+      <div className="row g-3 mb-4">
+
+        {/* My Classes */}
+        <div className="col-12 col-md-6">
           <div className="card border-0 shadow-sm rounded-4 h-100">
-            <div className="card-body p-4">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <h5 className="fw-bold text-primary mb-0">
-                  <Users size={20} className="me-2" />
-                  My Classes
-                </h5>
-                {teacher.classTeacherFor && teacher.classTeacherFor.length > 0 && (
-                  <button 
-                    className="btn btn-sm btn-outline-primary rounded-3"
+            <div className="card-body p-3">
+              <div className="d-flex align-items-center justify-content-between mb-3">
+                <h6 className="fw-bold mb-0 d-flex align-items-center gap-2">
+                  <BookOpen size={15} className="text-primary" /> My Classes
+                </h6>
+                {teacher.classTeacherFor?.length > 0 && (
+                  <button
+                    className="btn btn-link btn-sm p-0 text-primary d-flex align-items-center gap-1 text-decoration-none"
+                    style={{ fontSize: 12 }}
                     onClick={() => navigate('/teacher/my-class')}
                   >
-                    View All <ChevronRight size={16} />
+                    Manage <ChevronRight size={13} />
                   </button>
                 )}
               </div>
 
-              <div className="list-group list-group-flush">
-                {teacher.classes && teacher.classes.length > 0 ? (
-                  teacher.classes.map((cls, index) => (
-                    <div 
-                      key={cls._id} 
-                      className="list-group-item d-flex justify-content-between align-items-center px-0 py-3 border-bottom"
-                    >
-                      <div className="d-flex align-items-center">
-                        <div className="bg-primary bg-opacity-10 rounded-3 p-2 me-3">
-                          <BookOpen size={20} className="text-primary" />
-                        </div>
+              {teacher.classes?.length > 0 ? (
+                <div className="d-flex flex-column gap-2">
+                  {teacher.classes.map(cls => {
+                    const isClassTeacher = teacher.classTeacherFor?.some(
+                      c => (c._id || c).toString() === (cls._id || cls).toString()
+                    );
+                    return (
+                      <div key={cls._id}
+                        className="d-flex align-items-center justify-content-between px-3 py-2 bg-light rounded-3">
                         <div>
-                          <h6 className="mb-0 fw-semibold">{cls.name}</h6>
-                          <small className="text-muted">
-                            {teacher.classTeacherFor?.some(c => c._id === cls._id) && 
-                              <span className="badge bg-success-subtle text-success me-2">Class Teacher</span>
-                            }
-                          </small>
+                          <span className="fw-semibold small">{cls.name}</span>
+                          {isClassTeacher && (
+                            <span className="badge bg-success-subtle text-success ms-2" style={{ fontSize: 10 }}>
+                              Class Teacher
+                            </span>
+                          )}
                         </div>
+                        <ChevronRight size={13} className="text-muted" />
                       </div>
-                      <button 
-                        className="btn btn-sm btn-outline-primary rounded-3"
-                        onClick={() => navigate(`/teacher/class/${cls._id}`)}
-                      >
-                        View
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="alert alert-info mb-0">
-                    <p className="mb-0 small">No classes assigned yet</p>
-                  </div>
-                )}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-muted small mb-0">No classes assigned yet.</p>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Courses/Subjects Card */}
-        <div className="col-lg-6">
+        {/* My Subjects — from teacher.courses directly, no extra fetch */}
+        <div className="col-12 col-md-6">
           <div className="card border-0 shadow-sm rounded-4 h-100">
-            <div className="card-body p-4">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <h5 className="fw-bold text-success mb-0">
-                  <Award size={20} className="me-2" />
-                  My Courses
-                </h5>
-                <span className="badge bg-success-subtle text-success px-3 py-2">
-                  {courses.length} {courses.length === 1 ? 'Course' : 'Courses'}
+            <div className="card-body p-3">
+              <div className="d-flex align-items-center justify-content-between mb-3">
+                <h6 className="fw-bold mb-0 d-flex align-items-center gap-2">
+                  <Star size={15} className="text-success" /> My Subjects
+                </h6>
+                <span className="badge bg-success-subtle text-success" style={{ fontSize: 11 }}>
+                  {teacher.courses?.length ?? 0}
                 </span>
               </div>
 
-              <div className="list-group list-group-flush">
-                {courses.length > 0 ? (
-                  courses.map((course, index) => (
-                    <div 
-                      key={course._id} 
-                      className="list-group-item d-flex justify-content-between align-items-center px-0 py-3 border-bottom"
-                    >
-                      <div className="d-flex align-items-center">
-                        <div className="bg-success bg-opacity-10 rounded-3 p-2 me-3">
-                          <BookOpen size={20} className="text-success" />
-                        </div>
-                        <div>
-                          <h6 className="mb-0 fw-semibold">{course.name}</h6>
-                          <small className="text-muted">
-                            {course.classes?.length || 0} {course.classes?.length === 1 ? 'class' : 'classes'}
-                          </small>
-                        </div>
-                      </div>
-                      <span className="badge bg-success-subtle text-success">Active</span>
-                    </div>
-                  ))
-                ) : teacher.courses && teacher.courses.length > 0 ? (
-                  // Fallback to courses array from teacher profile if API fails
-                  teacher.courses.map((courseName, index) => (
-                    <div 
-                      key={index} 
-                      className="list-group-item d-flex justify-content-between align-items-center px-0 py-3 border-bottom"
-                    >
-                      <div className="d-flex align-items-center">
-                        <div className="bg-success bg-opacity-10 rounded-3 p-2 me-3">
-                          <BookOpen size={20} className="text-success" />
-                        </div>
-                        <div>
-                          <h6 className="mb-0 fw-semibold">{courseName}</h6>
-                        </div>
-                      </div>
-                      <span className="badge bg-success-subtle text-success">Active</span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="alert alert-info mb-0">
-                    <p className="mb-0 small">No courses assigned yet</p>
-                  </div>
-                )}
-              </div>
+              {teacher.courses?.length > 0 ? (
+                <div className="d-flex flex-wrap gap-2">
+                  {teacher.courses.map((course, i) => (
+                    <span key={i}
+                      className="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill"
+                      style={{ fontSize: 12 }}>
+                      {course}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted small mb-0">No subjects assigned yet.</p>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="row g-3 mt-4">
-        <div className="col-12">
-          <div className="card border-0 shadow-sm rounded-4">
-            <div className="card-body p-4">
-              <h5 className="fw-bold text-primary mb-3">
-                <TrendingUp size={20} className="me-2" />
-                Quick Actions
-              </h5>
-              <div className="row g-3">
-                <div className="col-6 col-md-6">
-                  <button 
-                    className="btn btn-outline-primary w-100 rounded-3 py-3 h-100"
-                    onClick={() => navigate('/teacher/my-class')}
-                  >
-                    <Users size={24} className="mb-2 d-block mx-auto" />
-                    <small className="fw-semibold">Manage Students</small>
-                  </button>
-                </div>
-                <div className="col-6 col-md-6">
-                  <button 
-                    className="btn btn-outline-info w-100 rounded-3 py-3 h-100"
-                    onClick={() => navigate('/teacher/teacher-profile')}
-                  >
-                    <Award size={24} className="mb-2 d-block mx-auto" />
-                    <small className="fw-semibold">My Profile</small>
-                  </button>
-                </div>
-                  <div className="col-6 col-md-6">
-                  <button 
-                    className="btn btn-outline-info w-100 rounded-3 py-3 h-100"
-                    onClick={() => navigate('/teacher/subject-score-entry')}
-                  >
-                    <Award size={24} className="mb-2 d-block mx-auto" />
-                    <small className="fw-semibold">Subject Score Entry</small>
-                  </button>
-                </div>
-              </div>
+      {/* ── Quick Actions ────────────────────────────────────────────────── */}
+      <div className="card border-0 shadow-sm rounded-4">
+        <div className="card-body p-3">
+          <h6 className="fw-bold mb-3">Quick Actions</h6>
+          <div className="row g-2">
+            <div className="col-4">
+              <ActionBtn
+                icon={<Users size={20} />}
+                label="My Class"
+                color="primary"
+                onClick={() => navigate('/teacher/my-class')}
+              />
+            </div>
+            <div className="col-4">
+              <ActionBtn
+                icon={<PenLine size={20} />}
+                label="Score Entry"
+                color="success"
+                onClick={() => navigate('/teacher/subject-score-entry')}
+              />
+            </div>
+            <div className="col-4">
+              <ActionBtn
+                icon={<UserCircle size={20} />}
+                label="My Profile"
+                color="secondary"
+                onClick={() => navigate('/teacher/teacher-profile')}
+              />
             </div>
           </div>
         </div>
       </div>
+
     </div>
   );
 };
+
+const ActionBtn = ({ icon, label, color, onClick }) => (
+  <button
+    className={`btn btn-outline-${color} w-100 rounded-3 py-3 d-flex flex-column align-items-center gap-2`}
+    onClick={onClick}
+    style={{ minHeight: 80 }}
+  >
+    {icon}
+    <span style={{ fontSize: 11, fontWeight: 600 }}>{label}</span>
+  </button>
+);
 
 export default TeacherHome;
