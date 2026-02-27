@@ -202,6 +202,14 @@ const VisualTemplateBuilder = ({
         headers: { Authorization: authHeader },
       });
 
+      // Propagate term/session to the school record so all teachers
+      // automatically use this term without any manual selection.
+      await axios.put(
+        `${REACT_APP_API_URL}/api/admin/settings`,
+        { section: 'term', data: { currentTerm: term, currentSession: session.trim() } },
+        { headers: { Authorization: authHeader } }
+      );
+
       if (onClose) onClose();
     } catch (err) {
       console.error('[TemplateBuilder] Save error:', err);

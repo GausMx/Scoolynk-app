@@ -5,6 +5,7 @@
 //   - classes they are assigned to   (User.classes)
 
 import SubjectScore from '../models/SubjectScore.js';
+import School      from '../models/School.js';
 import Student      from '../models/Student.js';
 import User         from '../models/User.js';
 import Class        from '../models/Class.js';
@@ -27,15 +28,22 @@ const verifySubjectTeacherAccess = async (teacherId, classId, subject, schoolId)
 
 // ─── GET /api/teacher/subject-scores ──────────────────────────────────────────
 // Returns all students in classId + their existing score for subject (if any).
-// Query params: classId, subject, term, session
+// term/session resolved from school's active settings — teachers don't select these.
 export const getSubjectScores = async (req, res) => {
   try {
-    const { classId, subject, term, session } = req.query;
+    const { classId, subject } = req.query;
     const teacherId = req.user._id;
     const schoolId  = req.user.schoolId;
 
-    if (!classId || !subject || !term || !session)
-      return res.status(400).json({ message: 'classId, subject, term, and session are required.' });
+    if (!classId || !subject)
+      return res.status(400).json({ message: 'classId and subject are required.' });
+
+    // Resolve active term/session — admin sets this once, all teachers use it
+    const school  = await School.findById(schoolId).select('currentTerm currentSession');
+    const term    = school?.currentTerm    || 'First Term';
+    const session = school?.currentSession || '';
+    if (!session)
+      return res.status(400).json({ message: 'No active session set. Ask your admin to configure the current term and session in Settings.' });
 
     // Access check
     const { teachesClass, teachesSubject } = await verifySubjectTeacherAccess(teacherId, classId, subject, schoolId);
@@ -59,19 +67,39 @@ export const getSubjectScores = async (req, res) => {
     existingScores.forEach(s => { scoreMap[s.student.toString()] = s; });
 
     // Merge students with scores
+    // Determine if a SubjectScore document was actually filled by the teacher.
+    // Old documents may have ca:0, exam:0 from Mongoose's previous default:0.
+    // A document is "entered" only if:
+    //   - ca or exam is not null AND not zero (clear numeric entry), OR
+    //   - ca or exam is null (new schema, null = unset → never entered), OR
+    //   - total > 0 (at least one field has a real score), OR
+    //   - createdAt !== updatedAt (doc was explicitly modified after creation)
+    // In all other cases, treat the field as '' (not yet entered).
+    const wasEntered = (score) => {
+      if (!score) return false;
+      if (score.ca  == null && score.exam == null) return false; // new schema, never set
+      if (score.total > 0) return true;                          // has real scores
+      // Check if doc was ever updated (teacher intentionally saved zeros)
+      const created = score.createdAt?.getTime?.() ?? 0;
+      const updated = score.updatedAt?.getTime?.() ?? 0;
+      return updated > created; // was explicitly re-saved after creation
+    };
+
     const rows = students.map(student => {
-      const score = scoreMap[student._id.toString()];
+      const score   = scoreMap[student._id.toString()];
+      const entered = wasEntered(score);
       return {
         studentId:  student._id,
         name:       student.name,
         regNo:      student.regNo,
         admNo:      student.admNo || '',
-        ca:         score?.ca    ?? '',
-        exam:       score?.exam  ?? '',
-        total:      score?.total ?? '',
-        grade:      score?.grade ?? '',
+        // Only return actual values when the score was genuinely entered
+        ca:         entered && score.ca   != null ? score.ca   : '',
+        exam:       entered && score.exam != null ? score.exam : '',
+        total:      entered ? (score?.total ?? '') : '',
+        grade:      entered ? (score?.grade ?? '') : '',
         scoreId:    score?._id   || null,
-        savedAt:    score?.updatedAt || null,
+        savedAt:    entered ? (score?.updatedAt || null) : null,
       };
     });
 
@@ -84,15 +112,25 @@ export const getSubjectScores = async (req, res) => {
 
 // ─── POST /api/teacher/subject-scores ─────────────────────────────────────────
 // Bulk upsert scores for a subject in a class.
-// Body: { classId, subject, term, session, scores: [{ studentId, ca, exam }] }
+// Body: { classId, subject, term, session, caMax, examMax, scores: [{ studentId, ca, exam }] }
+// caMax/examMax default to 40/60 if not supplied. Schools on 30:70 pass caMax=30, examMax=70.
 export const saveSubjectScores = async (req, res) => {
   try {
-    const { classId, subject, term, session, scores } = req.body;
+    const { classId, subject, scores, caMax: rawCaMax, examMax: rawExamMax } = req.body;
+    const caMax   = Number(rawCaMax)   || 40;
+    const examMax = Number(rawExamMax) || 60;
     const teacherId = req.user._id;
     const schoolId  = req.user.schoolId;
 
-    if (!classId || !subject || !term || !session || !Array.isArray(scores))
-      return res.status(400).json({ message: 'classId, subject, term, session, and scores[] are required.' });
+    if (!classId || !subject || !Array.isArray(scores))
+      return res.status(400).json({ message: 'classId, subject, and scores[] are required.' });
+
+    // Resolve active term/session from school — single source of truth
+    const school  = await School.findById(schoolId).select('currentTerm currentSession');
+    const term    = school?.currentTerm    || 'First Term';
+    const session = school?.currentSession || '';
+    if (!session)
+      return res.status(400).json({ message: 'No active session set. Ask your admin to configure the current term and session in Settings.' });
 
     if (scores.length === 0)
       return res.status(400).json({ message: 'scores array is empty.' });
@@ -127,32 +165,42 @@ export const saveSubjectScores = async (req, res) => {
     };
 
     // Bulk upsert — one operation per student
-    // bulkWrite bypasses Mongoose pre-save hooks, so we calculate
-    // total, grade, remark here before writing.
+    // Rules:
+    //   - ca/exam '' or null => stored as null (not entered)
+    //   - ca/exam 0 => stored as 0 (explicitly entered zero)
+    //   - clamped to caMax/examMax from request
+    //   - total/grade only calculated when both are non-null
     const ops = scores.map(({ studentId, ca, exam }) => {
-      const safeCA   = Math.min(40, Math.max(0, Number(ca)   || 0));
-      const safeExam = Math.min(60, Math.max(0, Number(exam) || 0));
-      const total    = safeCA + safeExam;
+      const caProvided   = ca   != null && ca   !== '';
+      const examProvided = exam != null && exam !== '';
+
+      const safeCA   = caProvided   ? Math.min(caMax,   Math.max(0, Number(ca)))   : null;
+      const safeExam = examProvided ? Math.min(examMax, Math.max(0, Number(exam))) : null;
+
+      // Only calculate total/grade when at least one is provided
+      const total = (safeCA ?? 0) + (safeExam ?? 0);
       const { grade, remark } = calcGrade(total);
+
+      // Build $set — only include ca/exam when provided
+      const $set = {
+        student: studentId,
+        classId,
+        schoolId,
+        teacher: teacherId,
+        term,
+        session,
+        subject,
+        total: (safeCA !== null || safeExam !== null) ? total : null,
+        grade: (safeCA !== null || safeExam !== null) ? grade : null,
+        remark:(safeCA !== null || safeExam !== null) ? remark : null,
+      };
+      if (caProvided)   $set.ca   = safeCA;
+      if (examProvided) $set.exam = safeExam;
+
       return {
         updateOne: {
           filter: { student: studentId, subject, term, session, schoolId },
-          update: {
-            $set: {
-              student: studentId,
-              classId,
-              schoolId,
-              teacher: teacherId,
-              term,
-              session,
-              subject,
-              ca:     safeCA,
-              exam:   safeExam,
-              total,
-              grade,
-              remark,
-            }
-          },
+          update: { $set },
           upsert: true,
         }
       };
@@ -186,11 +234,17 @@ export const saveSubjectScores = async (req, res) => {
 // Query params: classId, term, session
 export const getScoreCompletion = async (req, res) => {
   try {
-    const { classId, term, session } = req.query;
+    const { classId } = req.query;
     const schoolId = req.user.schoolId;
 
-    if (!classId || !term || !session)
-      return res.status(400).json({ message: 'classId, term, and session are required.' });
+    if (!classId)
+      return res.status(400).json({ message: 'classId is required.' });
+
+    const school  = await School.findById(schoolId).select('currentTerm currentSession');
+    const term    = school?.currentTerm    || 'First Term';
+    const session = school?.currentSession || '';
+    if (!session)
+      return res.status(400).json({ message: 'No active session configured.' });
 
     // Count how many students are in the class
     const totalStudents = await Student.countDocuments({ classId, schoolId });
@@ -272,11 +326,15 @@ export const getScoresForStudent = async (studentId, term, session, schoolId) =>
 // Query params: studentId, term, session
 export const getScoresForStudentRoute = async (req, res) => {
   try {
-    const { studentId, term, session } = req.query;
+    const { studentId } = req.query;
     const schoolId = req.user.schoolId;
 
-    if (!studentId || !term || !session)
-      return res.status(400).json({ message: 'studentId, term, and session are required.' });
+    if (!studentId)
+      return res.status(400).json({ message: 'studentId is required.' });
+
+    const school  = await School.findById(schoolId).select('currentTerm currentSession');
+    const term    = school?.currentTerm    || 'First Term';
+    const session = school?.currentSession || '';
 
     const scores = await SubjectScore.find({ student: studentId, term, session, schoolId })
       .select('subject ca exam total grade remark teacher updatedAt');

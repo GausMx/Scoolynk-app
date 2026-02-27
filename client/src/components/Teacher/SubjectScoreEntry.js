@@ -56,8 +56,8 @@ const SubjectScoreEntry = () => {
 
   const [selectedClass,   setSelectedClass]   = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
-  const [selectedTerm,    setSelectedTerm]    = useState('First Term');
-  const [selectedSession, setSelectedSession] = useState('2024/2025');
+  const [activeTerm,      setActiveTerm]      = useState('');
+  const [activeSession,   setActiveSession]   = useState('');
   const [showFilters,     setShowFilters]     = useState(false);
 
   const [rows,        setRows]        = useState([]);
@@ -92,6 +92,9 @@ const SubjectScoreEntry = () => {
       const scheme = brandRes.data.school?.scoringScheme;
       if (scheme?.caMax)   setCaMax(Number(scheme.caMax));
       if (scheme?.examMax) setExamMax(Number(scheme.examMax));
+      // Active term/session set by admin — single source of truth
+      setActiveTerm(brandRes.data.school?.currentTerm    || 'First Term');
+      setActiveSession(brandRes.data.school?.currentSession || '');
     })
     .catch(() => setMetaError('Failed to load your subjects and classes. Please refresh.'))
     .finally(() => setLoadingMeta(false));
@@ -106,7 +109,7 @@ const SubjectScoreEntry = () => {
     setSaveErr('');
     axios.get(`${REACT_APP_API_URL}/api/teacher/subject-scores`, {
       headers: { Authorization: authHdr() },
-      params:  { classId: selectedClass, subject: selectedSubject, term: selectedTerm, session: selectedSession },
+      params:  { classId: selectedClass, subject: selectedSubject },
     })
     .then(res => {
       setRows((res.data.rows || []).map(r => {
@@ -127,7 +130,7 @@ const SubjectScoreEntry = () => {
     })
     .catch(err => setRowsError(err.response?.data?.message || 'Failed to load students.'))
     .finally(() => setLoadingRows(false));
-  }, [selectedClass, selectedSubject, selectedTerm, selectedSession]);
+  }, [selectedClass, selectedSubject]);
 
   useEffect(() => { loadScores(); }, [loadScores]);
 
@@ -166,7 +169,7 @@ const SubjectScoreEntry = () => {
     try {
       await axios.post(
         `${REACT_APP_API_URL}/api/teacher/subject-scores`,
-        { classId: selectedClass, subject: selectedSubject, term: selectedTerm, session: selectedSession, caMax, examMax, scores: toSave },
+        { classId: selectedClass, subject: selectedSubject, caMax, examMax, scores: toSave },
         { headers: { Authorization: authHdr() } }
       );
       setSaved(true);
@@ -195,6 +198,15 @@ const SubjectScoreEntry = () => {
     </div>
   );
 
+  if (!activeSession && !loadingMeta) return (
+    <div className="p-3" style={{ maxWidth: 500 }}>
+      <div className="alert alert-warning mb-0">
+        <strong className="d-block mb-1">No active session configured.</strong>
+        <span className="small">Ask your admin to set the current term and session in Settings before you can enter scores.</span>
+      </div>
+    </div>
+  );
+
   if (mySubjects.length === 0) return (
     <div className="p-3" style={{ maxWidth: 500 }}>
       <div className="alert alert-warning mb-0">
@@ -217,7 +229,7 @@ const SubjectScoreEntry = () => {
             <div className="fw-bold lh-1" style={{ fontSize: 15 }}>Score Entry</div>
             {selectedSubject && selectedClassName && (
               <div className="text-white-50 text-truncate mt-1" style={{ fontSize: 11 }}>
-                {selectedSubject} · {selectedClassName} · {selectedTerm}
+                {selectedSubject} · {selectedClassName} · {activeTerm}
               </div>
             )}
           </div>
@@ -260,17 +272,11 @@ const SubjectScoreEntry = () => {
               {mySubjects.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          <div className="col-6 col-md-3">
-            <FilterLabel>Term</FilterLabel>
-            <select className="form-select form-select-sm" value={selectedTerm} onChange={e => setSelectedTerm(e.target.value)}>
-              <option>First Term</option>
-              <option>Second Term</option>
-              <option>Third Term</option>
-            </select>
-          </div>
-          <div className="col-6 col-md-3">
-            <FilterLabel>Session</FilterLabel>
-            <input className="form-control form-control-sm" value={selectedSession} onChange={e => setSelectedSession(e.target.value)} placeholder="2024/2025" />
+          <div className="col-12 col-md-6">
+            <FilterLabel>Active Term &amp; Session</FilterLabel>
+            <div className="form-control form-control-sm bg-light text-muted" style={{ cursor: 'default' }}>
+              {activeTerm || '—'} &nbsp;·&nbsp; {activeSession || 'Not set by admin'}
+            </div>
           </div>
         </div>
       </div>
@@ -303,7 +309,7 @@ const SubjectScoreEntry = () => {
           <div className="alert alert-info d-flex align-items-start gap-2 py-2 mb-0 small">
             <Info size={15} className="flex-shrink-0 mt-1" />
             <span>
-              CA max <strong>{caMax}</strong> · Exam max <strong>{examMax}</strong> · Total <strong>{caMax + examMax}</strong>.{' '}
+              Term: <strong>{activeTerm}</strong> · Session: <strong>{activeSession}</strong> · CA max <strong>{caMax}</strong> · Exam max <strong>{examMax}</strong>.{' '}
               Blank rows are <strong>not saved</strong>.{' '}
               <strong>{savedCount}/{rows.length}</strong> students have saved scores.
             </span>

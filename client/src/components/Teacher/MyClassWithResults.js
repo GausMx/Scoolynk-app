@@ -20,13 +20,27 @@ const MyClassWithResults = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTerm, setSelectedTerm] = useState('First Term');
-  const [selectedSession, setSelectedSession] = useState('2024/2025');
+  const [activeTerm,    setActiveTerm]    = useState('');
+  const [activeSession, setActiveSession] = useState('');
   const [classTeacherFor, setClassTeacherFor] = useState([]);
 
   const token = localStorage.getItem('accessToken');
 
+  // Load active term/session from school on mount
   useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    axios.get(`${REACT_APP_API_URL}/api/teacher/school-branding`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    .then(res => {
+      setActiveTerm(res.data.school?.currentTerm    || 'First Term');
+      setActiveSession(res.data.school?.currentSession || '');
+    })
+    .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!activeSession) return; // wait until term/session loaded
     if (activeTab === 'students') {
       fetchStudents();
     } else if (activeTab === 'results') {
@@ -34,7 +48,7 @@ const MyClassWithResults = () => {
     } else if (activeTab === 'history') {
       fetchResults();
     }
-  }, [activeTab, selectedTerm, selectedSession]);
+  }, [activeTab, activeTerm, activeSession]);
 
   const fetchStudents = async () => {
     try {
@@ -56,7 +70,7 @@ const MyClassWithResults = () => {
   const fetchResults = async (status = null) => {
     try {
       setLoading(true);
-      const params = { term: selectedTerm, session: selectedSession };
+      const params = { term: activeTerm, session: activeSession };
       if (status) params.status = status;
       const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/results`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -121,10 +135,10 @@ const MyClassWithResults = () => {
         <ResultsTab
           students={students}
           results={results}
-          selectedTerm={selectedTerm}
-          setSelectedTerm={setSelectedTerm}
-          selectedSession={selectedSession}
-          setSelectedSession={setSelectedSession}
+          selectedTerm={activeTerm}
+          setSelectedTerm={setActiveTerm}
+          selectedSession={activeSession}
+          setSelectedSession={() => {}}
           loading={loading}
           refreshResults={() => fetchResults('draft')}
           token={token}
@@ -134,10 +148,10 @@ const MyClassWithResults = () => {
       {activeTab === 'history' && (
         <HistoryTab
           results={results}
-          selectedTerm={selectedTerm}
-          setSelectedTerm={setSelectedTerm}
-          selectedSession={selectedSession}
-          setSelectedSession={setSelectedSession}
+          selectedTerm={activeTerm}
+          setSelectedTerm={setActiveTerm}
+          selectedSession={activeSession}
+          setSelectedSession={() => {}}
           loading={loading}
           token={token}
         />
@@ -232,6 +246,7 @@ const StudentsTab = ({ students, searchTerm, setSearchTerm, loading }) => {
 const ResultsTab = ({
   students, results, selectedTerm, setSelectedTerm,
   selectedSession, setSelectedSession, loading, refreshResults, token, setMessage
+  // selectedTerm/selectedSession here are activeTerm/activeSession — read from school
 }) => {
   const [showModal,       setShowModal]       = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -252,26 +267,26 @@ const ResultsTab = ({
       try {
         const res = await axios.get(`${REACT_APP_API_URL}/api/teacher/results/template`, {
           headers: { Authorization: `Bearer ${token}` },
-          params:  { term: selectedTerm, session: selectedSession }
+          params:  {}
         });
         setTemplate(res.data?.template || null);
       } catch { setTemplate(null); }
       finally  { setLoadingTemplate(false); }
     };
     fetchTemplate();
-  }, [selectedTerm, selectedSession, token]);
+  }, [token]);
 
   useEffect(() => {
     if (!classId) return;
     setLoadingCompletion(true);
     axios.get(`${REACT_APP_API_URL}/api/teacher/subject-scores/completion`, {
       headers: { Authorization: `Bearer ${token}` },
-      params:  { classId, term: selectedTerm, session: selectedSession }
+      params:  { classId }
     })
     .then(res => setCompletion(res.data.completion || []))
     .catch(() => setCompletion([]))
     .finally(() => setLoadingCompletion(false));
-  }, [classId, selectedTerm, selectedSession, token]);
+  }, [classId, token]);
 
   const openEntry = (student) => {
     setSelectedStudent(student);
@@ -283,19 +298,15 @@ const ResultsTab = ({
 
   return (
     <>
-      {/* Filters */}
-      <div className="row g-2 g-md-3 mb-3 mb-md-4">
-        <div className="col-6 col-md-3">
-          <select className="form-select form-select-sm" value={selectedTerm} onChange={e => setSelectedTerm(e.target.value)}>
-            <option value="First Term">First Term</option>
-            <option value="Second Term">Second Term</option>
-            <option value="Third Term">Third Term</option>
-          </select>
-        </div>
-        <div className="col-6 col-md-3">
-          <input type="text" className="form-control form-control-sm" placeholder="Session"
-            value={selectedSession} onChange={e => setSelectedSession(e.target.value)} />
-        </div>
+      {/* Active term/session — set by admin, read-only for teachers */}
+      <div className="d-flex align-items-center gap-2 mb-3 flex-wrap">
+        <span className="badge bg-primary fs-6 fw-normal px-3 py-2">
+          {activeTerm || 'Loading…'}
+        </span>
+        <span className="badge bg-secondary fs-6 fw-normal px-3 py-2">
+          {activeSession || '—'}
+        </span>
+        <span className="text-muted small ms-1">Active term set by admin</span>
       </div>
 
       {/* ── Subject score completion panel ─────────────────────────────────── */}
@@ -303,7 +314,7 @@ const ResultsTab = ({
         <div className="card shadow-sm mb-4">
           <div className="card-body pb-2">
             <h6 className="text-muted mb-3" style={{ fontSize:12, textTransform:'uppercase', letterSpacing:.5 }}>
-              Subject Score Completion ({selectedTerm}, {selectedSession})
+              Subject Score Completion ({activeTerm}, {activeSession})
             </h6>
             {loadingCompletion ? (
               <div className="text-center py-2"><div className="spinner-border spinner-border-sm" /></div>
@@ -437,19 +448,14 @@ const HistoryTab = ({ results, selectedTerm, setSelectedTerm, selectedSession, s
 
   return (
     <>
-      <div className="row g-2 g-md-3 mb-3 mb-md-4">
-        <div className="col-6 col-md-3">
-          <select className="form-select form-select-sm" value={selectedTerm} onChange={e => setSelectedTerm(e.target.value)}>
-            <option value="">All Terms</option>
-            <option value="First Term">First Term</option>
-            <option value="Second Term">Second Term</option>
-            <option value="Third Term">Third Term</option>
-          </select>
-        </div>
-        <div className="col-6 col-md-3">
-          <input type="text" className="form-control form-control-sm" placeholder="Session"
-            value={selectedSession} onChange={e => setSelectedSession(e.target.value)} />
-        </div>
+      <div className="d-flex align-items-center gap-2 mb-3 flex-wrap">
+        <span className="badge bg-primary fs-6 fw-normal px-3 py-2">
+          {selectedTerm || 'First Term'}
+        </span>
+        <span className="badge bg-secondary fs-6 fw-normal px-3 py-2">
+          {selectedSession || '—'}
+        </span>
+        <span className="text-muted small ms-1">Showing results for active term</span>
       </div>
 
       {loading ? (
