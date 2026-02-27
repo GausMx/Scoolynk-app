@@ -10,28 +10,28 @@ const { REACT_APP_API_URL } = process.env;
 
 // ── Grade helpers ─────────────────────────────────────────────────────────────
 const liveGrade = (total) => {
-  if (total >= 95) return 'A+';
-  if (total >= 90) return 'A';
-  if (total >= 85) return 'A-';
-  if (total >= 80) return 'B+';
-  if (total >= 75) return 'B';
-  if (total >= 70) return 'B-';
-  if (total >= 60) return 'C';
-  if (total >= 40) return 'D';
-  return 'F';
+  if (total >= 75) return 'A1';
+  if (total >= 70) return 'B2';
+  if (total >= 65) return 'B3';
+  if (total >= 60) return 'C4';
+  if (total >= 55) return 'C5';
+  if (total >= 50) return 'C6';
+  if (total >= 45) return 'D7';
+  if (total >= 40) return 'E8';
+  return 'F9';
 };
 
 const gradeBadge = (g) => {
   if (!g) return 'secondary';
-  if (g.startsWith('A')) return 'success';
-  if (g.startsWith('B')) return 'primary';
-  if (g === 'C') return 'info';
-  if (g === 'D') return 'warning';
-  return 'danger';
+  if (g === 'A1')               return 'success';
+  if (g === 'B2' || g === 'B3') return 'primary';
+  if (g === 'C4' || g === 'C5' || g === 'C6') return 'info';
+  if (g === 'D7' || g === 'E8') return 'warning';
+  return 'danger'; // F9
 };
 
 const totalColor = (t) =>
-  t >= 50 ? 'success' : t >= 40 ? 'warning' : 'danger';
+  t >= 50 ? 'success' : t >= 40 ? 'warning' : 'danger'; // E8(40) = pass, F9(<40) = fail
 
 const deriveRow = (row) => {
   const caNum   = row.ca   !== '' ? Number(row.ca)   : null;

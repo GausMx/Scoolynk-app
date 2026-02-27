@@ -2,15 +2,15 @@ import mongoose from 'mongoose';
 
 // ─── Grade helper (Nigerian scale) ───────────────────────────────────────────
 const getGrade = (total) => {
-  if (total >= 95) return { grade: 'A+', remark: 'Exceptional' };
-  if (total >= 90) return { grade: 'A',  remark: 'Distinction' };
-  if (total >= 85) return { grade: 'A-', remark: 'Excellent' };
-  if (total >= 80) return { grade: 'B+', remark: 'Very Good' };
-  if (total >= 75) return { grade: 'B',  remark: 'Very Good' };
-  if (total >= 70) return { grade: 'B-', remark: 'Below Standard' };
-  if (total >= 60) return { grade: 'C',  remark: 'Good' };
-  if (total >= 40) return { grade: 'D',  remark: 'Average' };
-  return             { grade: 'F',  remark: 'Pass' };
+  if (total >= 75) return { grade: 'A1', remark: 'EXCELLENT' };
+  if (total >= 70) return { grade: 'B2', remark: 'VERY GOOD' };
+  if (total >= 65) return { grade: 'B3', remark: 'GOOD' };
+  if (total >= 60) return { grade: 'C4', remark: 'CREDIT' };
+  if (total >= 55) return { grade: 'C5', remark: 'CREDIT' };
+  if (total >= 50) return { grade: 'C6', remark: 'CREDIT' };
+  if (total >= 45) return { grade: 'D7', remark: 'PASS' };
+  if (total >= 40) return { grade: 'E8', remark: 'PASS' };
+  return             { grade: 'F9', remark: 'FAIL' };
 };
 
 // ─── Subject Schema ───────────────────────────────────────────────────────────
@@ -161,6 +161,17 @@ const resultSchema = new mongoose.Schema({
   },
   rejectionReason: { type: String },
 
+  // ── Names on result sheet ───────────────────────────────────────────────────
+  teacherName:   { type: String, default: '' },
+  principalName: { type: String, default: '' },
+
+  // ── Extra student fields filled by teacher on the sheet ─────────────────────
+  studentExtras: {
+    gender: { type: String, default: '' },
+    dob:    { type: String, default: '' },
+    club:   { type: String, default: '' },
+  },
+
   // ── OCR Scan Metadata ───────────────────────────────────────────────────────
   wasScanned: { type: Boolean, default: false },
   scanData: {
@@ -214,12 +225,14 @@ resultSchema.statics.calculateClassPositions = async function(classId, term, ses
 
   console.log('[CalculateClassPositions] Starting for:', { classId, term, session, schoolId });
 
+  // Include ALL statuses so position is visible immediately on save,
+  // not just after admin approval.
   const results = await this.find({
     classId,
     term,
     session,
     schoolId,
-    status: { $in: ['approved', 'sent', 'verified'] },
+    status: { $in: ['draft', 'submitted', 'approved', 'sent', 'verified', 'rejected'] },
   }).sort({ overallTotal: -1 });
 
   console.log('[CalculateClassPositions] Found', results.length, 'results to rank');

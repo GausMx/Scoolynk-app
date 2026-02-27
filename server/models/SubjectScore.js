@@ -5,17 +5,17 @@
 
 import mongoose from 'mongoose';
 
-// Matches the grade helper in Result.js exactly
+// Nigerian grading scale — A1 to F9
 const getGrade = (total) => {
-  if (total >= 95) return { grade: 'A+', remark: 'Exceptional' };
-  if (total >= 90) return { grade: 'A',  remark: 'Distinction' };
-  if (total >= 85) return { grade: 'A-', remark: 'Excellent' };
-  if (total >= 80) return { grade: 'B+', remark: 'Very Good' };
-  if (total >= 75) return { grade: 'B',  remark: 'Very Good' };
-  if (total >= 70) return { grade: 'B-', remark: 'Below Standard' };
-  if (total >= 60) return { grade: 'C',  remark: 'Good' };
-  if (total >= 40) return { grade: 'D',  remark: 'Average' };
-  return             { grade: 'F',  remark: 'Fail' };
+  if (total >= 75) return { grade: 'A1', remark: 'Excellent' };
+  if (total >= 70) return { grade: 'B2', remark: 'Very Good' };
+  if (total >= 65) return { grade: 'B3', remark: 'Good' };
+  if (total >= 60) return { grade: 'C4', remark: 'Credit' };
+  if (total >= 55) return { grade: 'C5', remark: 'Credit' };
+  if (total >= 50) return { grade: 'C6', remark: 'Credit' };
+  if (total >= 45) return { grade: 'D7', remark: 'Pass' };
+  if (total >= 40) return { grade: 'E8', remark: 'Pass' };
+  return             { grade: 'F9', remark: 'Fail' };
 };
 
 const subjectScoreSchema = new mongoose.Schema({
@@ -31,9 +31,11 @@ const subjectScoreSchema = new mongoose.Schema({
 
   // ── Subject & scores ─────────────────────────────────────────────────────────
   subject:   { type: String, required: true, trim: true },
-  ca:        { type: Number, default: 0, min: 0, max: 40 },   // single CA (out of 40)
-  exam:      { type: Number, default: 0, min: 0, max: 60 },
-  total:     { type: Number },
+  // null = score not yet entered (distinct from 0 which is an explicit entry)
+  // max is validated in the controller against the school's scoring scheme
+  ca:        { type: Number, default: null },
+  exam:      { type: Number, default: null },
+  total:     { type: Number, default: null },
   grade:     { type: String },
   remark:    { type: String },
 

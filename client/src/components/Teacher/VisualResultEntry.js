@@ -11,15 +11,15 @@ const { REACT_APP_API_URL } = process.env;
 
 // ─── Grade helpers ────────────────────────────────────────────────────────────
 const getNigerianGrade = (total) => {
-  if (total >= 95) return { grade: 'A+', remark: 'EXCEPTIONAL' };
-  if (total >= 90) return { grade: 'A',  remark: 'DISTINCTION' };
-  if (total >= 85) return { grade: 'A-', remark: 'EXCELLENT' };
-  if (total >= 80) return { grade: 'B+', remark: 'VERY GOOD' };
-  if (total >= 75) return { grade: 'B',  remark: 'VERY GOOD' };
-  if (total >= 70) return { grade: 'B-', remark: 'GOOD' };
-  if (total >= 60) return { grade: 'C',  remark: 'AVERAGE' };
-  if (total >= 40) return { grade: 'D',  remark: 'BELOW AVERAGE' };
-  return            { grade: 'F',  remark: 'FAIL' };
+  if (total >= 75) return { grade: 'A1', remark: 'EXCELLENT' };
+  if (total >= 70) return { grade: 'B2', remark: 'VERY GOOD' };
+  if (total >= 65) return { grade: 'B3', remark: 'GOOD' };
+  if (total >= 60) return { grade: 'C4', remark: 'CREDIT' };
+  if (total >= 55) return { grade: 'C5', remark: 'CREDIT' };
+  if (total >= 50) return { grade: 'C6', remark: 'CREDIT' };
+  if (total >= 45) return { grade: 'D7', remark: 'PASS' };
+  if (total >= 40) return { grade: 'E8', remark: 'PASS' };
+  return            { grade: 'F9', remark: 'FAIL' };
 };
 
 // ─── Shared input style helpers ───────────────────────────────────────────────
@@ -92,6 +92,10 @@ const VisualResultEntry = ({
   const [nextTerm,   setNextTerm]   = useState('');
   const [classSize,  setClassSize]  = useState('');
 
+  // ── Editable names on result sheet ─────────────────────────────────────────
+  const [teacherName,    setTeacherName]    = useState('');
+  const [principalName,  setPrincipalName]  = useState('');
+
   // ── UI ───────────────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
@@ -118,6 +122,19 @@ const VisualResultEntry = ({
         logoBase64:    s.logoBase64    || '',
         principalName: s.principalName || '',
       });
+      // Pre-fill principal name from school branding (teacher can override)
+      setPrincipalName(prev => prev || s.principalName || '');
+      // Pre-fill term dates from school's active term settings.
+      // These are stored as plain strings (e.g. "2024-09-09") — use directly.
+      const toDateStr = v => {
+        if (!v) return '';
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v; // already YYYY-MM-DD
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
+      };
+      setTermBegins(prev => prev || toDateStr(s.currentTermBegins));
+      setTermEnds(prev   => prev || toDateStr(s.currentTermEnds));
+      setNextTerm(prev   => prev || toDateStr(s.currentNextTermBegins));
     })
     .catch(err => console.error('[VisualResultEntry] Branding fetch failed:', err.message))
     .finally(() => setFetching(false));
@@ -130,25 +147,20 @@ const VisualResultEntry = ({
     return t;
   }, []);
 
+  const emptySubjRow = (name = '') => ({
+    subject: name, ca: '', exam: '',
+    term1Total: '', term2Total: '', sessionAverage: '', classPosition: '', classAverage: '',
+  });
+
   const buildEmptySubjects = useCallback(() => {
-    // Flat subjects array (new VisualTemplateBuilder format)
     const flat = template?.components?.subjects;
-    if (Array.isArray(flat) && flat.length) {
-      return flat.map(s => ({
-        subject: typeof s === 'string' ? s : (s.name || s.subject || ''),
-        ca: 0, exam: 0,
-      }));
-    }
-    // Legacy scoresTable.subjects fallback
+    if (Array.isArray(flat) && flat.length)
+      return flat.map(s => emptySubjRow(typeof s === 'string' ? s : (s.name || s.subject || '')));
     const legacy = template?.components?.scoresTable?.subjects;
-    if (Array.isArray(legacy) && legacy.length) {
-      return legacy.map(s => ({
-        subject: typeof s === 'string' ? s : (s.name || s.subject || ''),
-        ca: 0, exam: 0,
-      }));
-    }
+    if (Array.isArray(legacy) && legacy.length)
+      return legacy.map(s => emptySubjRow(typeof s === 'string' ? s : (s.name || s.subject || '')));
     const n = template?.components?.scoresTable?.defaultSubjects || 12;
-    return Array.from({ length: n }, () => ({ subject:'', ca:0, exam:0 }));
+    return Array.from({ length: n }, emptySubjRow);
   }, [template]);
 
   useEffect(() => {
@@ -211,19 +223,26 @@ const VisualResultEntry = ({
 
     if (existingResult) {
       const s = (existingResult.subjects || []).map(sub => ({
-        subject: sub.subject || '',
-        ca:   sub.ca   ?? sub.ca1 ?? 0,
-        exam: sub.exam ?? 0,
+        subject:        sub.subject || '',
+        ca:             sub.ca   != null ? String(sub.ca)   : (sub.ca1 != null ? String(sub.ca1) : ''),
+        exam:           sub.exam != null ? String(sub.exam) : '',
+        term1Total:     sub.term1Total     != null ? String(sub.term1Total)     : '',
+        term2Total:     sub.term2Total     != null ? String(sub.term2Total)     : '',
+        sessionAverage: sub.sessionAverage != null ? String(sub.sessionAverage) : '',
+        classPosition:  sub.classPosition  != null ? String(sub.classPosition)  : '',
+        classAverage:   sub.classAverage   != null ? String(sub.classAverage)   : '',
       }));
       const baseRows = s.length ? s : buildEmptySubjects();
       mergeSubjectScores(baseRows, token, authHdr, setSubjects);
       setTraits(existingResult.affectiveTraits || defaultTraits());
       setAttendance(existingResult.attendance   || { opened:'', present:'', absent:'' });
       setComments(existingResult.comments       || { teacher:'', principal:'' });
-      setTermBegins(existingResult.termBegins   || '');
-      setTermEnds(existingResult.termEnds       || '');
-      setNextTerm(existingResult.nextTermResumption || '');
+      setTermBegins(existingResult.termBegins   ? new Date(existingResult.termBegins).toISOString().split('T')[0]   : '');
+      setTermEnds(existingResult.termEnds       ? new Date(existingResult.termEnds).toISOString().split('T')[0]       : '');
+      setNextTerm(existingResult.nextTermResumption ? new Date(existingResult.nextTermResumption).toISOString().split('T')[0] : '');
       setClassSize(existingResult.classSize     || '');
+      if (existingResult.teacherName)   setTeacherName(existingResult.teacherName);
+      if (existingResult.principalName) setPrincipalName(existingResult.principalName);
       if (existingResult.studentExtras) {
         setExtras(prev => ({
           gender: prev.gender || existingResult.studentExtras.gender || '',
@@ -237,21 +256,49 @@ const VisualResultEntry = ({
     // No existing result — build from template then merge SubjectScores
     const emptyRows = buildEmptySubjects();
     setTraits(defaultTraits());
-    if (template?.components?.termBegins)     setTermBegins(template.components.termBegins);
-    if (template?.components?.termEnds)       setTermEnds(template.components.termEnds);
-    if (template?.components?.nextTermBegins) setNextTerm(template.components.nextTermBegins);
+    // Set term dates from template — use functional updater to not override
+    // values already loaded from school branding (branding useEffect may run first)
+    const toDateStr2 = v => {
+      if (!v) return '';
+      if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
+    };
+    const tbFromTemplate = toDateStr2(template?.components?.termBegins);
+    const teFromTemplate = toDateStr2(template?.components?.termEnds);
+    const ntFromTemplate = toDateStr2(template?.components?.nextTermBegins);
+    if (tbFromTemplate) setTermBegins(prev => prev || tbFromTemplate);
+    if (teFromTemplate) setTermEnds(prev   => prev || teFromTemplate);
+    if (ntFromTemplate) setNextTerm(prev   => prev || ntFromTemplate);
     if (template?.components?.classSize)      setClassSize(String(template.components.classSize));
     mergeSubjectScores(emptyRows, token, authHdr, setSubjects);
   }, [existingResult, template, student, buildEmptySubjects, defaultTraits]);
 
   // ── Subject helpers ───────────────────────────────────────────────────────────
+  // Cross-term columns — any numeric field on a subject row
+  const CROSS_TERM_FIELDS = new Set(['term1Total','term2Total','sessionAverage','classPosition','classAverage']);
+
   const updateSubject = (idx, field, raw) => {
-    const val = field === 'subject'
-      ? raw
-      : Math.min(field === 'ca' ? 40 : 60, Math.max(0, Number(raw) || 0));
+    let val;
+    if (field === 'subject') {
+      val = raw;
+    } else {
+      // Strip non-digits; keep '' when empty so blank stays blank (not 0)
+      val = String(raw).replace(/[^0-9.]/g, '');
+    }
     setSubjects(prev => prev.map((s, i) => i === idx ? { ...s, [field]: val } : s));
   };
-  const addRow    = () => setSubjects(prev => [...prev, { subject:'', ca:0, exam:0 }]);
+
+  const blurSubject = (idx, field) => {
+    const max = field === 'ca' ? 40 : 60;
+    setSubjects(prev => prev.map((s, i) => {
+      if (i !== idx) return s;
+      if (s[field] === '' || s[field] == null) return s; // leave blank
+      const clamped = Math.min(max, Math.max(0, Number(s[field]) || 0));
+      return { ...s, [field]: String(clamped) };
+    }));
+  };
+  const addRow    = () => setSubjects(prev => [...prev, emptySubjRow()]);
   const removeRow = (idx) => setSubjects(prev => prev.filter((_, i) => i !== idx));
 
   // ── Trait click ───────────────────────────────────────────────────────────────
@@ -263,7 +310,9 @@ const VisualResultEntry = ({
     const total = Math.min(100, (Number(s.ca)||0) + (Number(s.exam)||0));
     return { ...s, total, ...getNigerianGrade(total) };
   });
-  const validRows     = computed.filter(s => s.subject?.trim());
+  // validRows: subject name must be non-empty AND at least one score entered
+  // This prevents saving zero-filled rows for subjects the teacher didn't touch
+  const validRows     = computed.filter(s => s.subject?.trim() && (s.ca !== '' || s.exam !== ''));
   const totalObtain   = validRows.length * 100;
   const totalObtained = validRows.reduce((a, s) => a + s.total, 0);
   const pct           = totalObtain > 0 ? ((totalObtained / totalObtain) * 100).toFixed(1) : '0.0';
@@ -278,7 +327,16 @@ const VisualResultEntry = ({
     const payload = {
       studentId:          student._id,
       term, session,
-      subjects:           validRows.map(({ subject, ca, exam, total }) => ({ subject, ca, exam, total })),
+      subjects:           validRows.map(({ subject, ca, exam, term1Total, term2Total, sessionAverage, classPosition, classAverage }) => ({
+        subject,
+        ca:             Number(ca)   || 0,
+        exam:           Number(exam) || 0,
+        term1Total:     term1Total     !== '' && term1Total     != null ? Number(term1Total)     : undefined,
+        term2Total:     term2Total     !== '' && term2Total     != null ? Number(term2Total)     : undefined,
+        sessionAverage: sessionAverage !== '' && sessionAverage != null ? Number(sessionAverage) : undefined,
+        classPosition:  classPosition  !== '' && classPosition  != null ? Number(classPosition)  : undefined,
+        classAverage:   classAverage   !== '' && classAverage   != null ? Number(classAverage)   : undefined,
+      })),
       affectiveTraits:    traits,
       attendance:         { opened: Number(attendance.opened)||0, present: Number(attendance.present)||0, absent: Number(attendance.absent)||0 },
       comments,
@@ -287,6 +345,8 @@ const VisualResultEntry = ({
       termEnds:           termEnds   || undefined,
       nextTermResumption: nextTerm   || undefined,
       classSize:          classSize  ? Number(classSize) : undefined,
+      teacherName:        teacherName    || undefined,
+      principalName:      principalName  || undefined,
       status:             submitToAdmin ? 'submitted' : 'draft',
     };
     if (existingResult) payload.resultId = existingResult._id;
@@ -610,7 +670,7 @@ const VisualResultEntry = ({
                   ['Total Score Obtained',   totalObtained],
                   ['%TAGE',                  `${pct}%`],
                   ['GRADE',                  overallGrade.grade],
-                  ['POSITION',               '—'],
+                  ['POSITION',               existingResult?.overallPosition ? `${existingResult.overallPosition} of ${existingResult.classSize || classSize || '?'}` : '—'],
                 ].map(([lbl, val]) => (
                   <React.Fragment key={lbl}>
                     <div style={{ fontWeight:'bold', fontSize:'10px' }}>{lbl}</div>
@@ -668,22 +728,37 @@ const VisualResultEntry = ({
                     </div>
                   </td>
                   <td style={{ ...S.td, background: subj.fromSubjectTeacher ? '#eff6ff' : undefined }}>
-                    <input type="number" min={0} max={40}
+                    <input type="text" inputMode="numeric" pattern="[0-9]*"
                       value={subj.ca}
+                      placeholder="—"
                       onChange={e => updateSubject(idx, 'ca', e.target.value)}
+                      onBlur={() => blurSubject(idx, 'ca')}
                       style={{ ...numInput(), ...(subj.fromSubjectTeacher ? { backgroundColor:'#eff6ff' } : EDITABLE_BG), width:'38px' }}
                     />
                   </td>
                   <td style={{ ...S.td, background: subj.fromSubjectTeacher ? '#eff6ff' : undefined }}>
-                    <input type="number" min={0} max={60}
+                    <input type="text" inputMode="numeric" pattern="[0-9]*"
                       value={subj.exam}
+                      placeholder="—"
                       onChange={e => updateSubject(idx, 'exam', e.target.value)}
+                      onBlur={() => blurSubject(idx, 'exam')}
                       style={{ ...numInput(), ...(subj.fromSubjectTeacher ? { backgroundColor:'#eff6ff' } : EDITABLE_BG), width:'38px' }}
                     />
                   </td>
-                  <td style={{ ...S.td, fontWeight:'bold', ...COMPUTED_BG }}>{subj.total || ''}</td>
-                  {[subj.term2Total, subj.term1Total, subj.sessionAverage, subj.classPosition, subj.classAverage].map((v,i) => (
-                    <td key={i} style={{ ...S.td, color:'#aaa' }}>{v || '—'}</td>
+                  <td style={{ ...S.td, fontWeight:'bold', ...COMPUTED_BG }}>{(subj.ca !== '' || subj.exam !== '') ? subj.total : ''}</td>
+                  {[
+                    ['term2Total','100'],['term1Total','100'],
+                    ['sessionAverage','100'],['classPosition',''],['classAverage','100']
+                  ].map(([field], i) => (
+                    <td key={i} style={S.td}>
+                      <input
+                        type="text" inputMode="numeric" pattern="[0-9]*"
+                        value={subj[field] ?? ''}
+                        placeholder="—"
+                        onChange={e => updateSubject(idx, field, e.target.value)}
+                        style={{ ...numInput(), ...EDITABLE_BG, width:'34px', fontSize:'9px' }}
+                      />
+                    </td>
                   ))}
                   <td style={{ ...S.td, fontWeight:'bold' }}>{subj.subject?.trim() ? subj.grade : ''}</td>
                   <td style={{ ...S.td, fontSize:'8.5px' }}>{subj.subject?.trim() ? subj.remark : ''}</td>
@@ -711,11 +786,11 @@ const VisualResultEntry = ({
               <DomainSection title="PSYCHOMOTOR DOMAIN" skills={PSYCHOMOTOR_SKILLS} />
               <div style={{ ...S.gradeBox, marginTop:'4px' }}>
                 <div style={S.gradeHdr}>Grade Scale</div>
-                {[['A+','95–100%','EXCEPTIONAL'],['A','90–94.9%','DISTINCTION'],
-                  ['A-','85–89.9%','EXCELLENT'],['B+','80–84.9%','VERY GOOD'],
-                  ['B','75–79.9%','VERY GOOD'],['B-','70–74.9%','GOOD'],
-                  ['C','60–69.9%','AVERAGE'],['D','40–59.9%','BELOW AVERAGE'],
-                  ['F','0–39.9%','FAIL'],
+                {[['A1','75–100','EXCELLENT'],['B2','70–74','VERY GOOD'],
+                  ['B3','65–69','GOOD'],['C4','60–64','CREDIT'],
+                  ['C5','55–59','CREDIT'],['C6','50–54','CREDIT'],
+                  ['D7','45–49','PASS'],['E8','40–44','PASS'],
+                  ['F9','0–39','FAIL'],
                 ].map(([g,r,d],i) => (
                   <div key={i} style={{ ...S.gradeRow, backgroundColor: i%2===0?'#fff':'#f5f5f5', padding:'1px 0' }}>
                     <span style={{ fontWeight:'bold', width:'22px', display:'inline-block' }}>{g}</span>
@@ -739,8 +814,15 @@ const VisualResultEntry = ({
                 style={{ width:'100%', border:'none', borderBottom:'1px solid #aaa', resize:'vertical',
                   fontFamily: BASE_FONT, fontSize:'10px', fontStyle:'italic', outline:'none', ...EDITABLE_BG, padding:'2px' }}
               />
-              <div style={{ borderTop:'1px solid #000', marginTop:'6px', paddingTop:'2px', fontSize:'9.5px' }}>
-                Name/Sign: ___________________________
+              <div style={{ borderTop:'1px solid #000', marginTop:'6px', paddingTop:'2px', fontSize:'9.5px', display:'flex', alignItems:'center', gap:'4px' }}>
+                <strong>Name:</strong>
+                <input
+                  type="text"
+                  value={teacherName}
+                  onChange={e => setTeacherName(e.target.value)}
+                  placeholder="Teacher's name"
+                  style={{ ...inputStyle('100%'), ...EDITABLE_BG, fontSize:'9.5px' }}
+                />
               </div>
             </div>
             <div style={S.cBox}>
@@ -753,8 +835,15 @@ const VisualResultEntry = ({
                 style={{ width:'100%', border:'none', borderBottom:'1px solid #aaa', resize:'vertical',
                   fontFamily: BASE_FONT, fontSize:'10px', fontStyle:'italic', outline:'none', ...EDITABLE_BG, padding:'2px' }}
               />
-              <div style={{ borderTop:'1px solid #000', marginTop:'6px', paddingTop:'2px', fontSize:'9.5px' }}>
-                Name: {school.principalName || '___________________________'}
+              <div style={{ borderTop:'1px solid #000', marginTop:'6px', paddingTop:'2px', fontSize:'9.5px', display:'flex', alignItems:'center', gap:'4px' }}>
+                <strong>Name:</strong>
+                <input
+                  type="text"
+                  value={principalName}
+                  onChange={e => setPrincipalName(e.target.value)}
+                  placeholder={school.principalName || "Head teacher's name"}
+                  style={{ ...inputStyle('100%'), ...EDITABLE_BG, fontSize:'9.5px' }}
+                />
               </div>
             </div>
           </div>
