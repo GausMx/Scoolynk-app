@@ -28,7 +28,6 @@ import {
   deleteStudent,
   uploadStudentsByClass,
   getSchoolBranding,
-  activateResultTemplate,
 } from '../controllers/adminController.js';
 
 import {
@@ -43,7 +42,8 @@ import {
   sendResultToParent,
   sendMultipleResultsToParents,
   getAllResults,
-  downloadResultPDF
+  downloadResultPDF,
+  activateResultTemplate,
 } from '../controllers/adminResultController.js';
 
 const router = express.Router();
