@@ -150,37 +150,27 @@ const AdminResultManagement = () => {
         </ul>
 
         {/* Tab Content */}
-        {activeTab === 'pending' && (
-          <PendingResultsTab
-            results={results}
-            loading={loading}
-            selectedTerm={selectedTerm}
-            setSelectedTerm={setSelectedTerm}
-            selectedSession={selectedSession}
-            setSelectedSession={setSelectedSession}
-            token={token}
-            onReviewSuccess={() => {
-              showMessage('success', 'Result reviewed successfully!');
-              fetchPendingResults();
-            }}
-          />
-        )}
+{activeTab === 'pending' && (
+  <PendingResultsTab
+    results={results}
+    loading={loading}
+    selectedTerm={selectedTerm}
+    setSelectedTerm={setSelectedTerm}
+    sessionInput={sessionInput}
+    setSessionInput={setSessionInput}
+  />
+)}
 
-        {activeTab === 'all' && (
-          <AllResultsTab
-            results={results}
-            loading={loading}
-            selectedTerm={selectedTerm}
-            setSelectedTerm={setSelectedTerm}
-            selectedSession={selectedSession}
-            setSelectedSession={setSelectedSession}
-            token={token}
-            onActionSuccess={() => {
-              showMessage('success', 'Action completed successfully!');
-              fetchAllResults();
-            }}
-          />
-        )}
+{activeTab === 'all' && (
+  <AllResultsTab
+    results={results}
+    loading={loading}
+    selectedTerm={selectedTerm}
+    setSelectedTerm={setSelectedTerm}
+    sessionInput={sessionInput}
+    setSessionInput={setSessionInput}
+  />
+)}
 
       </div>
     </div>
