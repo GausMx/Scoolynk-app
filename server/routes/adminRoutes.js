@@ -28,7 +28,7 @@ import {
   deleteStudent,
   uploadStudentsByClass,
   getSchoolBranding,
-  //activateResultTemplate,
+  activateResultTemplate,
 } from '../controllers/adminController.js';
 
 import {
@@ -48,7 +48,7 @@ import {
 
 const router = express.Router();
 
-//router.patch('/templates/:id/activate', protect, requireRole('admin'), activateResultTemplate);
+router.patch('/templates/:id/activate', protect, requireRole('admin'), activateResultTemplate);
 
 
 // Dashboard (Mounted at /api/admin)

@@ -6,7 +6,7 @@ import requireRole from '../middleware/roleMiddleware.js';
 
 import {
   getParentDashboard,
-  getChildren,
+  getMyChildren,
   getChildResults,
   getResultDetails,
   getPerformanceAnalytics,
@@ -17,7 +17,7 @@ const router = express.Router();
 const parent = [protect, requireRole('parent')];
 
 router.get('/dashboard',                              ...parent, getParentDashboard);
-router.get('/children',                               ...parent, getChildren);
+router.get('/children',                               ...parent, getMyChildren);
 router.get('/children/:studentId/results',            ...parent, getChildResults);
 router.get('/results/:resultId',                      ...parent, getResultDetails);
 router.get('/children/:studentId/analytics',          ...parent, getPerformanceAnalytics);

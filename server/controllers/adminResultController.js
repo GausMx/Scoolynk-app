@@ -5,12 +5,13 @@ import ResultTemplate from '../models/ResultTemplate.js';
 import Student from '../models/Student.js';
 import School from '../models/School.js';
 import { generateResultPDFBase64 } from '../services/pdfResultService.js';
-
+import ResultTemplate from '../models/ResultTemplate.js';
 // ─── School branding fields needed by pdfResultService ───────────────────────
 // Used in every place we call generateResultPDFBase64()
 const SCHOOL_BRANDING_SELECT = 'name address phone email motto logoBase64 principalName';
 
 // ─── Templates ────────────────────────────────────────────────────────────────
+
 
 export const createResultTemplate = async (req, res) => {
   try {
