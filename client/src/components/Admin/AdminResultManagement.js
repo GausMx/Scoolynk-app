@@ -33,7 +33,7 @@ const AdminResultManagement = () => {
     }, 600);
 
     return () => clearTimeout(timeout);
-  }, [sessionInput]);
+  }, [sessionInput, selectedSession]);
 
   // Fetch only when actual filter values change
   useEffect(() => {
@@ -44,7 +44,7 @@ const AdminResultManagement = () => {
     } else if (activeTab === 'all') {
       fetchAllResults();
     }
-  }, [activeTab, selectedTerm, selectedSession]);
+  }, [activeTab, selectedTerm, selectedSession]); // eslint-disable-line
 
   const showMessage = (type, text) => {
     setMessage({ type, text });
@@ -150,27 +150,33 @@ const AdminResultManagement = () => {
         </ul>
 
         {/* Tab Content */}
-{activeTab === 'pending' && (
-  <PendingResultsTab
-    results={results}
-    loading={loading}
-    selectedTerm={selectedTerm}
-    setSelectedTerm={setSelectedTerm}
-    sessionInput={sessionInput}
-    setSessionInput={setSessionInput}
-  />
-)}
+        {activeTab === 'pending' && (
+          <PendingResultsTab
+            results={results}
+            loading={loading}
+            selectedTerm={selectedTerm}
+            setSelectedTerm={setSelectedTerm}
+            selectedSession={selectedSession}
+            sessionInput={sessionInput}
+            setSessionInput={setSessionInput}
+            token={token}
+            onReviewSuccess={fetchPendingResults}
+          />
+        )}
 
-{activeTab === 'all' && (
-  <AllResultsTab
-    results={results}
-    loading={loading}
-    selectedTerm={selectedTerm}
-    setSelectedTerm={setSelectedTerm}
-    sessionInput={sessionInput}
-    setSessionInput={setSessionInput}
-  />
-)}
+        {activeTab === 'all' && (
+          <AllResultsTab
+            results={results}
+            loading={loading}
+            selectedTerm={selectedTerm}
+            setSelectedTerm={setSelectedTerm}
+            selectedSession={selectedSession}
+            sessionInput={sessionInput}
+            setSessionInput={setSessionInput}
+            token={token}
+            onActionSuccess={fetchAllResults}
+          />
+        )}
 
       </div>
     </div>
@@ -178,16 +184,14 @@ const AdminResultManagement = () => {
 };
 
 // ==================== RESULT PREVIEW MODAL ====================
-// Renders the actual NigerianResultSheet with live school branding
 const ResultPreviewModal = ({ result, onClose, onApprove, onReject, showActions = false }) => {
   const token    = localStorage.getItem('accessToken');
   const printRef = useRef();
 
   const [reviewing,       setReviewing]       = useState(false);
-  const [school,          setSchool]          = useState(null);
+  const [school,           setSchool]          = useState(null);
   const [loadingBranding, setLoadingBranding] = useState(true);
 
-  // Fetch school branding once when modal opens
   useEffect(() => {
     axios.get(`${REACT_APP_API_URL}/api/admin/school-branding`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -201,19 +205,18 @@ const ResultPreviewModal = ({ result, onClose, onApprove, onReject, showActions 
     setReviewing(true);
     try {
       if (action === 'approve') await onApprove(result._id);
-      else                       await onReject(result._id);
+      else                          await onReject(result._id);
     } finally {
       setReviewing(false);
     }
   };
 
-  // Shape props the way NigerianResultSheet expects them
   const studentProp = {
     name:           result.student?.name           || '',
-    admNo:          result.student?.regNo          || '',
+    admNo:           result.student?.regNo           || '',
     gender:         result.student?.gender         || result.studentExtras?.gender || '',
-    dob:            result.student?.dob            || result.studentExtras?.dob    || '',
-    className:      result.classId?.name           || '',
+    dob:             result.student?.dob            || result.studentExtras?.dob    || '',
+    className:       result.classId?.name           || '',
     passportBase64: result.student?.passportBase64 || '',
     club:           result.student?.club           || result.studentExtras?.club   || '',
   };
@@ -222,8 +225,6 @@ const ResultPreviewModal = ({ result, onClose, onApprove, onReject, showActions 
     <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
       <div className="modal-dialog modal-xl modal-dialog-scrollable">
         <div className="modal-content">
-
-          {/* Header */}
           <div className="modal-header py-2">
             <h6 className="modal-title fw-bold mb-0">
               Result Sheet — {result.student?.name}
@@ -241,8 +242,6 @@ const ResultPreviewModal = ({ result, onClose, onApprove, onReject, showActions 
               <button type="button" className="btn-close" onClick={onClose} />
             </div>
           </div>
-
-          {/* Body — the actual result sheet */}
           <div className="modal-body p-2 p-md-3" ref={printRef}>
             {loadingBranding ? (
               <div className="text-center py-5">
@@ -261,8 +260,6 @@ const ResultPreviewModal = ({ result, onClose, onApprove, onReject, showActions 
               />
             )}
           </div>
-
-          {/* Footer */}
           <div className="modal-footer py-2">
             <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
               Close
@@ -284,7 +281,6 @@ const ResultPreviewModal = ({ result, onClose, onApprove, onReject, showActions 
               </>
             )}
           </div>
-
         </div>
       </div>
     </div>
@@ -295,7 +291,7 @@ const ResultPreviewModal = ({ result, onClose, onApprove, onReject, showActions 
 const PendingResultsTab = ({
   results, loading,
   selectedTerm, setSelectedTerm,
-  sessionInput, setSessionInput,
+  selectedSession, sessionInput, setSessionInput,
   token, onReviewSuccess
 }) => {
   const [selectedResult, setSelectedResult] = useState(null);
@@ -366,7 +362,7 @@ const PendingResultsTab = ({
         </div>
         <div className="col-12 col-md-3">
           <input type="text" className="form-control rounded-3" placeholder="Session (e.g. 2024/2025)"
-            value={selectedSession} onChange={e => setSessionInput(e.target.value)} />
+            value={sessionInput} onChange={e => setSessionInput(e.target.value)} />
         </div>
         <div className="col-12 col-md-6 text-md-end">
           {pendingResults.length > 0 && (
@@ -455,9 +451,9 @@ const PendingResultsTab = ({
 // ==================== ALL RESULTS TAB ====================
 const AllResultsTab = ({
   results,
-   loading,
+  loading,
   selectedTerm, setSelectedTerm,
-  sessionInput, setSessionInput,
+  selectedSession, sessionInput, setSessionInput,
   token, onActionSuccess
 }) => {
   const [statusFilter, setStatusFilter]   = useState('all');
@@ -503,7 +499,7 @@ const AllResultsTab = ({
         </div>
         <div className="col-6 col-md-3 col-lg-2">
           <input type="text" className="form-control form-control-sm rounded-3" placeholder="Session"
-            value={selectedSession} onChange={e => setSessionInput(e.target.value)} />
+            value={sessionInput} onChange={e => setSessionInput(e.target.value)} />
         </div>
         <div className="col-12 col-md-3 col-lg-2">
           <select className="form-select form-select-sm rounded-3" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
