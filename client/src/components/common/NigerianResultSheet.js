@@ -1,6 +1,14 @@
 
 import React from 'react';
 
+const fmtDate = (d) => {
+  if (!d) return '';
+  const s = typeof d === 'string' ? d : d instanceof Date ? d.toISOString() : String(d);
+  const match = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return s;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${parseInt(match[3])} ${months[parseInt(match[2]) - 1]} ${match[1]}`;
+};
 // ─── Grade Scale (Nigerian WAEC-style) ───────────────────────────────────────
 export const getNigerianGrade = (total) => {
   if (total >= 95) return { grade: 'A+', remark: 'EXCEPTIONAL' };
@@ -572,7 +580,7 @@ const NigerianResultSheet = ({
           <div style={styles.commentLabel}>Class Teacher's Remark</div>
           <div style={styles.commentText}>{comments.teacher || '___________________________________'}</div>
           <div style={{ ...styles.sigLine }}>
-            <div>Name: {result?.teacher?.name || '___________________________'}</div>
+            <div>Name: {result?.teacheName || result?.teacher?.name || '___________________________'}</div>
             <div style={{ marginTop: '4px' }}>Name/Sign: ___________________________</div>
           </div>
         </div>
@@ -582,7 +590,7 @@ const NigerianResultSheet = ({
           <div style={styles.commentLabel}>Head Teacher's Remark</div>
           <div style={styles.commentText}>{comments.principal || '___________________________________'}</div>
           <div style={{ ...styles.sigLine }}>
-            <div>Name: ___________________________</div>
+            <div>Name: {result?.principalName || school?.principalName || '___________________________'}</div>
             <div style={{ marginTop: '4px' }}>Name/Sign: ___________________________</div>
           </div>
         </div>

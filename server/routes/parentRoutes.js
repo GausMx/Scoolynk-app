@@ -1,30 +1,26 @@
-// server/routes/parentRoutes.js - NEW FILE
+// server/routes/parentRoutes.js
 
 import express from 'express';
-import protect from '../middleware/authMiddleware.js';
+import protect     from '../middleware/authMiddleware.js';
 import requireRole from '../middleware/roleMiddleware.js';
+
 import {
   getParentDashboard,
-  getMyChildren,
+  getChildren,
   getChildResults,
   getResultDetails,
-  getPerformanceAnalytics
+  getPerformanceAnalytics,
+  uploadStudentPassport,
 } from '../controllers/parentController.js';
 
 const router = express.Router();
+const parent = [protect, requireRole('parent')];
 
-// All routes require authentication and parent role
-router.use(protect, requireRole('parent'));
-
-// Dashboard
-router.get('/dashboard', getParentDashboard);
-
-// Children management
-router.get('/children', getMyChildren);
-router.get('/children/:studentId/results', getChildResults);
-router.get('/children/:studentId/analytics', getPerformanceAnalytics);
-
-// Result details
-router.get('/results/:resultId', getResultDetails);
+router.get('/dashboard',                              ...parent, getParentDashboard);
+router.get('/children',                               ...parent, getChildren);
+router.get('/children/:studentId/results',            ...parent, getChildResults);
+router.get('/results/:resultId',                      ...parent, getResultDetails);
+router.get('/children/:studentId/analytics',          ...parent, getPerformanceAnalytics);
+router.put('/children/:studentId/passport',           ...parent, uploadStudentPassport);
 
 export default router;

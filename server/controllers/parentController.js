@@ -248,3 +248,47 @@ export const getPerformanceAnalytics = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch analytics.' });
   }
 };
+
+// ========== UPLOAD STUDENT PASSPORT PHOTO ==========
+// PUT /api/parent/children/:studentId/passport
+export const uploadStudentPassport = async (req, res) => {
+  try {
+    const parentId  = req.user._id;
+    const { studentId } = req.params;
+    const { passportBase64 } = req.body;
+
+    if (!passportBase64)
+      return res.status(400).json({ message: 'No image data provided.' });
+
+    if (!passportBase64.startsWith('data:image/'))
+      return res.status(400).json({ message: 'Invalid image format. Must be a JPEG or PNG.' });
+
+    // ~2 MB limit (base64 of 2 MB ≈ 2.7 MB string)
+    if (passportBase64.length > 3 * 1024 * 1024)
+      return res.status(400).json({ message: 'Image too large. Please use an image under 2 MB.' });
+
+    // Confirm parent owns this child
+    const parent = await User.findById(parentId).select('children');
+    const owns   = parent?.children?.some(id => id.toString() === studentId);
+    if (!owns)
+      return res.status(403).json({ message: 'Access denied.' });
+
+    const student = await Student.findByIdAndUpdate(
+      studentId,
+      { passportBase64 },
+      { new: true, select: 'name regNo passportBase64' }
+    );
+
+    if (!student)
+      return res.status(404).json({ message: 'Student not found.' });
+
+    res.json({
+      message:        'Passport photo uploaded successfully.',
+      passportBase64: student.passportBase64,
+      studentName:    student.name,
+    });
+  } catch (err) {
+    console.error('[UploadStudentPassport]', err);
+    res.status(500).json({ message: 'Failed to upload passport photo.' });
+  }
+};
