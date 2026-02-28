@@ -295,7 +295,7 @@ const ResultPreviewModal = ({ result, onClose, onApprove, onReject, showActions 
 const PendingResultsTab = ({
   results, loading,
   selectedTerm, setSelectedTerm,
-  selectedSession, setSelectedSession,
+  sessionInput, setSessionInput,
   token, onReviewSuccess
 }) => {
   const [selectedResult, setSelectedResult] = useState(null);
@@ -454,9 +454,10 @@ const PendingResultsTab = ({
 
 // ==================== ALL RESULTS TAB ====================
 const AllResultsTab = ({
-  results, loading,
+  results,
+   loading,
   selectedTerm, setSelectedTerm,
-  selectedSession, setSelectedSession,
+  sessionInput, setSessionInput,
   token, onActionSuccess
 }) => {
   const [statusFilter, setStatusFilter]   = useState('all');
