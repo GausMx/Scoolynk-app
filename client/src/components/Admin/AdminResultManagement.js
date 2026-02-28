@@ -15,12 +15,30 @@ const AdminResultManagement = () => {
   const [loading, setLoading]               = useState(false);
   const [loadingPercent, setLoadingPercent] = useState(0);
   const [message, setMessage]               = useState({ type: '', text: '' });
+
   const [selectedTerm, setSelectedTerm]     = useState('First Term');
   const [selectedSession, setSelectedSession] = useState('2024/2025');
 
+  //  NEW: input state (user typing)
+  const [sessionInput, setSessionInput] = useState('2024/2025');
+
   const token = localStorage.getItem('accessToken');
 
+  // Debounce session input (600ms after typing stops)
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (sessionInput !== selectedSession) {
+        setSelectedSession(sessionInput);
+      }
+    }, 600);
+
+    return () => clearTimeout(timeout);
+  }, [sessionInput]);
+
+  // Fetch only when actual filter values change
+  useEffect(() => {
+    if (!selectedSession) return;
+
     if (activeTab === 'pending') {
       fetchPendingResults();
     } else if (activeTab === 'all') {
@@ -37,10 +55,15 @@ const AdminResultManagement = () => {
     try {
       setLoading(true);
       setLoadingPercent(10);
-      const res = await axios.get(`${REACT_APP_API_URL}/api/admin/results/submitted`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { term: selectedTerm, session: selectedSession }
-      });
+
+      const res = await axios.get(
+        `${REACT_APP_API_URL}/api/admin/results/submitted`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { term: selectedTerm, session: selectedSession }
+        }
+      );
+
       setLoadingPercent(70);
       setResults(res.data.results || []);
       setLoadingPercent(100);
@@ -353,7 +376,7 @@ const PendingResultsTab = ({
         </div>
         <div className="col-12 col-md-3">
           <input type="text" className="form-control rounded-3" placeholder="Session (e.g. 2024/2025)"
-            value={selectedSession} onChange={e => setSelectedSession(e.target.value)} />
+            value={selectedSession} onChange={e => setSessionInput(e.target.value)} />
         </div>
         <div className="col-12 col-md-6 text-md-end">
           {pendingResults.length > 0 && (
@@ -489,7 +512,7 @@ const AllResultsTab = ({
         </div>
         <div className="col-6 col-md-3 col-lg-2">
           <input type="text" className="form-control form-control-sm rounded-3" placeholder="Session"
-            value={selectedSession} onChange={e => setSelectedSession(e.target.value)} />
+            value={selectedSession} onChange={e => setSessionInput(e.target.value)} />
         </div>
         <div className="col-12 col-md-3 col-lg-2">
           <select className="form-select form-select-sm rounded-3" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
