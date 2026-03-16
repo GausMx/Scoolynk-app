@@ -5,12 +5,12 @@ import ResultTemplate from '../models/ResultTemplate.js';
 import Student from '../models/Student.js';
 import School from '../models/School.js';
 import { generateResultPDFBase64 } from '../services/pdfResultService.js';
+
 // ─── School branding fields needed by pdfResultService ───────────────────────
 // Used in every place we call generateResultPDFBase64()
 const SCHOOL_BRANDING_SELECT = 'name address phone email motto logoBase64 principalName';
 
 // ─── Templates ────────────────────────────────────────────────────────────────
-
 
 export const createResultTemplate = async (req, res) => {
   try {
@@ -280,7 +280,7 @@ export const sendResultToParent = async (req, res) => {
       schoolId: req.user.schoolId,
       status: 'approved',
     })
-    .populate('student',  'name regNo parentPhone parentName parentId gender dob passportBase64 club')
+    .populate('student',  'name regNo parentPhone parentName parentId gender dob club')
     .populate('classId',  'name')
     .populate('teacher',  'name');
 
@@ -334,7 +334,7 @@ export const sendMultipleResultsToParents = async (req, res) => {
       schoolId: req.user.schoolId,
       status: 'approved',
     })
-    .populate('student', 'name regNo parentPhone parentName parentId gender dob passportBase64 club')
+    .populate('student', 'name regNo parentPhone parentName parentId gender dob club')
     .populate('classId', 'name')
     .populate('teacher', 'name');
 

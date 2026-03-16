@@ -78,7 +78,7 @@ export const getResultById = async (req, res) => {
       _id:      resultId,
       schoolId: req.user.schoolId
     })
-    .populate('student', 'name regNo parentPhone parentName gender dob club passportBase64')
+    .populate('student', 'name regNo parentPhone parentName gender dob club')
     .populate('classId', 'name fee')
     .populate('teacher', 'name');
 
@@ -252,7 +252,7 @@ export const saveResult = async (req, res) => {
 
     // Re-fetch after position recalc so overallPosition is current
     const populated = await Result.findById(result._id)
-      .populate('student', 'name regNo gender dob club passportBase64')
+      .populate('student', 'name regNo gender dob club')
       .populate('classId', 'name');
 
     res.json({

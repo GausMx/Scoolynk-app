@@ -1,6 +1,6 @@
 // src/components/Parent/ParentDashboard.js
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../common/Layout';
@@ -21,13 +21,6 @@ const ParentDashboard = () => {
     totalResults: 0, avgPerformance: 0, recentResults: [], notifications: []
   });
 
-  // ── Passport upload state ──────────────────────────────────────────────────
-  const [uploadModal,    setUploadModal]    = useState(null);  // child object or null
-  const [previewSrc,     setPreviewSrc]     = useState('');    // base64 preview
-  const [uploading,      setUploading]      = useState(false);
-  const [uploadMsg,      setUploadMsg]      = useState({ type: '', text: '' });
-  const fileInputRef = useRef();
-
   useEffect(() => { fetchDashboardData(); }, []);
 
   const fetchDashboardData = async () => {
@@ -44,79 +37,6 @@ const ParentDashboard = () => {
       console.error('Failed to fetch dashboard:', err);
     } finally {
       setTimeout(() => setLoading(false), 300);
-    }
-  };
-
-  // ── Open upload modal for a child ──────────────────────────────────────────
-  const openUploadModal = (child) => {
-    setUploadModal(child);
-    setPreviewSrc(child.passportBase64 || '');
-    setUploadMsg({ type: '', text: '' });
-    // reset file input
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const closeUploadModal = () => {
-    setUploadModal(null);
-    setPreviewSrc('');
-    setUploading(false);
-    setUploadMsg({ type: '', text: '' });
-  };
-
-  // ── File selected → convert to base64 preview ─────────────────────────────
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setUploadMsg({ type: 'error', text: 'Please select an image file (JPEG or PNG).' });
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setUploadMsg({ type: 'error', text: 'Image must be under 2 MB.' });
-      return;
-    }
-
-    setUploadMsg({ type: '', text: '' });
-    const reader = new FileReader();
-    reader.onloadend = () => setPreviewSrc(reader.result);
-    reader.readAsDataURL(file);
-  };
-
-  // ── Submit passport to backend ─────────────────────────────────────────────
-  const handleUpload = async () => {
-    if (!previewSrc || !uploadModal) return;
-    if (!previewSrc.startsWith('data:image/')) {
-      setUploadMsg({ type: 'error', text: 'Please select a new photo first.' });
-      return;
-    }
-
-    try {
-      setUploading(true);
-      setUploadMsg({ type: '', text: '' });
-
-      await axios.put(
-        `${REACT_APP_API_URL}/api/parent/children/${uploadModal._id}/passport`,
-        { passportBase64: previewSrc },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setUploadMsg({ type: 'success', text: 'Photo uploaded! It will appear on the result sheet.' });
-
-      // Update the child in local state so passport icon updates immediately
-      setDashboardData(prev => ({
-        ...prev,
-        children: prev.children.map(c =>
-          c._id === uploadModal._id ? { ...c, passportBase64: previewSrc } : c
-        )
-      }));
-
-      // Close after short delay so user sees success message
-      setTimeout(closeUploadModal, 1800);
-    } catch (err) {
-      setUploadMsg({ type: 'error', text: err.response?.data?.message || 'Upload failed. Try again.' });
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -214,64 +134,50 @@ const ParentDashboard = () => {
             <div className="row g-3">
               {dashboardData.children.map(child => (
                 <div key={child._id} className="col-12 col-md-6 col-lg-4">
-                  <div className="card border-0 shadow-sm rounded-3 h-100">
+                  <div
+                    className="card border-0 shadow-sm rounded-3 h-100"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => navigate(`/parent/children/${child._id}/results`)}
+                  >
                     <div className="card-body p-3">
-
-                      {/* Avatar + info */}
                       <div className="d-flex align-items-center mb-3">
-                        {/* Show passport if uploaded, icon otherwise */}
-                        {child.passportBase64 ? (
-                          <img
-                            src={child.passportBase64}
-                            alt={child.name}
-                            className="rounded-circle me-3 object-fit-cover"
-                            style={{ width: 50, height: 50, objectFit: 'cover', border: '2px solid #0d6efd' }}
-                          />
-                        ) : (
-                          <div
-                            className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-3"
-                            style={{ width: 50, height: 50, flexShrink: 0 }}
-                          >
-                            <i className="bi bi-person-fill text-primary" style={{ fontSize: '1.5rem' }}></i>
-                          </div>
-                        )}
-                        <div className="flex-grow-1 min-width-0">
-                          <h6 className="fw-bold mb-0 text-truncate">{child.name}</h6>
+                        <div
+                          className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-3"
+                          style={{ width: '50px', height: '50px' }}
+                        >
+                          <i className="bi bi-person-fill text-primary" style={{ fontSize: '1.5rem' }}></i>
+                        </div>
+                        <div className="flex-grow-1">
+                          <h6 className="fw-bold mb-0">{child.name}</h6>
                           <small className="text-muted">{child.regNo}</small>
                         </div>
                       </div>
 
-                      <div className="mb-3">
+                      <div className="mb-2">
                         <span className="badge bg-info me-2">{child.classId?.name || 'N/A'}</span>
-                        {child.passportBase64
-                          ? <span className="badge bg-success"><i className="bi bi-camera-fill me-1"></i>Photo uploaded</span>
-                          : <span className="badge bg-secondary"><i className="bi bi-camera me-1"></i>No photo</span>
-                        }
+                        <span className="badge bg-secondary">{child.status}</span>
                       </div>
 
-                      {/* Action buttons */}
-                      <div className="d-flex gap-2 flex-wrap">
+                      <div className="d-flex gap-2">
                         <button
                           className="btn btn-sm btn-outline-primary rounded-3 flex-grow-1"
-                          onClick={() => navigate(`/parent/children/${child._id}/results`)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/parent/children/${child._id}/results`);
+                          }}
                         >
                           <i className="bi bi-file-earmark-text me-1"></i>Results
                         </button>
                         <button
                           className="btn btn-sm btn-outline-success rounded-3 flex-grow-1"
-                          onClick={() => navigate(`/parent/children/${child._id}/analytics`)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/parent/children/${child._id}/analytics`);
+                          }}
                         >
                           <i className="bi bi-graph-up me-1"></i>Analytics
                         </button>
-                        <button
-                          className="btn btn-sm btn-outline-secondary rounded-3 flex-grow-1"
-                          onClick={() => openUploadModal(child)}
-                          title="Upload passport photo for result sheet"
-                        >
-                          <i className="bi bi-camera me-1"></i>Photo
-                        </button>
                       </div>
-
                     </div>
                   </div>
                 </div>
@@ -335,99 +241,8 @@ const ParentDashboard = () => {
             </div>
           </div>
         )}
+
       </div>
-
-      {/* ── Passport Upload Modal ──────────────────────────────────────────────── */}
-      {uploadModal && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1055 }}>
-          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: 400 }}>
-            <div className="modal-content rounded-4 border-0 shadow-lg">
-
-              <div className="modal-header border-0 pb-0">
-                <h5 className="modal-title fw-bold">
-                  <i className="bi bi-camera-fill me-2 text-primary"></i>
-                  Upload Passport Photo
-                </h5>
-                <button className="btn-close" onClick={closeUploadModal} disabled={uploading} />
-              </div>
-
-              <div className="modal-body pt-2">
-                <p className="text-muted small mb-3">
-                  For <strong>{uploadModal.name}</strong>. This photo will appear on their result sheet.
-                </p>
-
-                {/* Preview */}
-                <div className="text-center mb-3">
-                  {previewSrc ? (
-                    <img
-                      src={previewSrc}
-                      alt="Preview"
-                      className="rounded-3 shadow-sm"
-                      style={{ width: 140, height: 160, objectFit: 'cover', border: '2px solid #0d6efd' }}
-                    />
-                  ) : (
-                    <div
-                      className="rounded-3 bg-light d-flex flex-column align-items-center justify-content-center mx-auto"
-                      style={{ width: 140, height: 160, border: '2px dashed #ccc', cursor: 'pointer' }}
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <i className="bi bi-person-bounding-box text-muted" style={{ fontSize: '3rem' }}></i>
-                      <small className="text-muted mt-1">Click to select</small>
-                    </div>
-                  )}
-                </div>
-
-                {/* File input */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="d-none"
-                  onChange={handleFileChange}
-                />
-
-                <button
-                  className="btn btn-outline-secondary rounded-3 w-100 mb-3"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                >
-                  <i className="bi bi-folder2-open me-2"></i>
-                  {previewSrc ? 'Choose a different photo' : 'Choose photo'}
-                </button>
-
-                <p className="text-muted" style={{ fontSize: '0.75rem' }}>
-                  JPEG or PNG only · Max 2 MB · Passport-style photo recommended
-                </p>
-
-                {/* Message */}
-                {uploadMsg.text && (
-                  <div className={`alert alert-${uploadMsg.type === 'success' ? 'success' : 'danger'} py-2 small rounded-3`}>
-                    {uploadMsg.text}
-                  </div>
-                )}
-              </div>
-
-              <div className="modal-footer border-0 pt-0">
-                <button className="btn btn-secondary rounded-3" onClick={closeUploadModal} disabled={uploading}>
-                  Cancel
-                </button>
-                <button
-                  className="btn btn-primary rounded-3"
-                  onClick={handleUpload}
-                  disabled={uploading || !previewSrc || previewSrc === uploadModal.passportBase64}
-                >
-                  {uploading
-                    ? <><span className="spinner-border spinner-border-sm me-2" />Uploading…</>
-                    : <><i className="bi bi-cloud-upload me-2"></i>Save Photo</>
-                  }
-                </button>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
-
     </Layout>
   );
 };

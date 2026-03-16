@@ -107,12 +107,11 @@ export const generateResultPDFBase64 = async (result, school) => {
       let curY = MARGIN;
 
       // ══════════════════════════════════════════════════════════════════════
-      //  SECTION 1 — HEADER  (Logo | School info | Passport)
+      //  SECTION 1 — HEADER  (Logo | School info)
       // ══════════════════════════════════════════════════════════════════════
       const HEADER_H = 72;
       const LOGO_W   = 68;
-      const PASS_W   = 58;
-      const INFO_W   = CONTENT_W - LOGO_W - PASS_W - 4;
+      const INFO_W   = CONTENT_W - LOGO_W - 2;
 
       // Logo box
       rect(doc, MARGIN, curY, LOGO_W, HEADER_H);
@@ -149,21 +148,6 @@ export const generateResultPDFBase64 = async (result, school) => {
       if (contactLine) {
         doc.fontSize(7).font('Helvetica').fillColor('#333')
            .text(contactLine, infoX, curY + 52, { width: INFO_W, align: 'center' });
-      }
-
-      // Passport photo box
-      const passX = MARGIN + LOGO_W + 2 + INFO_W + 2;
-      rect(doc, passX, curY, PASS_W, HEADER_H);
-      if (student.passportBase64) {
-        try {
-          const passData = student.passportBase64.replace(/^data:image\/\w+;base64,/, '');
-          doc.image(Buffer.from(passData, 'base64'), passX + 2, curY + 2, {
-            width: PASS_W - 4, height: HEADER_H - 4, fit: [PASS_W - 4, HEADER_H - 4],
-          });
-        } catch (_) { /* passport decode failed */ }
-      } else {
-        cellText(doc, 'Passport\nPhoto', passX, curY + HEADER_H / 2 - 10, PASS_W, 20,
-          { align: 'center', color: '#aaa', fontSize: 7 });
       }
 
       curY += HEADER_H;

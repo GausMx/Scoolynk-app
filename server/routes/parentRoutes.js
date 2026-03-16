@@ -10,17 +10,15 @@ import {
   getChildResults,
   getResultDetails,
   getPerformanceAnalytics,
-  uploadStudentPassport,
 } from '../controllers/parentController.js';
 
 const router = express.Router();
 const parent = [protect, requireRole('parent')];
 
-router.get('/dashboard',                              ...parent, getParentDashboard);
-router.get('/children',                               ...parent, getMyChildren);
-router.get('/children/:studentId/results',            ...parent, getChildResults);
-router.get('/results/:resultId',                      ...parent, getResultDetails);
-router.get('/children/:studentId/analytics',          ...parent, getPerformanceAnalytics);
-router.put('/children/:studentId/passport',           ...parent, uploadStudentPassport);
+router.get('/dashboard',                          ...parent, getParentDashboard);
+router.get('/children',                           ...parent, getMyChildren);
+router.get('/children/:studentId/results',        ...parent, getChildResults);
+router.get('/results/:resultId',                  ...parent, getResultDetails);
+router.get('/children/:studentId/analytics',      ...parent, getPerformanceAnalytics);
 
 export default router;

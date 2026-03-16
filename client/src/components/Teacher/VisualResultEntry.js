@@ -539,16 +539,7 @@ const VisualResultEntry = ({
               )}
             </div>
 
-            {student?.passportBase64 ? (
-              <img src={student.passportBase64} alt="Passport"
-                style={{ width:68, height:80, objectFit:'cover', border:'1px solid #000', flexShrink:0 }} />
-            ) : (
-              <div style={{ width:68, height:80, border:'1px solid #000', flexShrink:0,
-                display:'flex', alignItems:'center', justifyContent:'center',
-                fontSize:'8px', color:'#aaa', textAlign:'center', flexDirection:'column' }}>
-                <span style={{ fontSize:20 }}>👤</span><span>Passport<br/>Photo</span>
-              </div>
-            )}
+
           </div>
 
           {/* SESSION BANNER */}

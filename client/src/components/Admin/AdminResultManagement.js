@@ -15,36 +15,18 @@ const AdminResultManagement = () => {
   const [loading, setLoading]               = useState(false);
   const [loadingPercent, setLoadingPercent] = useState(0);
   const [message, setMessage]               = useState({ type: '', text: '' });
-
   const [selectedTerm, setSelectedTerm]     = useState('First Term');
   const [selectedSession, setSelectedSession] = useState('2024/2025');
 
-  //  NEW: input state (user typing)
-  const [sessionInput, setSessionInput] = useState('2024/2025');
-
   const token = localStorage.getItem('accessToken');
 
-  // Debounce session input (600ms after typing stops)
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (sessionInput !== selectedSession) {
-        setSelectedSession(sessionInput);
-      }
-    }, 600);
-
-    return () => clearTimeout(timeout);
-  }, [sessionInput, selectedSession]);
-
-  // Fetch only when actual filter values change
-  useEffect(() => {
-    if (!selectedSession) return;
-
     if (activeTab === 'pending') {
       fetchPendingResults();
     } else if (activeTab === 'all') {
       fetchAllResults();
     }
-  }, [activeTab, selectedTerm, selectedSession]); // eslint-disable-line
+  }, [activeTab, selectedTerm, selectedSession]);
 
   const showMessage = (type, text) => {
     setMessage({ type, text });
@@ -55,15 +37,10 @@ const AdminResultManagement = () => {
     try {
       setLoading(true);
       setLoadingPercent(10);
-
-      const res = await axios.get(
-        `${REACT_APP_API_URL}/api/admin/results/submitted`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          params: { term: selectedTerm, session: selectedSession }
-        }
-      );
-
+      const res = await axios.get(`${REACT_APP_API_URL}/api/admin/results/submitted`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { term: selectedTerm, session: selectedSession }
+      });
       setLoadingPercent(70);
       setResults(res.data.results || []);
       setLoadingPercent(100);
@@ -157,10 +134,12 @@ const AdminResultManagement = () => {
             selectedTerm={selectedTerm}
             setSelectedTerm={setSelectedTerm}
             selectedSession={selectedSession}
-            sessionInput={sessionInput}
-            setSessionInput={setSessionInput}
+            setSelectedSession={setSelectedSession}
             token={token}
-            onReviewSuccess={fetchPendingResults}
+            onReviewSuccess={() => {
+              showMessage('success', 'Result reviewed successfully!');
+              fetchPendingResults();
+            }}
           />
         )}
 
@@ -171,10 +150,12 @@ const AdminResultManagement = () => {
             selectedTerm={selectedTerm}
             setSelectedTerm={setSelectedTerm}
             selectedSession={selectedSession}
-            sessionInput={sessionInput}
-            setSessionInput={setSessionInput}
+            setSelectedSession={setSelectedSession}
             token={token}
-            onActionSuccess={fetchAllResults}
+            onActionSuccess={() => {
+              showMessage('success', 'Action completed successfully!');
+              fetchAllResults();
+            }}
           />
         )}
 
@@ -184,14 +165,16 @@ const AdminResultManagement = () => {
 };
 
 // ==================== RESULT PREVIEW MODAL ====================
+// Renders the actual NigerianResultSheet with live school branding
 const ResultPreviewModal = ({ result, onClose, onApprove, onReject, showActions = false }) => {
   const token    = localStorage.getItem('accessToken');
   const printRef = useRef();
 
   const [reviewing,       setReviewing]       = useState(false);
-  const [school,           setSchool]          = useState(null);
+  const [school,          setSchool]          = useState(null);
   const [loadingBranding, setLoadingBranding] = useState(true);
 
+  // Fetch school branding once when modal opens
   useEffect(() => {
     axios.get(`${REACT_APP_API_URL}/api/admin/school-branding`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -205,19 +188,19 @@ const ResultPreviewModal = ({ result, onClose, onApprove, onReject, showActions 
     setReviewing(true);
     try {
       if (action === 'approve') await onApprove(result._id);
-      else                          await onReject(result._id);
+      else                       await onReject(result._id);
     } finally {
       setReviewing(false);
     }
   };
 
+  // Shape props the way NigerianResultSheet expects them
   const studentProp = {
     name:           result.student?.name           || '',
-    admNo:           result.student?.regNo           || '',
+    admNo:          result.student?.regNo          || '',
     gender:         result.student?.gender         || result.studentExtras?.gender || '',
-    dob:             result.student?.dob            || result.studentExtras?.dob    || '',
-    className:       result.classId?.name           || '',
-    passportBase64: result.student?.passportBase64 || '',
+    dob:            result.student?.dob            || result.studentExtras?.dob    || '',
+    className:      result.classId?.name           || '',
     club:           result.student?.club           || result.studentExtras?.club   || '',
   };
 
@@ -225,6 +208,8 @@ const ResultPreviewModal = ({ result, onClose, onApprove, onReject, showActions 
     <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
       <div className="modal-dialog modal-xl modal-dialog-scrollable">
         <div className="modal-content">
+
+          {/* Header */}
           <div className="modal-header py-2">
             <h6 className="modal-title fw-bold mb-0">
               Result Sheet — {result.student?.name}
@@ -242,6 +227,8 @@ const ResultPreviewModal = ({ result, onClose, onApprove, onReject, showActions 
               <button type="button" className="btn-close" onClick={onClose} />
             </div>
           </div>
+
+          {/* Body — the actual result sheet */}
           <div className="modal-body p-2 p-md-3" ref={printRef}>
             {loadingBranding ? (
               <div className="text-center py-5">
@@ -260,6 +247,8 @@ const ResultPreviewModal = ({ result, onClose, onApprove, onReject, showActions 
               />
             )}
           </div>
+
+          {/* Footer */}
           <div className="modal-footer py-2">
             <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
               Close
@@ -281,6 +270,7 @@ const ResultPreviewModal = ({ result, onClose, onApprove, onReject, showActions 
               </>
             )}
           </div>
+
         </div>
       </div>
     </div>
@@ -291,7 +281,7 @@ const ResultPreviewModal = ({ result, onClose, onApprove, onReject, showActions 
 const PendingResultsTab = ({
   results, loading,
   selectedTerm, setSelectedTerm,
-  selectedSession, sessionInput, setSessionInput,
+  selectedSession, setSelectedSession,
   token, onReviewSuccess
 }) => {
   const [selectedResult, setSelectedResult] = useState(null);
@@ -362,7 +352,7 @@ const PendingResultsTab = ({
         </div>
         <div className="col-12 col-md-3">
           <input type="text" className="form-control rounded-3" placeholder="Session (e.g. 2024/2025)"
-            value={sessionInput} onChange={e => setSessionInput(e.target.value)} />
+            value={selectedSession} onChange={e => setSelectedSession(e.target.value)} />
         </div>
         <div className="col-12 col-md-6 text-md-end">
           {pendingResults.length > 0 && (
@@ -450,10 +440,9 @@ const PendingResultsTab = ({
 
 // ==================== ALL RESULTS TAB ====================
 const AllResultsTab = ({
-  results,
-  loading,
+  results, loading,
   selectedTerm, setSelectedTerm,
-  selectedSession, sessionInput, setSessionInput,
+  selectedSession, setSelectedSession,
   token, onActionSuccess
 }) => {
   const [statusFilter, setStatusFilter]   = useState('all');
@@ -499,7 +488,7 @@ const AllResultsTab = ({
         </div>
         <div className="col-6 col-md-3 col-lg-2">
           <input type="text" className="form-control form-control-sm rounded-3" placeholder="Session"
-            value={sessionInput} onChange={e => setSessionInput(e.target.value)} />
+            value={selectedSession} onChange={e => setSelectedSession(e.target.value)} />
         </div>
         <div className="col-12 col-md-3 col-lg-2">
           <select className="form-select form-select-sm rounded-3" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>

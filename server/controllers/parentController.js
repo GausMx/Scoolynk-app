@@ -8,7 +8,7 @@ import School from '../models/School.js';
 // ─── Branding fields NigerianResultSheet needs ────────────────────────────────
 const BRANDING_SELECT = 'name address phone email motto logoBase64 principalName';
 // ─── Student fields the sheet needs ──────────────────────────────────────────
-const STUDENT_SELECT  = 'name regNo admNo gender dob passportBase64 club classId schoolId parentId';
+const STUDENT_SELECT  = 'name regNo admNo gender dob club classId schoolId parentId';
 
 // ========== GET PARENT DASHBOARD ==========
 export const getParentDashboard = async (req, res) => {
@@ -158,7 +158,6 @@ export const getResultDetails = async (req, res) => {
     //    result.schoolId.logoBase64 / .motto / .email were always undefined
     //    in ResultDetails.js, causing the sheet to render without branding.
     .populate('schoolId', BRANDING_SELECT)
-    // ✅ FIX: student now includes passport, dob, club, gender for the sheet
     .populate('student',  STUDENT_SELECT)
     .populate('classId',  'name')
     .populate('teacher',  'name');
@@ -246,49 +245,5 @@ export const getPerformanceAnalytics = async (req, res) => {
   } catch (err) {
     console.error('[GetPerformanceAnalytics Error]', err);
     res.status(500).json({ message: 'Failed to fetch analytics.' });
-  }
-};
-
-// ========== UPLOAD STUDENT PASSPORT PHOTO ==========
-// PUT /api/parent/children/:studentId/passport
-export const uploadStudentPassport = async (req, res) => {
-  try {
-    const parentId  = req.user._id;
-    const { studentId } = req.params;
-    const { passportBase64 } = req.body;
-
-    if (!passportBase64)
-      return res.status(400).json({ message: 'No image data provided.' });
-
-    if (!passportBase64.startsWith('data:image/'))
-      return res.status(400).json({ message: 'Invalid image format. Must be a JPEG or PNG.' });
-
-    // ~2 MB limit (base64 of 2 MB ≈ 2.7 MB string)
-    if (passportBase64.length > 3 * 1024 * 1024)
-      return res.status(400).json({ message: 'Image too large. Please use an image under 2 MB.' });
-
-    // Confirm parent owns this child
-    const parent = await User.findById(parentId).select('children');
-    const owns   = parent?.children?.some(id => id.toString() === studentId);
-    if (!owns)
-      return res.status(403).json({ message: 'Access denied.' });
-
-    const student = await Student.findByIdAndUpdate(
-      studentId,
-      { passportBase64 },
-      { new: true, select: 'name regNo passportBase64' }
-    );
-
-    if (!student)
-      return res.status(404).json({ message: 'Student not found.' });
-
-    res.json({
-      message:        'Passport photo uploaded successfully.',
-      passportBase64: student.passportBase64,
-      studentName:    student.name,
-    });
-  } catch (err) {
-    console.error('[UploadStudentPassport]', err);
-    res.status(500).json({ message: 'Failed to upload passport photo.' });
   }
 };

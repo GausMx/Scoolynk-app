@@ -1,14 +1,17 @@
-
 import React from 'react';
-
+ 
+// ─── Date formatter — strips time, handles ISO strings, Date objects, YYYY-MM-DD
 const fmtDate = (d) => {
   if (!d) return '';
+  // If already a plain date string like "2024-09-09" return nicely formatted
   const s = typeof d === 'string' ? d : d instanceof Date ? d.toISOString() : String(d);
+  // Extract YYYY-MM-DD regardless of whether time is appended
   const match = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!match) return s;
+  if (!match) return s; // unrecognised format — return as-is
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return `${parseInt(match[3])} ${months[parseInt(match[2]) - 1]} ${match[1]}`;
 };
+ 
 // ─── Grade Scale (Nigerian WAEC-style) ───────────────────────────────────────
 export const getNigerianGrade = (total) => {
   if (total >= 95) return { grade: 'A+', remark: 'EXCEPTIONAL' };
@@ -21,7 +24,7 @@ export const getNigerianGrade = (total) => {
   if (total >= 40) return { grade: 'D',  remark: 'AVERAGE' };
   return            { grade: 'F',  remark: 'PASS' };
 };
-
+ 
 // ─── Affective Rating (5-to-1 scale with checkmarks) ─────────────────────────
 const AffectiveMark = ({ value, max = 5 }) => (
   <div style={{ display: 'flex', justifyContent: 'center', gap: '1px' }}>
@@ -37,7 +40,7 @@ const AffectiveMark = ({ value, max = 5 }) => (
     })}
   </div>
 );
-
+ 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const NigerianResultSheet = ({
   result,
@@ -52,7 +55,7 @@ const NigerianResultSheet = ({
   const affective = result?.affectiveTraits || {};
   const attendance = result?.attendance || {};
   const comments = result?.comments || {};
-
+ 
   // ── Computed totals ──────────────────────────────────────────────────────
   const totalObtainable = subjects.length * 100;
   const totalObtained = subjects.reduce((s, subj) => s + (subj.total || 0), 0);
@@ -60,7 +63,7 @@ const NigerianResultSheet = ({
     ? ((totalObtained / totalObtainable) * 100).toFixed(1)
     : '0.0';
   const overallGradeInfo = getNigerianGrade(parseFloat(percentage));
-
+ 
   // ── Psychomotor skills (from affective traits or separate field) ─────────
   const psychomotorSkills = [
     { label: 'Handling Of Tools',   key: 'handlingOfTools' },
@@ -70,7 +73,7 @@ const NigerianResultSheet = ({
     { label: 'Speech Fluency',       key: 'speechFluency' },
     { label: 'Sports & Games',       key: 'sportsGames' },
   ];
-
+ 
   const affectiveSkills = [
     { label: 'Attentiveness',         key: 'attentiveness' },
     { label: 'Honesty',               key: 'honesty' },
@@ -83,10 +86,10 @@ const NigerianResultSheet = ({
     { label: 'Sense of Responsibility',key: 'responsibility' },
     { label: 'Relationship With Others',key: 'relationship' },
   ];
-
+ 
   const termLabel = result?.term || 'Third Term';
   const session   = result?.session || '2021/2022';
-
+ 
   // ── CSS (inline for PDF-safe rendering) ──────────────────────────────────
   const styles = {
     page: {
@@ -129,15 +132,7 @@ const NigerianResultSheet = ({
     schoolContact: {
       fontSize: '9.5px', textAlign: 'center', color: '#222',
     },
-    passport: {
-      width: '68px', height: '80px', objectFit: 'cover',
-      border: '1px solid #000',
-    },
-    passportPlaceholder: {
-      width: '68px', height: '80px', border: '1px solid #000',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: '8px', color: '#aaa', textAlign: 'center', flexDirection: 'column',
-    },
+ 
     // ── Session Banner ───────────────────────────────────────────────────────
     sessionBanner: {
       textAlign: 'center', fontWeight: 'bold', fontSize: '13px',
@@ -275,7 +270,7 @@ const NigerianResultSheet = ({
       fontWeight: 'bold', fontSize: '10px', marginBottom: '3px',
     },
   };
-
+ 
   const DomainSection = ({ title, skills, traits, max = 5 }) => (
     <div style={styles.domainBox}>
       <div style={styles.domainHeader}>{title}</div>
@@ -308,10 +303,10 @@ const NigerianResultSheet = ({
       })}
     </div>
   );
-
+ 
   return (
     <div style={styles.page} id="nigerian-result-sheet">
-
+ 
       {/* ════════════════════════════════════════════════════════════════════
           HEADER: Logo | School Info | Passport
       ════════════════════════════════════════════════════════════════════ */}
@@ -322,7 +317,7 @@ const NigerianResultSheet = ({
         ) : (
           <div style={styles.logoPlaceholder}>LOGO</div>
         )}
-
+ 
         {/* School Details */}
         <div style={{ flex: 1, textAlign: 'center' }}>
           <div style={styles.schoolName}>{school.name || 'AL-QALAM ACADEMY KADUNA'}</div>
@@ -340,30 +335,21 @@ const NigerianResultSheet = ({
             </div>
           )}
         </div>
-
-        {/* Student Passport */}
-        {student.passportBase64 ? (
-          <img src={student.passportBase64} alt="Passport" style={styles.passport} />
-        ) : (
-          <div style={styles.passportPlaceholder}>
-            <span style={{ fontSize: '20px' }}>👤</span>
-            <span>Passport Photo</span>
-          </div>
-        )}
+ 
       </div>
-
+ 
       {/* ════════════════════════════════════════════════════════════════════
           SESSION BANNER
       ════════════════════════════════════════════════════════════════════ */}
       <div style={styles.sessionBanner}>
         {session} — {termLabel.toUpperCase()} PUPIL'S PERFORMANCE REPORT
       </div>
-
+ 
       {/* ════════════════════════════════════════════════════════════════════
           TOP BAND: Personal Data | Attendance | Performance Summary
       ════════════════════════════════════════════════════════════════════ */}
       <div style={styles.topBand}>
-
+ 
         {/* Personal Data */}
         <div style={styles.topCell}>
           <div style={{ fontWeight: 'bold', textAlign: 'center', borderBottom: '1px solid #ccc', marginBottom: '3px', paddingBottom: '2px' }}>
@@ -394,7 +380,7 @@ const NigerianResultSheet = ({
             <span style={styles.value}>{student.club || '___________________'}</span>
           </div>
         </div>
-
+ 
         {/* Attendance */}
         <div style={styles.topCell}>
           <div style={{ fontWeight: 'bold', textAlign: 'center', borderBottom: '1px solid #ccc', marginBottom: '3px', paddingBottom: '2px' }}>
@@ -420,15 +406,15 @@ const NigerianResultSheet = ({
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', marginTop: '2px' }}>
             <div>
               <div style={{ fontWeight: 'bold' }}>Term Beginning</div>
-              <div>{termBegins || '___________'}</div>
+              <div>{fmtDate(termBegins) || '___________'}</div>
             </div>
             <div>
               <div style={{ fontWeight: 'bold' }}>Term Ending</div>
-              <div>{termEnds || '___________'}</div>
+              <div>{fmtDate(termEnds) || '___________'}</div>
             </div>
           </div>
         </div>
-
+ 
         {/* Performance Summary */}
         <div style={styles.topCellLast}>
           <div style={{ fontWeight: 'bold', textAlign: 'center', borderBottom: '1px solid #ccc', marginBottom: '3px', paddingBottom: '2px' }}>
@@ -458,7 +444,7 @@ const NigerianResultSheet = ({
           </div>
         </div>
       </div>
-
+ 
       {/* ════════════════════════════════════════════════════════════════════
           COGNITIVE DOMAIN — SCORES TABLE
       ════════════════════════════════════════════════════════════════════ */}
@@ -527,19 +513,19 @@ const NigerianResultSheet = ({
           )}
         </tbody>
       </table>
-
+ 
       {/* ════════════════════════════════════════════════════════════════════
           BOTTOM SECTION: Affective Domain | Psychomotor | Grade Scale
       ════════════════════════════════════════════════════════════════════ */}
       <div style={styles.bottomSection}>
-
+ 
         {/* Left: Affective Domain */}
         <DomainSection
           title="AFFECTIVE DOMAIN"
           skills={affectiveSkills}
           traits={affective}
         />
-
+ 
         {/* Right: Psychomotor + Grade Scale */}
         <div>
           <DomainSection
@@ -547,7 +533,7 @@ const NigerianResultSheet = ({
             skills={psychomotorSkills}
             traits={affective}
           />
-
+ 
           {/* Grade Scale */}
           <div style={{ ...styles.gradeBox, marginTop: '4px' }}>
             <div style={styles.gradeHeader}>Grade Scale</div>
@@ -570,7 +556,7 @@ const NigerianResultSheet = ({
           </div>
         </div>
       </div>
-
+ 
       {/* ════════════════════════════════════════════════════════════════════
           COMMENTS SECTION
       ════════════════════════════════════════════════════════════════════ */}
@@ -580,22 +566,22 @@ const NigerianResultSheet = ({
           <div style={styles.commentLabel}>Class Teacher's Remark</div>
           <div style={styles.commentText}>{comments.teacher || '___________________________________'}</div>
           <div style={{ ...styles.sigLine }}>
-            <div>Name: {result?.teacheName || result?.teacher?.name || '___________________________'}</div>
-            <div style={{ marginTop: '4px' }}>Name/Sign: ___________________________</div>
+            <div>Name: {result?.teacherName || result?.teacher?.name || '___________________________'}</div>
+            <div style={{ marginTop: '4px' }}>Sign: ___________________________</div>
           </div>
         </div>
-
+ 
         {/* Head Teacher's Remark */}
         <div style={styles.commentBox}>
           <div style={styles.commentLabel}>Head Teacher's Remark</div>
           <div style={styles.commentText}>{comments.principal || '___________________________________'}</div>
           <div style={{ ...styles.sigLine }}>
             <div>Name: {result?.principalName || school?.principalName || '___________________________'}</div>
-            <div style={{ marginTop: '4px' }}>Name/Sign: ___________________________</div>
+            <div style={{ marginTop: '4px' }}>Sign: ___________________________</div>
           </div>
         </div>
       </div>
-
+ 
       {/* ════════════════════════════════════════════════════════════════════
           STATUS & NEXT TERM
       ════════════════════════════════════════════════════════════════════ */}
@@ -608,10 +594,10 @@ const NigerianResultSheet = ({
             </span>
           </div>
           <div style={{ fontSize: '10px' }}>
-            <strong>Next Session Begins:</strong> {nextTermBegins || '_______________'}
+            <strong>Next Session Begins:</strong> {fmtDate(nextTermBegins) || '_______________'}
           </div>
         </div>
-
+ 
         {/* Rating Index (bottom right) */}
         <div style={styles.ratingBox}>
           <div style={styles.ratingHeader}>Rating Indices</div>
@@ -623,7 +609,7 @@ const NigerianResultSheet = ({
           <div>1 - Has No regard for Observable traits</div>
         </div>
       </div>
-
+ 
       {/* ════════════════════════════════════════════════════════════════════
           PRINT STYLES (injected when used in browser)
       ════════════════════════════════════════════════════════════════════ */}
@@ -641,5 +627,5 @@ const NigerianResultSheet = ({
     </div>
   );
 };
-
+ 
 export default NigerianResultSheet;

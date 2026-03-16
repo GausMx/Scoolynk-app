@@ -18,7 +18,7 @@ const protect = async (req, res, next) => {
         return res.status(401).json({ message: 'User not found' });
       }
 
-      // ✅ CRITICAL FIX: Verify schoolId in token matches user's actual schoolId
+      //CRITICAL FIX: Verify schoolId in token matches user's actual schoolId
       // This prevents token tampering where someone modifies the JWT to change schoolId
       if (decoded.schoolId !== req.user.schoolId.toString()) {
         console.error('[AuthMiddleware] SchoolId mismatch detected!', {

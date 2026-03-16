@@ -27,7 +27,6 @@ const PREVIEW_STUDENT = {
   dob: '12-Mar-2012',
   className: 'JSS 1A',
   club: 'Science Club',
-  passportBase64: null,
 };
 
 const PREVIEW_RESULT = {
@@ -412,7 +411,7 @@ const VisualTemplateBuilder = ({
               <p className="mb-1 small fw-semibold">ℹ️ What's automatically included on every result sheet:</p>
               <ul className="mb-0 small text-muted">
                 <li>School logo, name, motto and address (from Settings → Branding)</li>
-                <li>Student's personal data and passport photo</li>
+                <li>Student's personal data</li>
                 <li>CA (40) + Exam (60) = Total (100) columns</li>
                 <li>All 10 affective domain traits</li>
                 <li>All 6 psychomotor skills</li>
