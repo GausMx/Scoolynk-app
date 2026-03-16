@@ -505,7 +505,6 @@ const AllResultsTab = ({
             <option value="submitted">Submitted</option>
             <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>
-            <option value="sent">Sent to Parents</option>
           </select>
         </div>
         <div className="col-12 col-md-3 col-lg-6 text-md-end">
