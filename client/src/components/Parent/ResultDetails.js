@@ -6,7 +6,7 @@ import axios from 'axios';
 import Layout from '../common/Layout';
 import Loading from '../common/Loading';
 import NigerianResultSheet from '../common/NigerianResultSheet';
-import { getUser } from '../../utils/auth';
+import { getUser } from '../utils/auth';
 
 const { REACT_APP_API_URL } = process.env;
 
