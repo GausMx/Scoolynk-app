@@ -286,6 +286,7 @@ const PendingResultsTab = ({
 }) => {
   const [selectedResult, setSelectedResult] = useState(null);
   const [approvingAll, setApprovingAll]     = useState(false);
+  const [sessionDraft,  setSessionDraft]    = useState(selectedSession);
 
   const pendingResults = results.filter(r => r.status === 'submitted');
 
@@ -352,7 +353,10 @@ const PendingResultsTab = ({
         </div>
         <div className="col-12 col-md-3">
           <input type="text" className="form-control rounded-3" placeholder="Session (e.g. 2024/2025)"
-            value={selectedSession} onChange={e => setSelectedSession(e.target.value)} />
+            value={sessionDraft}
+            onChange={e => setSessionDraft(e.target.value)}
+            onBlur={() => setSelectedSession(sessionDraft)}
+            onKeyDown={e => e.key === 'Enter' && setSelectedSession(sessionDraft)} />
         </div>
         <div className="col-12 col-md-6 text-md-end">
           {pendingResults.length > 0 && (
@@ -445,9 +449,10 @@ const AllResultsTab = ({
   selectedSession, setSelectedSession,
   token, onActionSuccess
 }) => {
-  const [statusFilter, setStatusFilter]   = useState('all');
+  const [statusFilter,    setStatusFilter]    = useState('all');
   const [selectedResults, setSelectedResults] = useState([]);
-  const [previewResult, setPreviewResult] = useState(null);
+  const [previewResult,   setPreviewResult]   = useState(null);
+  const [sessionDraft,    setSessionDraft]    = useState(selectedSession);
 
   const filteredResults = results.filter(r =>
     (statusFilter === 'all' || r.status === statusFilter)
@@ -488,7 +493,10 @@ const AllResultsTab = ({
         </div>
         <div className="col-6 col-md-3 col-lg-2">
           <input type="text" className="form-control form-control-sm rounded-3" placeholder="Session"
-            value={selectedSession} onChange={e => setSelectedSession(e.target.value)} />
+            value={sessionDraft}
+            onChange={e => setSessionDraft(e.target.value)}
+            onBlur={() => setSelectedSession(sessionDraft)}
+            onKeyDown={e => e.key === 'Enter' && setSelectedSession(sessionDraft)} />
         </div>
         <div className="col-12 col-md-3 col-lg-2">
           <select className="form-select form-select-sm rounded-3" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
